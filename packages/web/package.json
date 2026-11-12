@@ -1,0 +1,20 @@
+{
+  "name": "@starmap/web",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "知识星图 Web 界面：星空画布、节点交互、幕布式笔记面板。",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5180",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4180"
+  },
+  "dependencies": {
+    "@starmap/core": "*",
+    "pdfjs-dist": "^4.10.38",
+    "pixi.js": "^8.22.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.6"
+  }
+}

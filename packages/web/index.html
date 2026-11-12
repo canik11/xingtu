@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>知识星图</title>
+    <meta name="description" content="个人知识星图：知识点节点 + 关系光丝，支持幕布式大纲笔记。" />
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAGm0lEQVR4nKVXW48URRT+6jKzM7Mse19wYVwT3GgMQhAfTPQFo4gJkSeMv4AHH9AYfZBfoX/CGDEkJiSoGE00PGgCig9GJSorBhaiy17mtt1dVeacU9XTC2KIdqanq7uqzvnO/ZQCX8cNcNqh0ViYnHn0NaXUUfiwAIWaUkoB9FO8UvFYRluvEH8hvtIzIIRAn3JotRRCOHv7jx/fBQZLiadKg+07Fl+p1cfeyQadHdmgg+CdMFHEMgFQEUdkTi/MaAhCXgkJ8ZUnfSttUG9so/tmnm28vn7zyvvEmymNzz5y3DZHP+isXEeeDZyxNa21HUp+J4iIQSlNEpYSyyjwPAsefAkk+CL4Ive23jDbpuZRZN2X15Z/Oq0ajfn26Mzc9xurN8aDc14Za4gSEYfSEAuQ5MI8gSFmRmt4AhBBEFNZJ8yD9xFgegb4InPa1PTY5Pxa98+b+2xzauaNbLM34fJNZ2zDEBNjrWwgAMxUQ2uSNmJgUxAIetK6xDxKn7Skoy9EsxAoY0eMKzZdttmdIN5WaXMsG3QCoRJptaxn6UkLxIS+KSh9hxYiItknzJmVLyL4yJhXef6nPcbUNPGsjYweswi+HbxTSpHwifiQ8fA51AYxzPMcCwttHl+9uoRarSaAWHGWUESf8EwvKi+aQymQkwfftlDKihRJ4ruZJ3A81hrWGtRa2/HU088wgFsrHcANkGc5QFry4iM0p4KC9wSCSGt4R9ohy3haYG1ysirT6rswF6mZAKmw1sTiY/vx0rGjTPjn35Zx5YfLyPJC1rEjGtECkyL/MPCV0E6ms9Gl+KOoSTSxhbmW2/uAiYlxvHjkMI688CwOH3pSrFwMcO6TB/DxuU+xtr4OZQxAEUBmZx+lv1Dxp8CaoRkyAU/oathFW6fwS9+MMeh0+/jiy6+x0vXYuavNa9478xkuX/wG3d4AWlME+TJ8mT3nCyeOy/5KT5m3MaWViyXBRa3QrfVQCxxXCisrf+HSxe/w4ZmzDJzG6ysrvI7SCKnaO/IHDUVaoG2kETZ+5MUaAKzEdIxjph/tkxhv8QfJBdZY9LuruPDVBSbS76zCGAvnMsl6nBN09AGJqjJII3OpMIpMkEpMRWryBzFZOSd7xX7N1ih6vT5++fV3UZLSaLVGkeV5JEf7K1pl4TTgJBeUCVtJwA+RVdXPe1OSEZ9w3qPZbMI5z7cyEsX8HucoSspoGpYoyYbpW6WQatzjSnKXxS5I7q+PjGAzy6AtMRff0GSS3oDnLEVASSTpdGvp5uj6NwCqRCqa0ByipPoWNgebcI7ieetFdqe5BmmIE0+FaUUb7Mz3o4GQnAlkOs+plgrSYDCQQsRxLrfUe8VztKZWi6EoihMfiFxpPWXGCoCQRCgl8VzHxVRcVoNHszGCXq8bI4aIk11pzsW6T7EPXtMiX+BSHEEwTQExbFISgCDyEvKK+LyRPH1mdhb7Ht+LtbV1FHkhxJyDc0WMd7oLNgvN5VmGtfUN7Nu/l/cSDZad9nEqTiILEC2qJjXLpCRkQd9u78bJk6/i7VNv4uHFPajXDGpUiKyRgsTvsTjFuXrdYnFxD06deov3Eg3OgioKWfaKYmZdiswtlEiRmofx7WN4cPc85manMTM9yUlRawVrqUFJmlMwWvFTxhrTUxOYnZnCg+1dTCO1Z6Qt9odqRE63nwid1WXJ4THZUANJodLrb+LAwYOYm5vF+fOfo9VqSmcUk0tJpeI/VI07vT6ef+4Qbt28hW8vXUKrWa+0aNFnvMe2yZ0E4EDYuL1cqYARAItIBajGLVpROCgzTMdlqFY8PWmSbUttgSdfcVuYBjKvF22PTe6ElS4mqp1JkXyxo4WC8wV8LoU6EAiqLlpSbQkhhmVVGzmrW3wpgUqhzXWazRJAAVsAwUoJFRpEq+yQCDU3FFF6TwSGB5UqAGlcKc7JoStteQlEbhGOQRUWSl9T2jzE5ZOLdCgbCN7IzQPl9sBAJBHEml41ASWsokinobsAJImjQwZK38RbB+8+qjfGlCtyH9sHts9QfeI4AozeHaihFLvKTd+oE65Kyibx1XdaI0C8K/xIc0wR7+HB5PaNcZowtm4If/L21K7psl2P4y1HsmH6rpwJK6ciMo+05EU+cKZyMNGDwfVrRdE/MTa1S2ljDS0Inn6ulCDZNYUSZb70vbyjhGW4xRqR7O5dEYqsT8wN8SqK3gni/f8Op/+kg/9yOC2P52gsTO6+n+P5PQAkppW8MDye66UQ/F3H878BX91wTdL/r2YAAAAASUVORK5CYII=" />
+    <link rel="stylesheet" href="./src/styles/app.css" />
+  <script>window.__VITE_PRELOAD__ = [];</script>
+  </head>
+  <body>
+    <canvas id="stage" aria-label="知识星图"></canvas>
+    <canvas id="glstage" aria-hidden="true"></canvas>
+
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-copy">
+          <div class="brand-title">星图 · 知识库</div>
+          <div class="brand-sub"><span id="statNodes">0</span> 个知识点<span class="sep">·</span><span id="statEdges">0</span> 条关系</div>
+        </div>
+      </div>
+      <nav class="nav" id="nav" aria-label="层级导航">
+        <button class="nav-back" id="navBack" type="button" aria-label="返回上一层" hidden>←</button>
+        <div class="nav-crumbs" id="navCrumbs"></div>
+        <button class="nav-level" id="levelBtn" type="button" aria-label="切换 3D 显示层级">层级 · 一级</button>
+        <button class="nav-level nav-spread" id="spreadBtn" type="button" aria-label="恢复标准图形与旋转，并清除手动拖动偏移">重置图形</button>
+        <div class="nav-motion" id="motionWrap">
+          <button class="nav-level nav-motion-btn" id="motionBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="调整 3D 静默效果">静默 · 旋转</button>
+          <div class="motion-pop" id="motionPanel" hidden role="dialog" aria-label="静默效果设置">
+            <div class="motion-pop-head">静默效果</div>
+            <div class="motion-modes" role="group" aria-label="静默模式">
+              <button type="button" data-motion="rotate">旋转</button>
+              <button type="button" data-motion="breathe">呼吸</button>
+              <button type="button" data-motion="puff">膨胀</button>
+              <button type="button" data-motion="still">静止</button>
+            </div>
+            <label class="motion-speed" for="motionSpeed">
+              <span>速度</span>
+              <input id="motionSpeed" type="range" min="1" max="6" step="0.25" value="1" />
+              <b id="motionSpeedText">1.0×</b>
+            </label>
+            <p class="motion-note">效果可叠加；再点一次关闭。膨胀 = 星海持续胀缩；拖动时暂停自动旋转</p>
+          </div>
+        </div>
+      </nav>
+      <div class="tools">
+        <div class="search" id="searchBox" role="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="6.5"></circle>
+            <path d="m16 16 4 4"></path>
+          </svg>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="搜索标题或内容"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            role="combobox"
+            aria-label="搜索知识库"
+            aria-autocomplete="list"
+            aria-controls="searchPop"
+            aria-expanded="false"
+          />
+          <button class="search-clear" id="searchClear" type="button" aria-label="清空搜索" hidden>×</button>
+          <span class="search-count" id="searchCount" hidden>0</span>
+        </div>
+        <button class="btn primary" id="btnAdd" type="button"><span class="plus">＋</span> 添加知识点</button>
+        <div class="more-wrap" id="moreWrap">
+          <button class="btn icon" id="btnMenu" type="button" aria-label="更多操作" aria-haspopup="true">⋯</button>
+          <div class="menu" id="menu" role="menu">
+            <button type="button" data-menu="export">导出数据</button>
+            <button type="button" data-menu="import-doc">导入 Markdown / PDF</button>
+            <div class="menu-sep"></div>
+            <button type="button" data-menu="delete" id="menuDelete" class="menu-danger" hidden>删除当前节点</button>
+            <button type="button" data-menu="kb">知识库路径</button>
+            <button type="button" data-menu="appearance">外观设置</button>
+            <button type="button" data-menu="global-doc">全项目大纲</button>
+            <button type="button" data-menu="reward">打赏作者</button>
+            <div class="menu-sep"></div>
+            <button type="button" data-menu="reset">恢复初始知识库</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-pop" id="searchPop" hidden>
+      <div class="search-pop-head">
+        <span id="searchSummary">输入标题或正文中的任意片段</span>
+        <span class="search-pop-keys">↑↓ 选择 · Enter 打开 · Esc 关闭</span>
+      </div>
+      <div class="search-results" id="searchResults" role="listbox" aria-label="搜索结果"></div>
+    </div>
+
+    <div class="hints">
+      <span><b>拖动空白</b> 旋转</span>
+      <span><b>右键拖动</b> 平移</span>
+      <span><b>拖动节点</b> 移动</span>
+      <span><b>滚轮</b> 缩放</span>
+      <span><b>单击</b> 选中</span>
+      <span><b>双击</b> 下钻 / 打开笔记</span>
+      <span><b>悬停连线</b> 看关系</span>
+    </div>
+
+    <div class="zoom">
+      <button id="zoomIn" type="button" aria-label="放大">＋</button>
+      <button id="zoomOut" type="button" aria-label="缩小">－</button>
+      <button id="zoomFit" type="button" aria-label="重置视图" title="重置视图">
+        <svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"></path></svg>
+      </button>
+    </div>
+
+    <div class="dock" id="dock">
+      <span class="dock-orb"></span>
+      <div class="dock-copy">
+        <div class="dock-name" id="dockName"></div>
+        <div class="dock-meta" id="dockMeta"></div>
+      </div>
+      <button class="btn small" id="dockOpen" type="button">查看笔记</button>
+      <button class="dock-x" id="dockClose" type="button" aria-label="取消选中">×</button>
+    </div>
+
+    <div class="scrim" id="scrim"></div>
+
+    <aside class="panel" id="panel" aria-hidden="true" aria-label="知识点明细">
+      <div class="panel-grip" id="panelGrip" title="拖动调整侧栏宽度" aria-hidden="true"></div>
+      <div class="panel-body" id="panelBody"></div>
+      <div class="panel-foot" id="panelFoot"></div>
+    </aside>
+    <button class="panel-reveal" id="panelReveal" type="button" hidden aria-label="展开详情侧栏">‹<span>笔记</span></button>
+
+    <div class="modal-layer" id="modalLayer">
+      <form class="modal" id="addForm" autocomplete="off">
+        <div class="modal-head">
+          <div>
+            <h2>添加知识点</h2>
+            <p>在星图上点亮一颗新的星辰</p>
+          </div>
+          <button class="x-btn" type="button" data-close-modal aria-label="关闭">×</button>
+        </div>
+        <div class="field">
+          <label for="addName">名称 <span class="req">必填</span></label>
+          <input id="addName" type="text" maxlength="40" placeholder="例如：最优控制" required />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="addCat">分类</label>
+            <input id="addCat" type="text" list="catOptions" maxlength="16" placeholder="输入或选择分类" />
+            <datalist id="catOptions"></datalist>
+          </div>
+          <div class="field">
+            <label>提示</label>
+            <div class="field-note">分类决定节点在星图中的引力区域</div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="addDesc">一句话简介 <span>可稍后补充</span></label>
+          <textarea id="addDesc" maxlength="200" placeholder="用一句话说明这个知识点，例如：研究向量空间与线性映射的代数结构。"></textarea>
+        </div>
+        <div class="field-note" style="margin: -6px 0 16px">创建后会直接打开笔记页，可以在那里用大纲详细记录。</div>
+        <div class="field">
+          <label>关联知识点 <span>可选</span></label>
+          <div class="rel-editor" id="addRels"></div>
+          <button class="link-btn" type="button" id="addRelBtn">＋ 添加一条关联</button>
+        </div>
+        <div class="modal-foot">
+          <button class="btn ghost" type="button" data-close-modal>取消</button>
+          <button class="btn primary" type="submit">点亮节点</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="doc-layer" id="docLayer" hidden>
+      <section class="doc-sheet" role="dialog" aria-modal="true" aria-labelledby="docTitle">
+        <header class="doc-head">
+          <div class="doc-head-copy">
+            <div class="doc-eyebrow">编辑模式</div>
+            <h2 id="docTitle">全项目大纲</h2>
+            <p>所有知识点放在同一份大纲里。拖动左侧圆点：放到条目之间移动，放到条目中间合并为子级，放到知识点标题上归入该节点。</p>
+          </div>
+          <div class="doc-head-actions">
+            <button class="link-btn" id="docCollapseAll" type="button">全部折叠</button>
+            <button class="link-btn" id="docExpandAll" type="button">全部展开</button>
+            <button class="x-btn" id="docClose" type="button" aria-label="关闭全项目大纲">×</button>
+          </div>
+        </header>
+        <div class="doc-body" id="docBody"></div>
+        <footer class="doc-foot">
+          <span>拖动左侧小圆点调整结构；双击条目文字可直接编辑。</span>
+          <span id="docStatus" class="doc-status" role="status" aria-live="polite"></span>
+        </footer>
+      </section>
+    </div>
+
+    <div class="modal-layer appearance-layer" id="appearanceLayer" hidden>
+      <div class="modal appearance-modal" role="dialog" aria-modal="true" aria-labelledby="appearanceTitle">
+        <div class="modal-head">
+          <div>
+            <h2 id="appearanceTitle">外观设置</h2>
+            <p class="field-note">3D / 2D 画质、颜色与节点样式只保存在本机；颜色会随知识数据一起保存，也会写进导出的 JSON。</p>
+          </div>
+          <button class="x-btn" type="button" data-appearance-close aria-label="关闭">×</button>
+        </div>
+        <div class="appearance-body">
+          <section class="appearance-section">
+            <div class="appearance-section-head">
+              <h3>视图模式</h3>
+              <span class="field-note">切换后立即生效</span>
+            </div>
+            <div class="quality-mode" role="group" aria-label="视图模式">
+              <button type="button" class="quality-mode-btn" data-view-mode="3d">3D 星海</button>
+              <button type="button" class="quality-mode-btn" data-view-mode="2d">2D 星图</button>
+            </div>
+            <p class="field-note">2D 星图把节点平铺在平面上，拖动是平移；3D 星海是球体，拖动空白旋转。</p>
+          </section>
+          <section class="appearance-section">
+            <div class="appearance-section-head">
+              <h3>3D 星海画质</h3>
+              <button class="link-btn" type="button" data-quality-reset="three">恢复默认</button>
+            </div>
+            <label class="appearance-slider-row" for="qualityMaxScale">
+              <span class="appearance-label">渲染倍率</span>
+              <input class="appearance-slider" type="range" id="qualityMaxScale" min="120" max="300" step="5" value="300" />
+              <output class="appearance-slider-value" id="qualityMaxScaleValue" for="qualityMaxScale">300%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualityPixelBudget">
+              <span class="appearance-label">像素预算</span>
+              <input class="appearance-slider" type="range" id="qualityPixelBudget" min="6" max="18" step="0.5" value="12" />
+              <output class="appearance-slider-value" id="qualityPixelBudgetValue" for="qualityPixelBudget">12 MP</output>
+            </label>
+            <label class="appearance-slider-row" for="qualityStars">
+              <span class="appearance-label">星点密度</span>
+              <input class="appearance-slider" type="range" id="qualityStars" min="20" max="160" step="5" value="100" />
+              <output class="appearance-slider-value" id="qualityStarsValue" for="qualityStars">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualityGlow">
+              <span class="appearance-label">光晕亮度</span>
+              <input class="appearance-slider" type="range" id="qualityGlow" min="40" max="180" step="1" value="100" />
+              <output class="appearance-slider-value" id="qualityGlowValue" for="qualityGlow">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualitySparkle">
+              <span class="appearance-label">星芒闪烁</span>
+              <input class="appearance-slider" type="range" id="qualitySparkle" min="30" max="180" step="1" value="100" />
+              <output class="appearance-slider-value" id="qualitySparkleValue" for="qualitySparkle">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualityAmbient">
+              <span class="appearance-label">环境粒子</span>
+              <input class="appearance-slider" type="range" id="qualityAmbient" min="20" max="160" step="5" value="100" />
+              <output class="appearance-slider-value" id="qualityAmbientValue" for="qualityAmbient">100%</output>
+            </label>
+            <p class="field-note">倍率越高越清晰、越吃显卡；像素预算限制单帧总像素，低配设备可调小。光晕与星芒会作用到节点。</p>
+          </section>
+          <section class="appearance-section">
+            <div class="appearance-section-head">
+              <h3>2D 星图画质</h3>
+              <button class="link-btn" type="button" data-quality-reset="two">恢复默认</button>
+            </div>
+            <label class="appearance-slider-row" for="qualityDpr">
+              <span class="appearance-label">渲染倍率</span>
+              <input class="appearance-slider" type="range" id="qualityDpr" min="100" max="300" step="10" value="200" />
+              <output class="appearance-slider-value" id="qualityDprValue" for="qualityDpr">200%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualityGlow2d">
+              <span class="appearance-label">光晕亮度</span>
+              <input class="appearance-slider" type="range" id="qualityGlow2d" min="40" max="180" step="1" value="100" />
+              <output class="appearance-slider-value" id="qualityGlow2dValue" for="qualityGlow2d">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualityStars2d">
+              <span class="appearance-label">星点密度</span>
+              <input class="appearance-slider" type="range" id="qualityStars2d" min="20" max="160" step="5" value="100" />
+              <output class="appearance-slider-value" id="qualityStars2dValue" for="qualityStars2d">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualitySpread">
+              <span class="appearance-label">星点间距</span>
+              <input class="appearance-slider" type="range" id="qualitySpread" min="60" max="160" step="5" value="100" />
+              <output class="appearance-slider-value" id="qualitySpreadValue" for="qualitySpread">100%</output>
+            </label>
+            <p class="field-note">间距调大，2D 星点铺得更开；渲染倍率决定清晰度，越高越吃显卡。</p>
+          </section>
+          <section class="appearance-section">
+            <div class="appearance-section-head">
+              <h3>全局颜色</h3>
+              <button class="link-btn" type="button" id="appearanceReset">恢复默认</button>
+            </div>
+            <div class="appearance-row">
+              <span class="appearance-label">默认节点</span>
+              <input type="color" id="appearanceDefault" aria-label="默认节点颜色" />
+              <span class="appearance-hex" id="appearanceDefaultHex">#ffffff</span>
+              <span class="appearance-dot" id="appearanceDefaultDot"></span>
+            </div>
+            <div class="appearance-row">
+              <span class="appearance-label">掌握之后</span>
+              <input type="color" id="appearanceMastered" aria-label="掌握之后的颜色" />
+              <span class="appearance-hex" id="appearanceMasteredHex">#ffa200</span>
+              <span class="appearance-dot" id="appearanceMasteredDot"></span>
+            </div>
+            <p class="field-note">节点会根据掌握比例，从默认色渐变到掌握色。</p>
+          </section>
+          <section class="appearance-section">
+            <div class="appearance-section-head">
+              <h3>节点与关系线</h3>
+              <span class="field-note">拖动即时预览</span>
+            </div>
+            <label class="appearance-slider-row" for="appearanceNodeBrightness">
+              <span class="appearance-label">节点亮度</span>
+              <input class="appearance-slider" type="range" id="appearanceNodeBrightness" min="40" max="180" step="1" value="100" />
+              <output class="appearance-slider-value" id="appearanceNodeBrightnessValue" for="appearanceNodeBrightness">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="appearanceNodeSize">
+              <span class="appearance-label">节点大小</span>
+              <input class="appearance-slider" type="range" id="appearanceNodeSize" min="40" max="180" step="1" value="100" />
+              <output class="appearance-slider-value" id="appearanceNodeSizeValue" for="appearanceNodeSize">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="appearancePulseBrightness">
+              <span class="appearance-label">脉冲亮度</span>
+              <input class="appearance-slider" type="range" id="appearancePulseBrightness" min="40" max="180" step="1" value="100" />
+              <output class="appearance-slider-value" id="appearancePulseBrightnessValue" for="appearancePulseBrightness">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="appearancePulseSize">
+              <span class="appearance-label">脉冲大小</span>
+              <input class="appearance-slider" type="range" id="appearancePulseSize" min="40" max="180" step="1" value="100" />
+              <output class="appearance-slider-value" id="appearancePulseSizeValue" for="appearancePulseSize">100%</output>
+            </label>
+            <p class="field-note">节点参数作用于所有层级；脉冲参数作用于选中节点时关系线上的流光。</p>
+          </section>
+          <section class="appearance-section">
+            <div class="appearance-section-head">
+              <h3>按课程覆盖</h3>
+              <span class="field-note">未单独设置的课程跟随全局</span>
+            </div>
+            <div class="appearance-courses" id="appearanceCourses"></div>
+          </section>
+        </div>
+        <div class="modal-foot">
+          <button class="btn primary" type="button" id="appearanceDone">完成</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-layer" id="kbLayer" hidden>
+      <div class="modal kb-modal" role="dialog" aria-modal="true" aria-labelledby="kbTitle">
+        <div class="modal-head">
+          <div>
+            <h2 id="kbTitle">知识库路径</h2>
+            <p class="field-note">打开时从知识文件读取，修改自动写回；不支持文件读写的环境改为按路径载入。</p>
+          </div>
+          <button class="x-btn" type="button" data-kb-close aria-label="关闭">×</button>
+        </div>
+        <div class="kb-body">
+          <div class="field">
+            <label for="kbPathInput">知识文件</label>
+            <input id="kbPathInput" type="text" spellcheck="false" autocomplete="off" placeholder="knowledge/seed.json" aria-label="知识文件路径" />
+          </div>
+          <div class="kb-actions">
+            <button class="btn ghost" type="button" id="kbPickBtn">选择知识文件</button>
+          </div>
+          <p class="field-note" id="kbPathHint">默认使用 knowledge/seed.json</p>
+          <p class="field-note">浏览器支持文件读写时，按钮会打开文件选择器，并把修改自动写回该文件；否则按输入框里的路径载入（相对路径或 http(s) 地址，只读）。</p>
+        </div>
+        <div class="modal-foot">
+          <button class="btn primary" type="button" id="kbDone">完成</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-layer" id="rewardLayer" hidden>
+      <div class="modal reward-modal" role="dialog" aria-modal="true" aria-labelledby="rewardTitle">
+        <div class="modal-head">
+          <div>
+            <h2 id="rewardTitle">打赏作者</h2>
+            <p class="field-note">如果这个项目帮到了你，可以请作者喝杯咖啡 ☕</p>
+          </div>
+          <button class="x-btn" type="button" data-reward-close aria-label="关闭">×</button>
+        </div>
+        <div class="reward-body">
+          <img id="rewardImage" src="./src/assets/reward.jpg" alt="微信赞赏码" width="1037" height="1037" />
+          <p class="field-note">微信扫码赞赏，金额随缘，感谢支持。</p>
+        </div>
+        <div class="modal-foot">
+          <button class="btn primary" type="button" id="rewardDone">完成</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-layer import-layer" id="importLayer" hidden>
+      <div class="modal import-modal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+        <div class="modal-head">
+          <div>
+            <h2 id="importTitle">导入 Markdown / PDF</h2>
+            <p>只导入标题和内容，不创建关系线；关系可以在星图中手动连接。</p>
+          </div>
+          <button class="x-btn" type="button" data-import-close aria-label="关闭">×</button>
+        </div>
+        <div class="import-body">
+          <div class="import-drop" id="importDrop">
+            <div class="import-drop-mark">↓</div>
+            <div class="import-drop-copy">
+              <b>把文件拖到这里</b>
+              <span>支持 .md / .markdown / .pdf，可多选</span>
+            </div>
+            <div class="import-pick-actions">
+              <button class="btn ghost" id="importFilesBtn" type="button">选择文件</button>
+              <button class="btn ghost" id="importFolderBtn" type="button">选择 Markdown 文件夹</button>
+            </div>
+          </div>
+          <div class="import-toolbar">
+            <label class="import-toolbar-field" for="importDefaultLevel">
+              <span>默认级别</span>
+              <select id="importDefaultLevel">
+                <option value="1">一级 · 课程</option>
+                <option value="2" selected>二级 · 章节</option>
+                <option value="3">三级 · 知识点</option>
+              </select>
+            </label>
+            <label class="import-toolbar-field" for="importDefaultCourse" id="importDefaultCourseField">
+              <span>一级节点</span>
+              <select id="importDefaultCourse"></select>
+            </label>
+            <label class="import-toolbar-field" for="importDefaultChapter" id="importDefaultChapterField" hidden>
+              <span>二级节点</span>
+              <select id="importDefaultChapter"></select>
+            </label>
+            <button class="link-btn import-apply-default" id="importApplyDefault" type="button">应用到全部</button>
+            <span class="import-count" id="importCount">未选择文件</span>
+          </div>
+          <div class="import-list-head">
+            <label class="import-check"><input id="importSelectAll" type="checkbox" checked /> 全选</label>
+            <span>标题、级别和上级都可以逐条调整</span>
+          </div>
+          <div class="import-list" id="importList"></div>
+          <div class="import-status" id="importStatus" role="status" aria-live="polite"></div>
+        </div>
+        <div class="modal-foot import-foot">
+          <span class="import-foot-note">正文会作为条目的子条目；长文本自动分段。</span>
+          <button class="link-btn" id="importClear" type="button">清空</button>
+          <span class="import-foot-gap"></span>
+          <button class="btn ghost" type="button" data-import-close>取消</button>
+          <button class="btn primary" id="importRun" type="button" disabled>导入</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-layer confirm-layer" id="confirmLayer" hidden>
+      <div class="modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <div class="modal-head">
+          <div>
+            <h2 id="confirmTitle">确认操作</h2>
+            <p class="field-note" id="confirmText"></p>
+          </div>
+          <button class="x-btn" type="button" data-confirm-cancel aria-label="关闭">×</button>
+        </div>
+        <div class="modal-foot">
+          <button class="btn ghost" type="button" data-confirm-cancel>取消</button>
+          <button class="btn primary" id="confirmOk" type="button">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="fatal" id="fatal" role="alert" hidden></div>
+    <input id="docFileInput" type="file" accept=".md,.markdown,.pdf,text/markdown,application/pdf" multiple hidden />
+    <input id="docFolderInput" type="file" accept=".md,.markdown,text/markdown" webkitdirectory multiple hidden />
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

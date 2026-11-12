@@ -1,0 +1,21 @@
+{
+  "name": "xintu",
+  "version": "0.2.0",
+  "private": true,
+  "license": "CC-BY-NC-SA-4.0",
+  "type": "module",
+  "description": "知识星图：个人知识点的星图 + 幕布式大纲笔记（monorepo）",
+  "author": "canik",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @starmap/web",
+    "build": "npm run build --workspace @starmap/web && node scripts/copy-dist.cjs",
+    "preview": "npm run preview --workspace @starmap/web",
+    "test": "node scripts/test.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
