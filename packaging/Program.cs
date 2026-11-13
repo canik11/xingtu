@@ -37,6 +37,7 @@ namespace KnowledgeStarmap
     {
         private readonly WebView2 webView;
         private readonly string userDataFolder;
+        private readonly string dataDirFile;
         private readonly string htmlPath;
         private bool isFullscreen;
         private FormBorderStyle savedBorderStyle;
@@ -46,9 +47,10 @@ namespace KnowledgeStarmap
         public MainForm(string baseDir, string htmlPath)
         {
             this.htmlPath = htmlPath;
-            this.userDataFolder = Path.Combine(
+            this.dataDirFile = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "KnowledgeStarmap", "WebView2");
+                "KnowledgeStarmap", "data-dir.txt");
+            this.userDataFolder = ResolveDataDir(this.dataDirFile);
 
             Text = "知识星图";
             StartPosition = FormStartPosition.CenterScreen;
@@ -92,6 +94,69 @@ namespace KnowledgeStarmap
             try { msg = e.TryGetWebMessageAsString(); } catch { return; }
             if (msg == "starmap:fullscreen") ToggleFullscreen();
             else if (msg == "starmap:escape" && isFullscreen) ToggleFullscreen();
+            else if (msg == "starmap:get-data-dir") SendDataDir();
+            else if (msg == "starmap:pick-data-dir") PickDataDir();
+        }
+
+        private static string DefaultDataDir()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "KnowledgeStarmap", "WebView2");
+        }
+
+        // 默认放在 %LOCALAPPDATA%；用户改过 data-dir.txt 时用用户指定的目录。
+        private static string ResolveDataDir(string dataDirFile)
+        {
+            try
+            {
+                if (File.Exists(dataDirFile))
+                {
+                    string dir = File.ReadAllText(dataDirFile).Trim();
+                    if (dir.Length > 0) return dir;
+                }
+            }
+            catch { }
+            return DefaultDataDir();
+        }
+
+        private void SendDataDir()
+        {
+            try
+            {
+                webView.CoreWebView2.PostWebMessageAsString("starmap:data-dir:" + userDataFolder);
+            }
+            catch { }
+        }
+
+        private void PickDataDir()
+        {
+            using (var dialog = new FolderBrowserDialog())
+            {
+                dialog.Description = "选择知识星图的数据目录。切换后需要重启，旧目录里的内容不会自动迁移。";
+                dialog.SelectedPath = userDataFolder;
+                dialog.ShowNewFolderButton = true;
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                string dir = dialog.SelectedPath;
+                if (string.IsNullOrEmpty(dir)) return;
+                try
+                {
+                    Directory.CreateDirectory(dir);
+                    Directory.CreateDirectory(Path.GetDirectoryName(dataDirFile));
+                    File.WriteAllText(dataDirFile, dir);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("无法使用这个目录：\n" + ex.Message, "知识星图",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                DialogResult answer = MessageBox.Show(
+                    "数据目录已改为：\n" + dir +
+                    "\n\n重启后生效。旧目录里的数据不会自动搬迁；如果里面有内容，请先在旧窗口「导出数据」，重启后再导入。\n\n现在重启吗？",
+                    "知识星图", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (answer == DialogResult.Yes) Application.Restart();
+            }
         }
 
         private void ToggleFullscreen()
