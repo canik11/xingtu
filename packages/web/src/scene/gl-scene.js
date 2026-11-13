@@ -664,20 +664,17 @@ class WebGLScene {
     if (prev < 0 || p >= prev) return;
     const visuals = sceneVisuals();
     if (!visuals || !visuals.length) return;
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
+    // 以球心为圆心，取最远可见节点的投影距离作为轮廓半径。
+    const center = worldToScreen(0, 0);
+    let r0 = 80;
     for (const v of visuals) {
-      minX = Math.min(minX, v.x);
-      maxX = Math.max(maxX, v.x);
-      minY = Math.min(minY, v.y);
-      maxY = Math.max(maxY, v.y);
+      const p = worldToScreen(v.x, v.y);
+      if (p.x < -120 || p.x > view.w + 120 || p.y < -120 || p.y > view.h + 120) continue;
+      r0 = Math.max(r0, Math.hypot(p.x - center.x, p.y - center.y));
     }
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    const r0 = Math.max(80, Math.hypot(maxX - minX, maxY - minY) / 2);
-    this.ambient.spawnRing(cx, cy, 0, r0 * 0.98, r0 * 1.38, 1500, 0.36, 0xa9c8ff);
+    r0 += 12;
+    // spawnRing 的 size 是精灵直径，这里换算成直径。
+    this.ambient.spawnRing(center.x, center.y, 0, r0 * 1.96, r0 * 2.76, 1500, 0.36, 0xa9c8ff);
   }
 
   render(t, dt) {
