@@ -118,7 +118,31 @@ async function bind(handle) {
 /** 选择并绑定一个知识文件，返回读取到的规范化数据。 */
 export async function pickKbFile() {
   if (!kbFileSupported()) throw new Error('unsupported');
-  const [handle] = await window.showOpenFilePicker({ types: pickerTypes(), multiple: false });
+  // 记住上次选择的文件位置：把上次的句柄作为 startIn，选择器会停在它所在的目录。
+  let lastHandle = null;
+  try {
+    lastHandle = await getHandle();
+  } catch {
+    /* IndexedDB 不可用时按默认目录。 */
+  }
+  let handles;
+  if (lastHandle) {
+    try {
+      handles = await window.showOpenFilePicker({
+        types: pickerTypes(),
+        multiple: false,
+        startIn: lastHandle,
+      });
+    } catch (err) {
+      // 用户主动取消：不要重试，直接当取消处理。
+      if (err && err.name === 'AbortError') throw new Error('cancelled');
+      // 上次的文件被移动/删除、句柄失效：退回默认目录再开一次。
+      handles = await window.showOpenFilePicker({ types: pickerTypes(), multiple: false });
+    }
+  } else {
+    handles = await window.showOpenFilePicker({ types: pickerTypes(), multiple: false });
+  }
+  const [handle] = handles || [];
   if (!handle) throw new Error('cancelled');
   await bind(handle);
   const norm = normalizeData(JSON.parse(await readText(handle)));

@@ -38,6 +38,10 @@ namespace KnowledgeStarmap
         private readonly WebView2 webView;
         private readonly string userDataFolder;
         private readonly string htmlPath;
+        private bool isFullscreen;
+        private FormBorderStyle savedBorderStyle;
+        private FormWindowState savedWindowState;
+        private Rectangle savedBounds;
 
         public MainForm(string baseDir, string htmlPath)
         {
@@ -67,16 +71,63 @@ namespace KnowledgeStarmap
             Load += async (sender, args) => await InitAsync();
         }
 
+        // 网页里按 F11 时通过 postMessage 通知壳程序切换全屏；Esc 只用于退出全屏。
+        private const string FullscreenBridgeScript = @"
+(function () {
+  if (!window.chrome || !window.chrome.webview) return;
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'F11') {
+      e.preventDefault();
+      window.chrome.webview.postMessage('starmap:fullscreen');
+    } else if (e.key === 'Escape') {
+      window.chrome.webview.postMessage('starmap:escape');
+    }
+  }, true);
+})();
+";
+
+        private void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            string msg;
+            try { msg = e.TryGetWebMessageAsString(); } catch { return; }
+            if (msg == "starmap:fullscreen") ToggleFullscreen();
+            else if (msg == "starmap:escape" && isFullscreen) ToggleFullscreen();
+        }
+
+        private void ToggleFullscreen()
+        {
+            if (!isFullscreen)
+            {
+                savedBorderStyle = FormBorderStyle;
+                savedWindowState = WindowState;
+                savedBounds = Bounds;
+                FormBorderStyle = FormBorderStyle.None;
+                WindowState = FormWindowState.Normal;
+                Bounds = Screen.FromControl(this).Bounds;
+                isFullscreen = true;
+            }
+            else
+            {
+                FormBorderStyle = savedBorderStyle;
+                Bounds = savedBounds;
+                WindowState = savedWindowState;
+                isFullscreen = false;
+            }
+        }
+
         private async Task InitAsync()
         {
             try
             {
                 CoreWebView2Environment env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
                 await webView.EnsureCoreWebView2Async(env);
+                webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+                await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(FullscreenBridgeScript);
                 webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
                 webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
                 webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
                 webView.CoreWebView2.Navigate(new Uri(htmlPath).AbsoluteUri);
+                webView.Focus();
             }
             catch (Exception ex)
             {
