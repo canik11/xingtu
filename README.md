@@ -4,7 +4,7 @@
 
 ![知识星图预览](preview.png)
 
-公开仓库只带 3 个示例知识点：高等数学、线性代数、概率论。演示库放在 `knowledge/seed.json`，也可以换成你自己的知识库。你自己的完整知识库只保存在本机；本机私有的 JSON 数据放在 `private_knowledge_data/`，该目录已被 `.gitignore` 忽略，不会进入公开仓库。`app/index.html` 是构建好的单文件版本，随仓库一起提交，下载后双击即可试用。
+公开仓库只带 3 个示例知识点：高等数学、线性代数、概率论。演示库放在 `packages/core/src/seed/seed.json`，可以通过「知识库路径」换成你自己的知识库。你自己的完整知识库只保存在本机；本机私有的 JSON 数据放在 `private_knowledge_data/`，该目录已被 `.gitignore` 忽略，不会进入公开仓库。`app/index.html` 是构建好的单文件版本，随仓库一起提交，下载后双击即可试用。
 
 ## 运行
 
@@ -108,13 +108,13 @@ app/index.html
 
 - 按钮会根据运行环境自动选择方式：
   - 浏览器支持文件读写（Chrome / Edge 等）时显示“选择知识文件”：选一个 JSON 绑定，浏览器会请求一次读写授权，之后保存自动写回该文件
-  - 不支持文件读写的环境显示“从路径载入”：按输入框里的路径读取（`knowledge/seed.json` 这类相对路径或 `http(s)://` 地址），只读、不写回
+  - 不支持文件读写的环境显示“从路径载入”：按输入框里的路径读取（相对路径或 `http(s)://` 地址），只读、不写回
 - 输入框里填了非默认路径时，按钮会按该路径载入
 - 绑定信息只保存在本机（文件句柄存在 IndexedDB，路径存在 `localStorage`），不影响导出的 JSON 数据；不会删除文件夹里已有的文件
 
 > 提示：`file://` 双击打开时，浏览器对本地文件的授权行为因版本而异；如果选择文件后刷新需要重新授权，重新点一次“选择知识文件”即可。
 
-`knowledge/` 是放知识库 JSON 的地方，`seed.json` 是出厂演示库。注意：这个文件夹里的 `.json` 默认会被 git 跟踪，私人知识库不要直接提交。
+演示库 `seed.json` 是构建原料，和种子模型一起放在 `packages/core/src/seed/`，构建时内联进 `app/index.html`；已经构建好的单文件不依赖它。想放自己的知识库，用 `private_knowledge_data/`（已被 `.gitignore` 忽略）或任意本地目录，再通过「知识库路径」绑定。
 
 ### 外观
 
@@ -174,9 +174,8 @@ app/index.html
 
 ```text
 xintu/
-├─ knowledge/           # 知识库文件夹：seed.json 是出厂演示库，也可以放自己的 JSON
 ├─ packages/
-│  ├─ core/             # 数据模型、种子、力导向、存储
+│  ├─ core/             # 数据模型、种子（含 seed.json）、力导向、存储
 │  └─ web/              # 界面源码（Vite）
 ├─ app/                 # 构建好的单文件版本 app/index.html（随仓库提交）
 ├─ scripts/             # 构建、测试
@@ -204,14 +203,14 @@ node scripts/smoke.cjs "file:///D:/dsh/WorkSpace/xintu/app/index.html?debug"
 
 ## 数据说明
 
-- `knowledge/seed.json` 是出厂演示库，只含 3 个示例知识点；应用默认从这里读取
+- `packages/core/src/seed/seed.json` 是出厂演示库，只含 3 个示例知识点；应用默认使用构建时内联的这份数据
 - `localStorage` 是浏览器里的实时数据库，键名 `starmap.knowledge.v1`
 - JSON 是数据快照，可导入 / 导出
 - “知识库路径”可以把知识库绑定到一个本地 JSON 文件（自动读写），也可以载入一个 `http(s)` 地址（只读）
 - `private_knowledge_data/` 是本机私有数据目录，已被 `.gitignore` 忽略，不会上传
   - `my_knowledge.json`：当前完整知识库，可在应用里通过 `⋯ → 知识库路径` 绑定或载入
   - `知识星图-*.json`：历史导出快照
-- “恢复初始知识库”会重新使用 `knowledge/seed.json` 里的演示库
+- “恢复初始知识库”会重新使用内置演示库（来自 `packages/core/src/seed/seed.json`）
 
 ## 支持作者
 

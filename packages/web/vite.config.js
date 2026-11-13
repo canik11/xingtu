@@ -8,9 +8,9 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const KNOWLEDGE_DIR = fileURLToPath(new URL('../../knowledge/', import.meta.url));
+const KNOWLEDGE_DIR = fileURLToPath(new URL('../core/src/seed/', import.meta.url));
 
-// Serve repository knowledge/*.json in dev/preview so relative paths like
+// Serve the bundled demo seed in dev/preview so relative paths like
 // "knowledge/seed.json" work from the settings dialog. Only .json files inside
 // that folder are exposed.
 function knowledgeFilesPlugin() {

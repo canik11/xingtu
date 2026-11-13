@@ -1,4 +1,4 @@
-// 知识库路径：默认指向仓库里的 knowledge/seed.json。
+// 知识库路径：默认值是示例路径，开发服务器把 /knowledge/ 映射到包内种子目录。
 // 用户可以在「知识库路径」里改成自己的 JSON（http(s) 地址或相对路径）。
 import { normalizeData } from '@starmap/core';
 

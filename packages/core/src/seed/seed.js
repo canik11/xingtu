@@ -1,7 +1,6 @@
-// 公开演示种子：数据本体存放在仓库根 knowledge/seed.json（用户的知识库文件夹）。
-// 用户可以直接编辑该文件，或在设置里把知识库路径指向自己的 JSON。
-// 私人的完整知识库不进入这个文件，也不进入公开构建。
-import seedSource from '../../../../knowledge/seed.json' with { type: 'json' };
+// 公开演示种子：数据本体与模型放在一起，构建时内联进单文件产物。
+// 用户可以把「知识库路径」指向自己的 JSON；私人的完整知识库不进入公开构建。
+import seedSource from './seed.json' with { type: 'json' };
 
 export const DEFAULT_CATEGORIES = (seedSource.categories || []).map((c) => ({
   id: c.id,

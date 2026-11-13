@@ -43,7 +43,7 @@ export function syncKbUi() {
   el.kbPathHint.textContent = name
     ? `已绑定知识文件：${name}`
     : isDefaultKbPath(path)
-      ? '默认使用 knowledge/seed.json'
+      ? '默认使用内置演示库'
       : `使用自定义路径：${path}`;
   el.kbPickBtn.textContent = kbFileSupported() ? '选择知识文件' : '从路径载入';
 }
