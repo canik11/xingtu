@@ -6,7 +6,7 @@ import { worldToScreen } from '../camera.js';
 import { drawSpace, drawVignette, drawGrain } from './space.js';
 import { drawAmbient } from './ambient.js';
 import { getFocus, projectFocusNode } from '../focus.js';
-import { edgeDefaultRgb, edgeIsMastered, edgeMasteredRgb, masteryRgb, rgba } from '../mastery.js';
+import { edgeDefaultRgb, edgeIsMastered, edgeMasteredRgb, masteryRgb, rgba, scaledAppearance } from '../mastery.js';
 import { drawIdleFlare } from './idle-fx.js';
 
 const FONT =
@@ -103,10 +103,11 @@ function drawEdges(ctx, t, graph) {
     if (ui.selection) {
       alpha = active ? 0.62 : adjacency.has(e.a) || adjacency.has(e.b) ? alpha * 0.6 : alpha * 0.12;
     }
-    if (ui.searchTerm) alpha *= 0.3;
-    if (e.kind === 'topic') alpha *= 1.15;
     const edgeDepth = Math.max(projectFocusNode(e.pa).depth, projectFocusNode(e.pb).depth);
     alpha *= 0.42 + edgeDepth * 0.58;
+    if (e.kind === 'topic') alpha *= 1.15;
+    if (ui.searchTerm) alpha *= 0.3;
+    alpha *= scaledAppearance().edgeBrightness;
     const goldEdge = edgeIsMastered(e.pa.entity, e.pb.entity);
     const edgeRgb = goldEdge ? edgeMasteredRgb(e.pa.entity, e.pb.entity) : edgeDefaultRgb(e.pa.entity, e.pb.entity);
 

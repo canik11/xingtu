@@ -73,6 +73,8 @@ export function cacheDom() {
   el.appearanceNodeBrightnessValue = $id('appearanceNodeBrightnessValue');
   el.appearanceNodeSize = $id('appearanceNodeSize');
   el.appearanceNodeSizeValue = $id('appearanceNodeSizeValue');
+  el.appearanceEdgeBrightness = $id('appearanceEdgeBrightness');
+  el.appearanceEdgeBrightnessValue = $id('appearanceEdgeBrightnessValue');
   el.appearancePulseBrightness = $id('appearancePulseBrightness');
   el.appearancePulseBrightnessValue = $id('appearancePulseBrightnessValue');
   el.appearancePulseSize = $id('appearancePulseSize');
@@ -104,12 +106,6 @@ export function cacheDom() {
   el.qualityAmbientValue = $id('qualityAmbientValue');
   el.qualityDpr = $id('qualityDpr');
   el.qualityDprValue = $id('qualityDprValue');
-  el.qualityGlow2d = $id('qualityGlow2d');
-  el.qualityGlow2dValue = $id('qualityGlow2dValue');
-  el.qualityStars2d = $id('qualityStars2d');
-  el.qualityStars2dValue = $id('qualityStars2dValue');
-  el.qualityStarSize2d = $id('qualityStarSize2d');
-  el.qualityStarSize2dValue = $id('qualityStarSize2dValue');
   el.qualitySpread = $id('qualitySpread');
   el.qualitySpreadValue = $id('qualitySpreadValue');
   el.qualityModeButtons = document.querySelectorAll('[data-view-mode]');

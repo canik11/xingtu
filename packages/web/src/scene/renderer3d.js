@@ -10,7 +10,7 @@ import {
   sceneEdges,
   innerSelectionSet
 } from '../hierarchy.js';
-import { edgeDefaultRgb, edgeIsMastered, edgeMasteredRgb, masteryRgb, rgba } from '../mastery.js';
+import { edgeDefaultRgb, edgeIsMastered, edgeMasteredRgb, masteryRgb, rgba, scaledAppearance } from '../mastery.js';
 import { drawIdleFlare } from './idle-fx.js';
 
 const FONT =
@@ -89,6 +89,7 @@ function drawEdges3D(ctx, t, edges) {
   const labels = [];
   // 心跳光脉冲：连线跟着整片星海一起亮一点。
   const beat = 1 + (ui.idlePulse || 0) * 0.12;
+  const style = scaledAppearance();
 
   for (const e of edges) {
     const pa = screenPos(e.pa);
@@ -103,7 +104,7 @@ function drawEdges3D(ctx, t, edges) {
     if (e.kind === 'topic') alpha *= 1.18;
     if (activeSel) alpha = active ? 0.58 : alpha * 0.2;
     if (ui.searchTerm && ui.level === 'sphere') alpha *= 0.25;
-    alpha = clamp(alpha, 0, 0.66) * beat;
+    alpha = clamp(alpha * style.edgeBrightness, 0, 0.66) * beat;
     const goldEdge = edgeIsMastered(e.pa.node, e.pb.node);
     const edgeRgb = goldEdge ? edgeMasteredRgb(e.pa.node, e.pb.node) : edgeDefaultRgb(e.pa.node, e.pb.node);
 

@@ -103,6 +103,7 @@ function scaleInputs() {
   return [
     [el.appearanceNodeBrightness, el.appearanceNodeBrightnessValue, 'nodeBrightness'],
     [el.appearanceNodeSize, el.appearanceNodeSizeValue, 'nodeSize'],
+    [el.appearanceEdgeBrightness, el.appearanceEdgeBrightnessValue, 'edgeBrightness'],
     [el.appearancePulseBrightness, el.appearancePulseBrightnessValue, 'pulseBrightness'],
     [el.appearancePulseSize, el.appearancePulseSizeValue, 'pulseSize']
   ];
@@ -117,27 +118,35 @@ function syncScaleUi() {
   }
 }
 
-/** 画质滑块：存储值是实际倍率，滑杆显示百分比（像素预算显示 MP）。 */
+/** 画质滑块：存储值是实际倍率，滑杆显示百分比（像素预算显示 MP）。
+ *  groups 表示滑杆同时写入哪几组：星点密度/大小/光晕是 3D 与 2D 共用的背景参数。 */
 function qualityInputs() {
   return [
-    ['three', 'maxScale', el.qualityMaxScale, el.qualityMaxScaleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['three', 'pixelBudget', el.qualityPixelBudget, el.qualityPixelBudgetValue, 1, (v) => `${v} MP`],
-    ['three', 'stars', el.qualityStars, el.qualityStarsValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['three', 'starSize', el.qualityStarSize, el.qualityStarSizeValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['three', 'glow', el.qualityGlow, el.qualityGlowValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['three', 'sparkle', el.qualitySparkle, el.qualitySparkleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['three', 'ambient', el.qualityAmbient, el.qualityAmbientValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['two', 'dprCap', el.qualityDpr, el.qualityDprValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['two', 'glow', el.qualityGlow2d, el.qualityGlow2dValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['two', 'stars', el.qualityStars2d, el.qualityStars2dValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['two', 'starSize', el.qualityStarSize2d, el.qualityStarSize2dValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    ['two', 'spread', el.qualitySpread, el.qualitySpreadValue, 0.01, (v) => `${Math.round(v * 100)}%`]
+    [['three'], 'maxScale', el.qualityMaxScale, el.qualityMaxScaleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    [['three'], 'pixelBudget', el.qualityPixelBudget, el.qualityPixelBudgetValue, 1, (v) => `${v} MP`],
+    [['three', 'two'], 'stars', el.qualityStars, el.qualityStarsValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    [['three', 'two'], 'starSize', el.qualityStarSize, el.qualityStarSizeValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    [['three', 'two'], 'glow', el.qualityGlow, el.qualityGlowValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    [['three'], 'sparkle', el.qualitySparkle, el.qualitySparkleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    [['three'], 'ambient', el.qualityAmbient, el.qualityAmbientValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    [['two'], 'dprCap', el.qualityDpr, el.qualityDprValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    [['two'], 'spread', el.qualitySpread, el.qualitySpreadValue, 0.01, (v) => `${Math.round(v * 100)}%`]
   ];
+}
+
+/** 3D 与 2D 共享的三个背景参数：老数据里两组可能不一致，打开面板时以 3D 组为准合并。 */
+function syncSharedQuality() {
+  const q = quality();
+  for (const key of ['stars', 'starSize', 'glow']) {
+    if (q.two[key] !== q.three[key]) setQuality('two', key, q.three[key]);
+  }
 }
 
 function syncQualityUi() {
   const q = quality();
-  for (const [group, key, input, output, factor, format] of qualityInputs()) {
+  const current = q.mode === '2d' ? 'two' : 'three';
+  for (const [groups, key, input, output, factor, format] of qualityInputs()) {
+    const group = groups.includes(current) ? current : groups[0];
     const value = q[group][key];
     input.value = String(value / factor);
     output.textContent = format(value);
@@ -244,6 +253,7 @@ function updateCourseRow(input) {
 }
 
 export function bindAppearance() {
+  syncSharedQuality();
   el.appearanceDefault.addEventListener('input', () => {
     setGlobalAppearance('defaultColor', el.appearanceDefault.value);
     syncColorUi();
@@ -274,10 +284,10 @@ export function bindAppearance() {
     });
   }
 
-  for (const [group, key, input, output, factor, format] of qualityInputs()) {
+  for (const [groups, key, input, output, factor, format] of qualityInputs()) {
     input.addEventListener('input', () => {
       const value = Number(input.value) * factor;
-      setQuality(group, key, value);
+      for (const group of groups) setQuality(group, key, value);
       output.textContent = format(value);
     });
   }

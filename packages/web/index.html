@@ -214,19 +214,9 @@
           </section>
           <section class="appearance-section">
             <div class="appearance-section-head">
-              <h3>3D 星海画质</h3>
-              <button class="link-btn" type="button" data-quality-reset="three">恢复默认</button>
+              <h3>星空背景</h3>
+              <button class="link-btn" type="button" data-quality-reset="all">恢复默认</button>
             </div>
-            <label class="appearance-slider-row" for="qualityMaxScale">
-              <span class="appearance-label">渲染倍率</span>
-              <input class="appearance-slider" type="range" id="qualityMaxScale" min="120" max="300" step="5" value="300" />
-              <output class="appearance-slider-value" id="qualityMaxScaleValue" for="qualityMaxScale">300%</output>
-            </label>
-            <label class="appearance-slider-row" for="qualityPixelBudget">
-              <span class="appearance-label">像素预算</span>
-              <input class="appearance-slider" type="range" id="qualityPixelBudget" min="6" max="18" step="0.5" value="12" />
-              <output class="appearance-slider-value" id="qualityPixelBudgetValue" for="qualityPixelBudget">12 MP</output>
-            </label>
             <label class="appearance-slider-row" for="qualityStars">
               <span class="appearance-label">星点密度</span>
               <input class="appearance-slider" type="range" id="qualityStars" min="20" max="300" step="5" value="100" />
@@ -242,6 +232,18 @@
               <input class="appearance-slider" type="range" id="qualityGlow" min="20" max="300" step="1" value="100" />
               <output class="appearance-slider-value" id="qualityGlowValue" for="qualityGlow">100%</output>
             </label>
+            <p class="field-note">星点密度、星点大小与光晕亮度同时作用于 3D 星海和 2D 星图，两种模式共享这一组星空背景。</p>
+            <div class="appearance-subhead">3D 星海专属</div>
+            <label class="appearance-slider-row" for="qualityMaxScale">
+              <span class="appearance-label">渲染倍率</span>
+              <input class="appearance-slider" type="range" id="qualityMaxScale" min="120" max="300" step="5" value="300" />
+              <output class="appearance-slider-value" id="qualityMaxScaleValue" for="qualityMaxScale">300%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualityPixelBudget">
+              <span class="appearance-label">像素预算</span>
+              <input class="appearance-slider" type="range" id="qualityPixelBudget" min="6" max="18" step="0.5" value="12" />
+              <output class="appearance-slider-value" id="qualityPixelBudgetValue" for="qualityPixelBudget">12 MP</output>
+            </label>
             <label class="appearance-slider-row" for="qualitySparkle">
               <span class="appearance-label">星芒闪烁</span>
               <input class="appearance-slider" type="range" id="qualitySparkle" min="20" max="300" step="1" value="100" />
@@ -252,39 +254,19 @@
               <input class="appearance-slider" type="range" id="qualityAmbient" min="20" max="300" step="5" value="100" />
               <output class="appearance-slider-value" id="qualityAmbientValue" for="qualityAmbient">100%</output>
             </label>
-            <p class="field-note">倍率越高越清晰、越吃显卡；像素预算限制单帧总像素，低配设备可调小。星点大小、密度、亮度都已放宽到 300%，光晕与星芒也会作用到节点。</p>
-          </section>
-          <section class="appearance-section">
-            <div class="appearance-section-head">
-              <h3>2D 星图画质</h3>
-              <button class="link-btn" type="button" data-quality-reset="two">恢复默认</button>
-            </div>
+            <p class="field-note">倍率越高越清晰、越吃显卡；像素预算限制单帧总像素，低配设备可调小。星芒与环境粒子只影响 3D 星海。</p>
+            <div class="appearance-subhead">2D 星图专属</div>
             <label class="appearance-slider-row" for="qualityDpr">
               <span class="appearance-label">渲染倍率</span>
               <input class="appearance-slider" type="range" id="qualityDpr" min="100" max="300" step="10" value="200" />
               <output class="appearance-slider-value" id="qualityDprValue" for="qualityDpr">200%</output>
-            </label>
-            <label class="appearance-slider-row" for="qualityGlow2d">
-              <span class="appearance-label">光晕亮度</span>
-              <input class="appearance-slider" type="range" id="qualityGlow2d" min="20" max="300" step="1" value="100" />
-              <output class="appearance-slider-value" id="qualityGlow2dValue" for="qualityGlow2d">100%</output>
-            </label>
-            <label class="appearance-slider-row" for="qualityStars2d">
-              <span class="appearance-label">星点密度</span>
-              <input class="appearance-slider" type="range" id="qualityStars2d" min="20" max="300" step="5" value="100" />
-              <output class="appearance-slider-value" id="qualityStars2dValue" for="qualityStars2d">100%</output>
-            </label>
-            <label class="appearance-slider-row" for="qualityStarSize2d">
-              <span class="appearance-label">星点大小</span>
-              <input class="appearance-slider" type="range" id="qualityStarSize2d" min="30" max="300" step="5" value="100" />
-              <output class="appearance-slider-value" id="qualityStarSize2dValue" for="qualityStarSize2d">100%</output>
             </label>
             <label class="appearance-slider-row" for="qualitySpread">
               <span class="appearance-label">星点间距</span>
               <input class="appearance-slider" type="range" id="qualitySpread" min="60" max="160" step="5" value="100" />
               <output class="appearance-slider-value" id="qualitySpreadValue" for="qualitySpread">100%</output>
             </label>
-            <p class="field-note">间距调大，2D 星点铺得更开；星点大小、密度、亮度上限都提高到了 300%，渲染倍率决定清晰度，越高越吃显卡。</p>
+            <p class="field-note">间距调大，2D 星点铺得更开；渲染倍率决定 2D 画面的清晰度，越高越吃显卡。</p>
           </section>
           <section class="appearance-section">
             <div class="appearance-section-head">
@@ -320,6 +302,11 @@
               <input class="appearance-slider" type="range" id="appearanceNodeSize" min="40" max="180" step="1" value="100" />
               <output class="appearance-slider-value" id="appearanceNodeSizeValue" for="appearanceNodeSize">100%</output>
             </label>
+            <label class="appearance-slider-row" for="appearanceEdgeBrightness">
+              <span class="appearance-label">关系线亮度</span>
+              <input class="appearance-slider" type="range" id="appearanceEdgeBrightness" min="40" max="180" step="1" value="100" />
+              <output class="appearance-slider-value" id="appearanceEdgeBrightnessValue" for="appearanceEdgeBrightness">100%</output>
+            </label>
             <label class="appearance-slider-row" for="appearancePulseBrightness">
               <span class="appearance-label">脉冲亮度</span>
               <input class="appearance-slider" type="range" id="appearancePulseBrightness" min="40" max="180" step="1" value="100" />
@@ -330,7 +317,7 @@
               <input class="appearance-slider" type="range" id="appearancePulseSize" min="40" max="180" step="1" value="100" />
               <output class="appearance-slider-value" id="appearancePulseSizeValue" for="appearancePulseSize">100%</output>
             </label>
-            <p class="field-note">节点参数作用于所有层级；脉冲参数作用于选中节点时关系线上的流光。</p>
+            <p class="field-note">节点与关系线参数作用于所有层级；关系线亮度只改线的明暗，不改变线宽与连接关系。脉冲参数作用于选中节点时关系线上的流光。</p>
           </section>
           <section class="appearance-section">
             <div class="appearance-section-head">

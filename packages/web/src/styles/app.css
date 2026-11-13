@@ -539,6 +539,16 @@ body.appearance-dragging {
   margin: 0;
   text-align: right;
 }
+/* 合并后的“星空背景”里，用小标题分隔 3D / 2D 专属项。 */
+.appearance-subhead {
+  margin: 14px 0 6px;
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  color: rgba(160, 196, 238, .58);
+}
+.appearance-subhead:first-of-type {
+  margin-top: 8px;
+}
 .appearance-row {
   display: flex;
   align-items: center;

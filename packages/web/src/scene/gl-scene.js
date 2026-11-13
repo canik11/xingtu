@@ -130,10 +130,12 @@ class WebGLScene {
     this.edgeMain.blendMode = 'add';
     this.root.addChild(this.edgeGlow, this.edgeMain);
 
+    this.nodeShadeLayer = new Container();
     this.nodeGlowLayer = new Container();
     this.nodeCoreLayer = new Container();
     this.nodeFlareLayer = new Container();
-    this.root.addChild(this.nodeGlowLayer, this.nodeFlareLayer, this.nodeCoreLayer);
+    // 节点衬底：2D 星图里垫在关系线之上、光晕之下，让穿过节点的线暗下去，节点始终压在线上面。
+    this.root.addChild(this.nodeShadeLayer, this.nodeGlowLayer, this.nodeFlareLayer, this.nodeCoreLayer);
 
     this.edgePulseLayer = new Container();
     this.root.addChild(this.edgePulseLayer);
@@ -205,11 +207,15 @@ class WebGLScene {
     const flare = new Sprite(nodeStarTexture());
     flare.anchor.set(0.5);
     flare.blendMode = 'add';
-    halo.visible = core.visible = flare.visible = false;
+    // 2D 星图专用暗盘：用深色替换核心纹理，垫在线与节点光晕之间。
+    const shade = new Sprite(coreTexture());
+    shade.anchor.set(0.5);
+    halo.visible = core.visible = flare.visible = shade.visible = false;
+    this.nodeShadeLayer.addChild(shade);
     this.nodeGlowLayer.addChild(halo);
     this.nodeFlareLayer.addChild(flare);
     this.nodeCoreLayer.addChild(core);
-    const record = { halo, core, flare };
+    const record = { halo, core, flare, shade };
     this.nodes.set(id, record);
     return record;
   }
@@ -251,28 +257,42 @@ class WebGLScene {
   drawNode(id, x, y, rad, depth, dim, active, hovered, rgb, born, isPoint = false, lowDetail = false, t = 0, gain = 1, haloScale = 1) {
     const rec = this.ensureNode(id);
     this.usedNodes.add(id);
+    const twoD = quality().mode === '2d';
+    // 2D 星图：节点下面垫一块近背景色的暗盘，关系线从节点背后穿过时会被压暗，
+    // 节点的光晕与核心仍在暗盘上层，所以读起来始终是“节点压着线”。
+    if (twoD) {
+      const shadeR = rad * 3.4;
+      rec.shade.visible = rad > 0.4;
+      rec.shade.position.set(x, y);
+      rec.shade.width = shadeR * 2;
+      rec.shade.height = shadeR * 2;
+      rec.shade.alpha = Math.min(0.95, 0.72 * dim * born + 0.2);
+      rec.shade.tint = 0x050912;
+    } else if (rec.shade.visible) {
+      rec.shade.visible = false;
+    }
     let hash = 0;
     for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 997;
     // 光芒与核心保持 1:3：核心精灵直径 2*rad，光晕直径 6*rad。
-    // 选中态不再额外放大光晕，否则会压住周围节点和标签。
-    const haloR = rad * 3.0 * haloScale;
+    // 选中态不再额外放大光晕，否则会压住周围节点和标签。2D 的光晕再略大一点，让节点更醒目。
+    const haloR = rad * (twoD ? 3.8 : 3.0) * haloScale;
     const haloBase = active || hovered ? 0.11 + depth * 0.16 : 0.075 + depth * 0.10;
     const glowK = modeGlow();
     // 心跳光脉冲：整片星海一起轻轻亮一下，节点光晕再放大一点，但不刺眼。
     const pulse = 1 + (ui.idlePulse || 0) * 0.34;
-    const alpha = haloBase * dim * born * (active ? 1.4 : hovered ? 1.2 : 1) * glowK;
+    const alpha = haloBase * dim * born * (active ? 1.4 : hovered ? 1.2 : 1) * glowK * (twoD ? 1.15 : 1);
     rec.halo.visible = alpha > 0.012 && rad > 0.4 && !(isPoint && lowDetail);
     rec.halo.position.set(x, y);
     rec.halo.width = haloR * 2;
     rec.halo.height = haloR * 2;
-    rec.halo.alpha = Math.min(active || hovered ? 0.5 : 0.38, alpha * 1.5 * gain * pulse);
+    rec.halo.alpha = Math.min((active || hovered ? 0.5 : 0.38) + (twoD ? 0.08 : 0), alpha * 1.5 * gain * pulse);
     rec.halo.tint = rgbHex(rgb);
 
     rec.core.visible = rad > 0.3 && dim * born > 0.02;
     rec.core.position.set(x, y);
     rec.core.width = rad * 2;
     rec.core.height = rad * 2;
-    rec.core.alpha = Math.min(1, 0.76 * dim * born * gain * (1 + (ui.idlePulse || 0) * 0.14));
+    rec.core.alpha = Math.min(1, 0.76 * dim * born * gain * (1 + (ui.idlePulse || 0) * 0.14) * (twoD ? 1.08 : 1));
     rec.core.tint = rgbHex(rgb.map((v) => Math.min(255, v + 8)));
 
     // Every node gets its own resting cross-star. The star is four
@@ -390,11 +410,18 @@ class WebGLScene {
     const active = selectedId();
     const hover = hoveredId();
     const style = scaledAppearance();
+    const twoD = quality().mode === '2d';
     const innerGraph = ui.innerGraph;
     const born = ui.level === 'inner' && innerGraph ? innerGraph.born : 0;
+    // 2D 星图：先算好每个节点的屏幕半径，让关系线在节点边缘内缩，线不会戳进节点里。
+    const rads = new Map();
+    for (const v of visuals) {
+      const base = Math.max(1.7, v.r * cam.scale * (0.6 + v.depth * 0.7)) * style.nodeSize;
+      rads.set(v.id, twoD ? base * 1.32 : base);
+    }
     // At full three-level fit the point cloud is tiny and dense. Halos are
     // skipped and cross-stars are faint/small until the user zooms in.
-    const lowDetail = ui.level === 'sphere' && ui.sphereScope >= 3 && cam.scale < 1.15;
+    const lowDetail = ui.level === 'sphere' && ui.sphereScope >= 3 && cam.scale < 1.15 && !twoD;
 
     this.edgeGlow.clear();
     this.edgeMain.clear();
@@ -413,24 +440,47 @@ class WebGLScene {
       if (e.kind === 'point') alpha *= 0.42;
       if (e.kind === 'topic') alpha *= 1.18;
       if (active) alpha = isActive ? 0.58 : alpha * 0.2;
-      alpha = clamp(alpha, 0, 0.66);
+      if (twoD) alpha *= 0.62;
+      alpha = clamp(alpha * style.edgeBrightness, 0, 0.66);
       const gold = edgeIsMastered(e.pa.node, e.pb.node);
       const edgeRgb = gold ? edgeMasteredRgb(e.pa.node, e.pb.node) : edgeDefaultRgb(e.pa.node, e.pb.node);
       const color = rgbHex(edgeRgb);
+      // 2D 星图：关系线两端缩到节点衬底之外，节点始终“压”在线上。
+      let ax = pa.x;
+      let ay = pa.y;
+      let bx = pb.x;
+      let by = pb.y;
+      if (twoD) {
+        const ra = (rads.get(e.a) || 0) * 1.45;
+        const rb = (rads.get(e.b) || 0) * 1.45;
+        const dx = pb.x - pa.x;
+        const dy = pb.y - pa.y;
+        const len = Math.hypot(dx, dy);
+        if (len > ra + rb + 6) {
+          const ux = dx / len;
+          const uy = dy / len;
+          ax = pa.x + ux * ra;
+          ay = pa.y + uy * ra;
+          bx = pb.x - ux * rb;
+          by = pb.y - uy * rb;
+        }
+      }
       // 心跳时关系光丝跟着亮一点，让“整片星海亮一下”也扫到连线。
       const beat = 1 + (ui.idlePulse || 0) * 0.12;
-      this.edgeGlow.moveTo(pa.x, pa.y).lineTo(pb.x, pb.y).stroke({
-        width: isActive ? 8 : 5.2,
+      const glowWidth = twoD ? (isActive ? 6.5 : 2.8) : (isActive ? 8 : 5.2);
+      const mainWidth = twoD ? (isActive ? 1.1 : 0.6) : (isActive ? 1.45 : 0.95);
+      this.edgeGlow.moveTo(ax, ay).lineTo(bx, by).stroke({
+        width: glowWidth,
         color,
         alpha: Math.min(1, (gold ? Math.min(0.3, alpha * 0.24) : alpha * 0.16) * beat)
       });
-      this.edgeMain.moveTo(pa.x, pa.y).lineTo(pb.x, pb.y).stroke({
-        width: isActive ? 1.45 : 0.95,
+      this.edgeMain.moveTo(ax, ay).lineTo(bx, by).stroke({
+        width: mainWidth,
         color,
         alpha: Math.min(1, (gold ? Math.min(0.8, alpha * 1.08) : alpha) * beat)
       });
       if (isActive) {
-        pulseInfos.push({ pa, pb, color, alpha, gold });
+        pulseInfos.push({ pa: { x: ax, y: ay }, pb: { x: bx, y: by }, color, alpha, gold });
       }
       if ((isActive || (ui.level === 'sphere' && e.label && cam.scale > 1.45 && front > 0.72)) && e.label) {
         edgeLabels.push({ e, pa, pb, active: isActive });
@@ -457,7 +507,7 @@ class WebGLScene {
     for (const v of ordered) {
       const p = positions.get(v.id);
       if (!p || !this.onScreen(p, 70)) continue;
-      const rad = Math.max(1.7, v.r * cam.scale * (0.6 + v.depth * 0.7)) * style.nodeSize;
+      const rad = rads.get(v.id) ?? Math.max(1.7, v.r * cam.scale * (0.6 + v.depth * 0.7)) * style.nodeSize;
       const isActive = v.id === (ui.level === 'inner' ? ui.innerSelection : ui.selection);
       const isHovered = v.id === hover;
       let dim = depthDim(v) * age;
@@ -466,7 +516,8 @@ class WebGLScene {
         dim *= set && set.has(v.id) ? 0.72 : 0.16;
       }
       const rgb = masteryRgb(v.node);
-      this.drawNode(v.id, p.x, p.y, rad, v.depth, dim, isActive, isHovered, rgb, 1, v.kind === 'point', lowDetail, t, style.nodeBrightness);
+      // 2D 星图不做低细节裁剪：平面节点间距大，光晕与星芒都要完整，节点才醒目。
+      this.drawNode(v.id, p.x, p.y, rad, v.depth, dim, isActive, isHovered, rgb, 1, v.kind === 'point', lowDetail && !twoD, t, style.nodeBrightness);
       labelNodes.push({ v, p, rad, dim, selected: isActive || isHovered });
       if (isActive) this.drawRings(p.x, p.y, rad, rgb, true, t);
     }
@@ -498,12 +549,20 @@ class WebGLScene {
       return;
     }
     const style = scaledAppearance();
+    const twoD = quality().mode === '2d';
     const positions = new Map();
     const depths = new Map();
     for (const n of graph.nodes) {
       const p = projectFocusNode(n);
       positions.set(n.id, worldToScreen(p.x, p.y));
       depths.set(n.id, p.depth);
+    }
+    // 2D 星图：节点半径放大一点并把关系线两端缩到节点边缘，节点压在线上面。
+    const rads = new Map();
+    for (const n of graph.nodes) {
+      const depth = depths.get(n.id) || 0;
+      const base = Math.max(1.8, n.r * cam.scale * (0.74 + depth * 0.5)) * style.nodeSize;
+      rads.set(n.id, twoD ? base * 1.32 : base);
     }
     const adjacency = new Set();
     if (ui.selection) {
@@ -536,26 +595,46 @@ class WebGLScene {
       const color = rgbHex(edgeRgb);
       // 外部节点的关系线改虚线：一眼区分“本节点下级”和“别的课程/章节”。
       const dashed = e.pa.kind === 'external' || e.pb.kind === 'external';
-      const glowWidth = active ? 8 : e.kind === 'topic' ? 6.5 : 6;
+      let ax = pa.x;
+      let ay = pa.y;
+      let bx = pb.x;
+      let by = pb.y;
+      if (twoD) {
+        const ra = (rads.get(e.a) || 0) * 1.45;
+        const rb = (rads.get(e.b) || 0) * 1.45;
+        const dx = pb.x - pa.x;
+        const dy = pb.y - pa.y;
+        const len = Math.hypot(dx, dy);
+        if (len > ra + rb + 6) {
+          const ux = dx / len;
+          const uy = dy / len;
+          ax = pa.x + ux * ra;
+          ay = pa.y + uy * ra;
+          bx = pb.x - ux * rb;
+          by = pb.y - uy * rb;
+        }
+      }
+      alpha = clamp(alpha * style.edgeBrightness * (twoD ? 0.62 : 1), 0, 0.7);
+      const glowWidth = twoD ? (active ? 6.5 : e.kind === 'topic' ? 4.2 : 4) : (active ? 8 : e.kind === 'topic' ? 6.5 : 6);
       const glowAlpha = gold ? Math.min(0.3, alpha * 0.22) : Math.min(0.2, alpha * 0.16);
-      const mainWidth = active ? 1.4 : 0.9;
+      const mainWidth = twoD ? (active ? 1.1 : 0.6) : (active ? 1.4 : 0.9);
       const mainAlpha = gold ? Math.min(0.8, alpha * 1.08) : alpha;
       if (dashed) {
-        strokeDashed(this.edgeGlow, pa.x, pa.y, pb.x, pb.y, glowWidth, color, glowAlpha);
-        strokeDashed(this.edgeMain, pa.x, pa.y, pb.x, pb.y, mainWidth, color, mainAlpha);
+        strokeDashed(this.edgeGlow, ax, ay, bx, by, glowWidth, color, glowAlpha);
+        strokeDashed(this.edgeMain, ax, ay, bx, by, mainWidth, color, mainAlpha);
       } else {
-        this.edgeGlow.moveTo(pa.x, pa.y).lineTo(pb.x, pb.y).stroke({
+        this.edgeGlow.moveTo(ax, ay).lineTo(bx, by).stroke({
           width: glowWidth,
           color,
           alpha: glowAlpha
         });
-        this.edgeMain.moveTo(pa.x, pa.y).lineTo(pb.x, pb.y).stroke({
+        this.edgeMain.moveTo(ax, ay).lineTo(bx, by).stroke({
           width: mainWidth,
           color,
           alpha: mainAlpha
         });
       }
-      if (active) pulseInfos.push({ pa, pb, color, alpha, gold });
+      if (active) pulseInfos.push({ pa: { x: ax, y: ay }, pb: { x: bx, y: by }, color, alpha, gold });
       if ((active || (ui.hoverEdge && ui.hoverEdge.a === e.a && ui.hoverEdge.b === e.b)) && e.label) {
         edgeLabels.push({ e, pa, pb, active });
       }
@@ -581,7 +660,7 @@ class WebGLScene {
       const p = positions.get(n.id);
       if (!p || !this.onScreen(p, 50)) continue;
       const depth = depths.get(n.id) || 0;
-      const rad = Math.max(1.8, n.r * cam.scale * (0.74 + depth * 0.5)) * style.nodeSize;
+      const rad = rads.get(n.id) ?? Math.max(1.8, n.r * cam.scale * (0.74 + depth * 0.5)) * style.nodeSize;
       const selected = n.id === ui.selection || n.id === hover;
       const external = n.kind === 'external';
       let dim = (0.38 + depth * 0.62) * age;

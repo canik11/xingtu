@@ -13,6 +13,7 @@ const DEFAULT_APPEARANCE = {
   masteredColor: '#ffa200',
   nodeBrightness: 1,
   nodeSize: 1,
+  edgeBrightness: 1,
   pulseBrightness: 1,
   pulseSize: 1
 };
@@ -32,6 +33,7 @@ const LEGACY_APPEARANCE = {
 export const BASE_SCALE = Object.freeze({
   nodeBrightness: 1.8,
   nodeSize: 1.19,
+  edgeBrightness: 1,
   pulseBrightness: 1.61,
   pulseSize: 0.8
 });
@@ -63,6 +65,7 @@ function normalizeAppearance(raw) {
     masteredColor: migrateColor(source.masteredColor, LEGACY_APPEARANCE.masteredColor, DEFAULT_APPEARANCE.masteredColor),
     nodeBrightness: cleanScale(source.nodeBrightness, DEFAULT_APPEARANCE.nodeBrightness),
     nodeSize: cleanScale(source.nodeSize, DEFAULT_APPEARANCE.nodeSize),
+    edgeBrightness: cleanScale(source.edgeBrightness, DEFAULT_APPEARANCE.edgeBrightness),
     pulseBrightness: cleanScale(source.pulseBrightness, DEFAULT_APPEARANCE.pulseBrightness),
     pulseSize: cleanScale(source.pulseSize, DEFAULT_APPEARANCE.pulseSize),
     courses: {}
@@ -111,6 +114,7 @@ export function createDefaultData() {
       masteredColor: '#ffa200',
       nodeBrightness: 1,
       nodeSize: 1,
+      edgeBrightness: 1,
       pulseBrightness: 1,
       pulseSize: 1,
       courses: {}

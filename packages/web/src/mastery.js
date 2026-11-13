@@ -9,6 +9,7 @@ export const DEFAULT_APPEARANCE = Object.freeze({
   masteredColor: '#ffa200',
   nodeBrightness: 1,
   nodeSize: 1,
+  edgeBrightness: 1,
   pulseBrightness: 1,
   pulseSize: 1,
   courses: {}
@@ -19,7 +20,7 @@ const DEFAULT_MASTERED = [255, 162, 0];
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const SCALE_MIN = 0.4;
 const SCALE_MAX = 1.8;
-const SCALE_KINDS = new Set(['nodeBrightness', 'nodeSize', 'pulseBrightness', 'pulseSize']);
+const SCALE_KINDS = new Set(['nodeBrightness', 'nodeSize', 'edgeBrightness', 'pulseBrightness', 'pulseSize']);
 
 export function normalizeHexColor(value, fallback) {
   return typeof value === 'string' && HEX_COLOR.test(value.trim())
@@ -55,6 +56,7 @@ export function appearanceConfig() {
     masteredColor: normalizeHexColor(source.masteredColor, DEFAULT_APPEARANCE.masteredColor),
     nodeBrightness: normalizeScale(source.nodeBrightness, DEFAULT_APPEARANCE.nodeBrightness),
     nodeSize: normalizeScale(source.nodeSize, DEFAULT_APPEARANCE.nodeSize),
+    edgeBrightness: normalizeScale(source.edgeBrightness, DEFAULT_APPEARANCE.edgeBrightness),
     pulseBrightness: normalizeScale(source.pulseBrightness, DEFAULT_APPEARANCE.pulseBrightness),
     pulseSize: normalizeScale(source.pulseSize, DEFAULT_APPEARANCE.pulseSize),
     courses: {}
@@ -98,10 +100,18 @@ export function scaledAppearance() {
     ...source,
     nodeBrightness: source.nodeBrightness * BASE_SCALE.nodeBrightness,
     nodeSize: source.nodeSize * BASE_SCALE.nodeSize,
+    edgeBrightness: source.edgeBrightness * BASE_SCALE.edgeBrightness,
     pulseBrightness: source.pulseBrightness * BASE_SCALE.pulseBrightness,
     pulseSize: source.pulseSize * BASE_SCALE.pulseSize
   };
   return cachedScaledConfig;
+}
+
+/** 滑杆改动会直接改 appearanceConfig 缓存对象的字段，引用不变；
+ *  这里主动丢掉 scaledAppearance 缓存，保证拖动时画布立即预览。 */
+function invalidateScaledAppearance() {
+  cachedScaledSource = null;
+  cachedScaledConfig = null;
 }
 
 export function setGlobalAppearance(kind, value) {
@@ -111,6 +121,7 @@ export function setGlobalAppearance(kind, value) {
   if (!color) return;
   config[kind] = color;
   data.appearance = config;
+  invalidateScaledAppearance();
   scheduleSave();
 }
 
@@ -119,6 +130,7 @@ export function setScaleAppearance(kind, value) {
   const config = ensureAppearance();
   config[kind] = normalizeScale(value, DEFAULT_APPEARANCE[kind]);
   data.appearance = config;
+  invalidateScaledAppearance();
   scheduleSave();
 }
 
@@ -131,6 +143,7 @@ export function setCourseAppearance(courseId, kind, value) {
   override[kind] = color;
   config.courses[courseId] = override;
   data.appearance = config;
+  invalidateScaledAppearance();
   scheduleSave();
 }
 
@@ -139,6 +152,7 @@ export function clearCourseAppearance(courseId) {
   if (!config.courses[courseId]) return;
   delete config.courses[courseId];
   data.appearance = config;
+  invalidateScaledAppearance();
   scheduleSave();
 }
 
@@ -148,10 +162,12 @@ export function resetAppearance() {
     masteredColor: DEFAULT_APPEARANCE.masteredColor,
     nodeBrightness: DEFAULT_APPEARANCE.nodeBrightness,
     nodeSize: DEFAULT_APPEARANCE.nodeSize,
+    edgeBrightness: DEFAULT_APPEARANCE.edgeBrightness,
     pulseBrightness: DEFAULT_APPEARANCE.pulseBrightness,
     pulseSize: DEFAULT_APPEARANCE.pulseSize,
     courses: {}
   };
+  invalidateScaledAppearance();
   scheduleSave();
 }
 
