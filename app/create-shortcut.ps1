@@ -1,8 +1,8 @@
 ﻿<#
   为「知识星图」单文件网页创建一个桌面 / 开始菜单快捷方式。
 
-  默认行为：用本机 Edge / Chrome 的 --app 模式打开，没有地址栏和标签页，
-  看起来像一个独立小应用；图标使用同目录的 xintu.ico。
+  默认行为：优先使用同目录的「知识星图.exe」——独立窗口、任务栏自定义图标；
+  没有 exe 时退回本机 Edge / Chrome 的 --app 模式（无地址栏、无标签页）。
 
   用法：
     powershell -NoProfile -ExecutionPolicy Bypass -File .\create-shortcut.ps1
@@ -62,14 +62,20 @@ if (-not (Test-Path -LiteralPath $icon)) {
   $icon = Join-Path $appDir 'xintu.png'
 }
 
-# —— 选浏览器：auto 先 Edge 再 Chrome，都没有就交给默认浏览器 ——
+# —— 优先使用同目录的「知识星图.exe」：独立窗口，不依赖浏览器外壳 ——
+$appExe = Join-Path $appDir '知识星图.exe'
+$useAppExe = Test-Path -LiteralPath $appExe
+
+# —— 没有 exe 时选浏览器：auto 先 Edge 再 Chrome，都没有就交给默认浏览器 ——
 $browserExe = $null
-switch ($Browser) {
-  'edge' { $browserExe = Find-Browser 'edge' }
-  'chrome' { $browserExe = Find-Browser 'chrome' }
-  'auto' {
-    $browserExe = Find-Browser 'edge'
-    if (-not $browserExe) { $browserExe = Find-Browser 'chrome' }
+if (-not $useAppExe) {
+  switch ($Browser) {
+    'edge' { $browserExe = Find-Browser 'edge' }
+    'chrome' { $browserExe = Find-Browser 'chrome' }
+    'auto' {
+      $browserExe = Find-Browser 'edge'
+      if (-not $browserExe) { $browserExe = Find-Browser 'chrome' }
+    }
   }
 }
 
@@ -85,7 +91,11 @@ $uri = ([System.Uri]$html).AbsoluteUri
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.Description = '知识星图 · 离线单文件版'
-if ($browserExe) {
+if ($useAppExe) {
+  $shortcut.TargetPath = $appExe
+  $shortcut.Arguments = ''
+  $shortcut.IconLocation = $appExe + ',0'
+} elseif ($browserExe) {
   $shortcut.TargetPath = $browserExe
   $shortcut.Arguments = '--app="' + $uri + '"'
 } else {
@@ -93,13 +103,15 @@ if ($browserExe) {
   $shortcut.TargetPath = $html
 }
 $shortcut.WorkingDirectory = $appDir
-if ($icon -and (Test-Path -LiteralPath $icon)) {
+if (-not $useAppExe -and $icon -and (Test-Path -LiteralPath $icon)) {
   $shortcut.IconLocation = $icon + ',0'
 }
 $shortcut.Save()
 
 "已创建快捷方式：$shortcutPath"
-if ($browserExe) {
+if ($useAppExe) {
+  "打开方式：$appExe（独立窗口，任务栏显示自定义图标）"
+} elseif ($browserExe) {
   "打开方式：$browserExe --app=$uri"
 } else {
   "打开方式：系统默认浏览器（没有找到 Edge / Chrome 的 --app 模式）"
@@ -107,7 +119,9 @@ if ($browserExe) {
 "图标：$icon"
 
 if ($Launch) {
-  if ($browserExe) {
+  if ($useAppExe) {
+    Start-Process -FilePath $appExe
+  } elseif ($browserExe) {
     Start-Process -FilePath $browserExe -ArgumentList ('--app="' + $uri + '"')
   } else {
     Start-Process -FilePath $html

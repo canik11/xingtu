@@ -5,7 +5,7 @@ import { view } from '../state.js';
 import { flareTexture, sparkTexture, starRingTexture } from './gl-textures.js';
 
 const PARTICLE_COUNT = 240;
-const PARTICLE_POOL = Math.ceil(PARTICLE_COUNT * 1.6);
+const PARTICLE_POOL = Math.ceil(PARTICLE_COUNT * 3.0);
 const MAX_SPARKS = 180;
 
 export class GLAmbient {
@@ -85,9 +85,9 @@ export class GLAmbient {
     this.setDensity(1);
   }
 
-  /** 环境粒子密度：1 = 默认；0.2–1.6 对应画质面板的 20%–160%。 */
+  /** 环境粒子密度：1 = 默认；0.2–3.0 对应画质面板的 20%–300%。 */
   setDensity(value) {
-    this.particleDensity = clamp(Number(value) || 1, 0.2, 1.6);
+    this.particleDensity = clamp(Number(value) || 1, 0.2, 3.0);
     const count = Math.min(this.particles.length, Math.round(PARTICLE_COUNT * this.particleDensity));
     this.particles.forEach((p, i) => {
       p.s.visible = i < count;

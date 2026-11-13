@@ -48,14 +48,9 @@ import { bindSearch } from './ui/search.js';
 import { toast } from './ui/feedback.js';
 import { askConfirm } from './ui/confirm.js';
 import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath, setKbPath } from './kb-path.js';
+import { updateStats } from './stats.js';
 
-/** 顶部统计。 */
-export function updateStats() {
-  el.statNodes.textContent = data.nodes.length;
-  el.statEdges.textContent = data.edges.length;
-}
-
-export { refreshCategoryDatalist };
+export { refreshCategoryDatalist, updateStats };
 
 /** 重建索引并同步派生数据。 */
 function reindexAll() {

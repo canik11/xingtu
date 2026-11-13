@@ -46,7 +46,7 @@ export const ui = {
   hostId: null,
   innerSelection: null,
   innerGraph: null,
-  /** 3D 星海显示范围：1 = 课程；2 = 课程 + 章节；3 = 课程 + 章节 + 知识点。 */
+  /** 3D 星海显示范围：1 = 课程；2 = 课程 + 章节；3 = 前三级；4 = 全部层级（含更深子知识点）。 */
   sphereScope: 1,
   /** 3D 球体的随机膨胀：0 = 标准球，1 = 完全展开；target 用于补间。 */
   spherePuff: 0,

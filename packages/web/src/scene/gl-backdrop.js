@@ -2,6 +2,7 @@
 import { Container, Graphics, Sprite, TilingSprite } from 'pixi.js';
 import { clamp, randRange, TAU } from '@starmap/core';
 import { cam, view } from '../state.js';
+import { quality } from '../quality.js';
 import {
   bgTexture,
   crossTexture,
@@ -56,8 +57,8 @@ export class GLBackdrop {
     this.root.addChild(this.starLayer);
     this.stars = [];
     this.starBase = view.w < 700 ? 520 : 900;
-    // 多生成 60%，画质面板把密度调高时不用重建纹理与分布。
-    const starCount = Math.ceil(this.starBase * 1.6);
+    // 多生成 200%，画质面板把密度拉到 300% 时不用重建纹理与分布。
+    const starCount = Math.ceil(this.starBase * 3.0);
     for (let i = 0; i < starCount; i++) {
       let u = Math.random();
       let v = Math.random();
@@ -99,7 +100,7 @@ export class GLBackdrop {
     this.root.addChild(this.moteLayer);
     this.motes = [];
     this.moteBase = view.w < 700 ? 130 : 220;
-    const moteCount = Math.ceil(this.moteBase * 1.6);
+    const moteCount = Math.ceil(this.moteBase * 3.0);
     for (let i = 0; i < moteCount; i++) {
       const s = new Sprite(sparkTexture());
       s.anchor.set(0.5);
@@ -145,9 +146,9 @@ export class GLBackdrop {
     this.resize();
   }
 
-  /** 星点密度：1 = 默认；0.2–1.6 对应画质面板的 20%–160%。 */
+  /** 星点密度：1 = 默认；0.2–3.0 对应画质面板的 20%–300%。 */
   setDensity(value) {
-    this.starDensity = clamp(Number(value) || 1, 0.2, 1.6);
+    this.starDensity = clamp(Number(value) || 1, 0.2, 3.0);
     const stars = Math.min(this.stars.length, Math.round(this.starBase * this.starDensity));
     this.stars.forEach((s, i) => {
       const show = i < stars;
@@ -177,6 +178,11 @@ export class GLBackdrop {
     const H = view.h;
     const time = t * 0.001;
     const nt = t * 0.00002;
+    const qAll = quality();
+    const q = qAll.mode === '2d' ? qAll.two : qAll.three;
+    const sizeScale = clamp(q.starSize || 1, 0.3, 3);
+    const bright = clamp(q.glow || 1, 0.2, 3);
+    const sparkle = clamp(q.sparkle || q.glow || 1, 0.2, 3);
 
     for (const { cfg, s } of this.nebulas) {
       const x = cfg.u * W + Math.sin(nt * cfg.sp + cfg.ph) * W * 0.018 + cam.x * 0.012;
@@ -194,8 +200,8 @@ export class GLBackdrop {
       const sx = mod(s.u * W - cam.x * par, W);
       const sy = mod(s.v * H - cam.y * par * 0.7, H);
       const twinkle = 0.72 + 0.28 * Math.sin(time * s.tw + s.ph);
-      const alpha = s.a * twinkle;
-      const size = Math.max(0.7, s.r * 4.2);
+      const alpha = Math.min(1, s.a * twinkle * bright);
+      const size = Math.max(0.7, s.r * 4.2 * sizeScale);
       s.sprite.position.set(sx, sy);
       s.sprite.width = size;
       s.sprite.height = size;
@@ -203,12 +209,12 @@ export class GLBackdrop {
       s.sprite.tint = s.tint ? 0xfff2dc : 0xe8f2ff;
       if (s.cross) {
         // 星芒与星核约 1:3：星核直径 s.r*4.2，十字区域直径 s.r*13。
-        const bigSize = Math.max(7, s.r * 13);
+        const bigSize = Math.max(7, s.r * 13 * sizeScale);
         s.cross.position.set(sx, sy);
         s.cross.width = bigSize;
         s.cross.height = bigSize;
         s.cross.rotation = s.crossAngle;
-        s.cross.alpha = Math.min(1, alpha);
+        s.cross.alpha = Math.min(1, alpha * sparkle);
         s.cross.tint = s.tint ? 0xfff2dc : 0xe8f2ff;
       }
     }
@@ -218,8 +224,8 @@ export class GLBackdrop {
       const drift = t * 0.000012 * m.sp;
       const sx = mod(m.u * W + drift * W * 0.2 - cam.x * 0.05, W);
       const sy = mod(m.v * H - drift * H * 0.28 - cam.y * 0.05, H);
-      const a = m.a * (0.55 + 0.45 * Math.sin(time * m.tw + m.ph));
-      const size = Math.max(1.2, m.r * 2.0);
+      const a = Math.min(1, m.a * (0.55 + 0.45 * Math.sin(time * m.tw + m.ph)) * bright);
+      const size = Math.max(1.2, m.r * 2.0 * sizeScale);
       m.s.position.set(sx, sy);
       m.s.width = size;
       m.s.height = size;

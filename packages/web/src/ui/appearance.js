@@ -123,12 +123,14 @@ function qualityInputs() {
     ['three', 'maxScale', el.qualityMaxScale, el.qualityMaxScaleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
     ['three', 'pixelBudget', el.qualityPixelBudget, el.qualityPixelBudgetValue, 1, (v) => `${v} MP`],
     ['three', 'stars', el.qualityStars, el.qualityStarsValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    ['three', 'starSize', el.qualityStarSize, el.qualityStarSizeValue, 0.01, (v) => `${Math.round(v * 100)}%`],
     ['three', 'glow', el.qualityGlow, el.qualityGlowValue, 0.01, (v) => `${Math.round(v * 100)}%`],
     ['three', 'sparkle', el.qualitySparkle, el.qualitySparkleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
     ['three', 'ambient', el.qualityAmbient, el.qualityAmbientValue, 0.01, (v) => `${Math.round(v * 100)}%`],
     ['two', 'dprCap', el.qualityDpr, el.qualityDprValue, 0.01, (v) => `${Math.round(v * 100)}%`],
     ['two', 'glow', el.qualityGlow2d, el.qualityGlow2dValue, 0.01, (v) => `${Math.round(v * 100)}%`],
     ['two', 'stars', el.qualityStars2d, el.qualityStars2dValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    ['two', 'starSize', el.qualityStarSize2d, el.qualityStarSize2dValue, 0.01, (v) => `${Math.round(v * 100)}%`],
     ['two', 'spread', el.qualitySpread, el.qualitySpreadValue, 0.01, (v) => `${Math.round(v * 100)}%`]
   ];
 }

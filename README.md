@@ -29,17 +29,19 @@ app/index.html
 
 不需要服务器或联网，CSS 和 JavaScript 都打包在这一个 HTML 文件里。渲染默认使用 WebGL（PixiJS）；不支持 WebGL 的浏览器会自动回退到 Canvas 2D。WebGL 渲染倍率最高与 3D 视图最大缩放一致（2.8×，受约 1200 万像素/帧预算保护），文字标签使用同一倍率，避免放大后发虚或出现锯齿。
 
-## 把它当成小应用
+## 把它当成真正的小应用
 
-`app/` 里除了 `index.html`，还带了一枚图标 `xintu.ico` 和快捷方式脚本：
+`app/` 里带一个自绘窗口的「知识星图.exe」：
 
-- 双击 `app/create-shortcut.cmd`（或用 PowerShell 运行 `create-shortcut.ps1`），会在桌面生成「知识星图」快捷方式；
-- 快捷方式用 Edge / Chrome 的 `--app` 模式打开，没有地址栏和标签页，看起来像一个独立小应用，图标就是星图图标；
-- 想放到开始菜单：`create-shortcut.ps1 -Place startmenu`；想指定浏览器：`-Browser chrome`；找不到 Edge/Chrome 时会退回系统默认浏览器。
+- 双击 `app/知识星图.exe` 直接打开，任务栏显示星图图标，而不是浏览器图标（窗口用 WebView2 加载同目录的 `index.html`，没有地址栏和标签页）；
+- 首次运行需要 Microsoft Edge WebView2 Runtime。Windows 11 和大多数 Windows 10 已自带；缺失时程序会弹提示，可从微软官网免费安装；
+- 双击 `app/create-shortcut.cmd` 会在桌面生成「知识星图」快捷方式：有 exe 时优先用 exe，没有 exe 时才退回 Edge / Chrome 的 `--app` 模式；
+- 想放到开始菜单：`create-shortcut.ps1 -Place startmenu`；
+- 需要重新编译 exe 时运行 `scripts/build-shell.ps1`（调用系统自带 csc，依赖 `packaging/webview2/` 里的 WebView2 DLL）。
 
-图标由 `scripts/make-icon.py`（Pillow）生成，重新运行即可更新 `assets/xintu.png` 与 `assets/xintu.ico`。
+注意：exe 版的数据存在 `%LOCALAPPDATA%\KnowledgeStarmap\WebView2`，与 Edge 浏览器里的 localStorage 不是同一份。如果你之前在浏览器 --app 窗口里录入过内容，先在旧窗口「导出数据」，再到 exe 里用「知识库路径 → 选择知识文件」导入。
 
-分发时把整个 `app/` 文件夹打包发给对方，对方双击一次 `create-shortcut.cmd` 生成自己的快捷方式。快捷方式记录的是绝对路径，所以换电脑或换文件夹后需要重新运行一次脚本。
+分发时把整个 `app/` 文件夹打包发给对方（exe、3 个 DLL、`index.html`、图标和快捷方式脚本），对方双击 `create-shortcut.cmd` 即可。快捷方式记录的是绝对路径，换电脑或换文件夹后需要重新运行一次脚本。只想发一个 HTML 也可以：直接发 `app/index.html`，双击仍能离线使用，只是任务栏会显示浏览器的图标。
 
 ## 操作
 

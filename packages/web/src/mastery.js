@@ -177,31 +177,60 @@ export function appearanceColors(entityOrId) {
   };
 }
 
+/** 一个笔记块下所有叶子的列表；块本身无子块时返回自身。 */
+export function leafBlockList(block) {
+  if (!block) return [];
+  const children = Array.isArray(block.children) ? block.children : [];
+  if (!children.length) return [block];
+  return children.flatMap(leafBlockList);
+}
+
+/** 仅叶子可手动标记；有子块的知识点由子级比例决定。 */
+export function isLeafBlock(block) {
+  return !!block && !(Array.isArray(block.children) && block.children.length);
+}
+
+/** 块级掌握比例：叶子看自己，父级按内部叶子完成比例。 */
+export function blockMasteryRatio(block) {
+  const leaves = leafBlockList(block);
+  if (!leaves.length) return 0;
+  const map = data.mastery || {};
+  let done = 0;
+  for (const leaf of leaves) if (map[leaf.id]) done++;
+  return done / leaves.length;
+}
+
+function entityLeaves(entity) {
+  // 只从顶层块向下递归，避免“父块 + 子块”被重复计入叶子比例。
+  if (entity.level === 1) {
+    return chaptersOf(entity.id).flatMap((chapter) => leafBlockList(chapter.block));
+  }
+  return entity.block ? leafBlockList(entity.block) : [];
+}
+
 export function masteryFor(entityOrId) {
   const entity = typeof entityOrId === 'string' ? getEntity(entityOrId) : entityOrId;
   if (!entity) return 0;
+  const leaves = entityLeaves(entity);
+  if (!leaves.length) return 0;
   const map = data.mastery || (data.mastery = {});
-  if (entity.level === 3) return entity.blockId && map[entity.blockId] ? 1 : 0;
-  const points = entity.level === 1
-    ? chaptersOf(entity.id).flatMap((chapter) => pointsOf(chapter.id))
-    : pointsOf(entity.id);
-  if (!points.length) return 0;
   let done = 0;
-  for (const point of points) if (point.blockId && map[point.blockId]) done++;
-  return done / points.length;
+  for (const leaf of leaves) if (leaf.id && map[leaf.id]) done++;
+  return done / leaves.length;
 }
 
 export function isMastered(entityOrId) {
   return masteryFor(entityOrId) >= 0.999;
 }
 
+/** 切换叶子掌握；非叶子返回 null（父级只读）。 */
 export function toggleMastery(entityOrId) {
   const entity = typeof entityOrId === 'string' ? getEntity(entityOrId) : entityOrId;
-  if (!entity || entity.level !== 3 || !entity.blockId) return false;
+  if (!entity || entity.level !== 3 || !entity.block || !isLeafBlock(entity.block)) return null;
   const map = data.mastery || (data.mastery = {});
-  const next = !map[entity.blockId];
-  if (next) map[entity.blockId] = true;
-  else delete map[entity.blockId];
+  const next = !map[entity.block.id];
+  if (next) map[entity.block.id] = true;
+  else delete map[entity.block.id];
   scheduleSave();
   return next;
 }

@@ -10,6 +10,7 @@ export const DEFAULT_QUALITY = Object.freeze({
     maxScale: 3.0,
     pixelBudget: 12,
     stars: 1.0,
+    starSize: 1.0,
     glow: 1.0,
     sparkle: 1.0,
     ambient: 1.0
@@ -18,6 +19,7 @@ export const DEFAULT_QUALITY = Object.freeze({
     dprCap: 2.0,
     glow: 1.0,
     stars: 1.0,
+    starSize: 1.0,
     spread: 1.0
   })
 });
@@ -26,15 +28,17 @@ const RANGES = {
   three: {
     maxScale: [1.2, 3.0],
     pixelBudget: [6, 18],
-    stars: [0.2, 1.6],
-    glow: [0.4, 1.8],
-    sparkle: [0.3, 1.8],
-    ambient: [0.2, 1.6]
+    stars: [0.2, 3.0],
+    starSize: [0.3, 3.0],
+    glow: [0.2, 3.0],
+    sparkle: [0.2, 3.0],
+    ambient: [0.2, 3.0]
   },
   two: {
     dprCap: [1, 3],
-    glow: [0.4, 1.8],
-    stars: [0.2, 1.6],
+    glow: [0.2, 3.0],
+    stars: [0.2, 3.0],
+    starSize: [0.3, 3.0],
     spread: [0.6, 1.6]
   }
 };

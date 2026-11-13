@@ -14,6 +14,7 @@ import { buildFocus, clearManualPositions, fitFocus, getFocus } from './focus.js
 import { getEntity, pathOf, courseOf, refreshOutline } from './outline.js';
 import { idleLabel, isStill, loadMotionPrefs, setIdleModes, setIdleSpeed, toggleIdleMode } from './motion.js';
 import { setViewMode } from './quality.js';
+import { updateStats } from './stats.js';
 
 let panelApi = {
   openPanel: () => {},
@@ -33,6 +34,7 @@ export function getLevel() {
 function sphereRadius() {
   if (ui.idleModes.puff) return 365;
   if (ui.spherePuffTarget > 0.5) return 430;
+  if (ui.sphereScope >= 4) return 400;
   return ui.sphereScope >= 3 ? 350 : 300;
 }
 
@@ -129,11 +131,13 @@ export function syncNav() {
       }
     });
     if (level === 'sphere') {
-      const scope = ui.sphereScope === 3
-        ? '课程 + 章节 + 知识点'
-        : ui.sphereScope === 2
-          ? '课程 + 章节'
-          : '课程';
+      const scope = ui.sphereScope === 4
+        ? '全部层级'
+        : ui.sphereScope === 3
+          ? '课程 + 章节 + 知识点'
+          : ui.sphereScope === 2
+            ? '课程 + 章节'
+            : '课程';
       parts.push(`<span class="nav-scope">· ${scope}</span>`);
     }
     el.navCrumbs.innerHTML = parts.join('');
@@ -141,20 +145,24 @@ export function syncNav() {
 
   if (el.levelBtn) {
     el.levelBtn.hidden = level !== 'sphere';
-    el.levelBtn.textContent = ui.sphereScope === 3
-      ? '层级 · 三级'
-      : ui.sphereScope === 2
-        ? '层级 · 二级'
-        : '层级 · 一级';
+    el.levelBtn.textContent = ui.sphereScope === 4
+      ? '层级 · 全部'
+      : ui.sphereScope === 3
+        ? '层级 · 三级'
+        : ui.sphereScope === 2
+          ? '层级 · 二级'
+          : '层级 · 一级';
     el.levelBtn.classList.toggle('is-2', ui.sphereScope === 2);
-    el.levelBtn.classList.toggle('is-3', ui.sphereScope === 3);
+    el.levelBtn.classList.toggle('is-3', ui.sphereScope >= 3);
     el.levelBtn.setAttribute(
       'aria-label',
-      ui.sphereScope === 3
-        ? '3D 显示课程、章节和知识点'
-        : ui.sphereScope === 2
-          ? '3D 显示课程与章节'
-          : '3D 只显示课程'
+      ui.sphereScope === 4
+        ? '展开显示全部层级，包括更深层的子知识点'
+        : ui.sphereScope === 3
+          ? '3D 显示课程、章节和知识点'
+          : ui.sphereScope === 2
+            ? '3D 显示课程与章节'
+            : '3D 只显示课程'
     );
   }
   if (el.motionWrap) {
@@ -187,6 +195,7 @@ export function syncNav() {
   }
   if (el.hints) el.hints.textContent = hintFor(level);
   document.body.dataset.level = level;
+  updateStats();
 }
 
 function closeSidebar() {
@@ -329,7 +338,7 @@ export function bindNavigation() {
   }
   if (el.levelBtn) {
     el.levelBtn.addEventListener('click', () => {
-      ui.sphereScope = ui.sphereScope >= 3 ? 1 : ui.sphereScope + 1;
+      ui.sphereScope = ui.sphereScope >= 4 ? 1 : ui.sphereScope + 1;
       if (ui.level === 'sphere') applySphereCamera(true);
       syncNav();
     });

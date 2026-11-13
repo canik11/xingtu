@@ -383,7 +383,7 @@ class WebGLScene {
     const born = ui.level === 'inner' && innerGraph ? innerGraph.born : 0;
     // At full three-level fit the point cloud is tiny and dense. Halos are
     // skipped and cross-stars are faint/small until the user zooms in.
-    const lowDetail = ui.level === 'sphere' && ui.sphereScope === 3 && cam.scale < 1.15;
+    const lowDetail = ui.level === 'sphere' && ui.sphereScope >= 3 && cam.scale < 1.15;
 
     this.edgeGlow.clear();
     this.edgeMain.clear();

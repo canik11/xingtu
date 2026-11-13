@@ -18,7 +18,8 @@ import { ui } from '../state.js';
 import { data, reindex, scheduleSave } from '../store.js';
 import { getEntity, refreshOutline } from '../outline.js';
 import { rebuildFocus } from '../focus.js';
-import { toggleMastery } from '../mastery.js';
+import { toggleMastery, blockMasteryRatio, isLeafBlock } from '../mastery.js';
+import { enterLocal } from '../navigation.js';
 
 const NOTE_LIMIT = 2000;
 let isOpen = false;
@@ -38,12 +39,15 @@ function blockRow(block, nodeId, parentId, index, depth) {
         .map((child, i) => blockRow(child, nodeId, block.id, i, depth + 1))
         .join('')}</div>`
     : '';
-  // 根条目是章节，掌握状态按下属知识点比例计算；只有更深层的知识点可以单独打勾。
-  const mastered = depth > 0 && !!(data.mastery && data.mastery[block.id]);
+  // 根条目是章节，掌握状态按下属知识点比例计算；只有最深层的叶子条目可以单独打勾。
+  const leaf = depth > 0 && isLeafBlock(block);
+  const mastered = leaf && !!(data.mastery && data.mastery[block.id]);
   const masteryButton = depth > 0
-    ? `<button class="doc-mastery${mastered ? ' on' : ''}" type="button" data-mastery="${esc(block.id)}"
+    ? (leaf
+        ? `<button class="doc-mastery${mastered ? ' on' : ''}" type="button" data-mastery="${esc(block.id)}"
         aria-pressed="${mastered}" aria-label="${mastered ? '取消掌握' : '标记为已掌握'}"
         title="${mastered ? '取消掌握' : '标记为已掌握'}"><span class="doc-mastery-box" aria-hidden="true">${mastered ? '✓' : ''}</span></button>`
+        : `<span class="doc-mastery-ratio" title="这一条包含子条目，掌握度按子级汇总">${Math.round(blockMasteryRatio(block) * 100)}%</span>`)
     : '';
   return `
     <div class="doc-row${depth === 0 ? ' is-root' : ''}" data-nid="${esc(block.id)}"
@@ -374,6 +378,22 @@ function onDocClick(event) {
   }
 }
 
+function onDocDoubleClick(event) {
+  const handle = event.target.closest('.doc-handle');
+  if (!handle) return;
+  const row = handle.closest('.doc-row');
+  const blockId = row && row.dataset.nid;
+  if (!blockId) return;
+  const owner = ownerOf(blockId);
+  if (!owner) return;
+  const entity = getEntity(`h:${owner.block.id}`);
+  if (!entity) return;
+  event.preventDefault();
+  event.stopPropagation();
+  closeGlobalDoc();
+  enterLocal(entity.id, { from3D: false, openSidebar: true });
+}
+
 function onKeydownCapture(event) {
   if (!isOpen || event.key !== 'Escape') return;
   event.preventDefault();
@@ -414,6 +434,7 @@ export function bindGlobalDoc() {
   el.docBody.addEventListener('input', onDocInput);
   el.docBody.addEventListener('keydown', onDocKeydown);
   el.docBody.addEventListener('click', onDocClick);
+  el.docBody.addEventListener('dblclick', onDocDoubleClick);
   el.docBody.addEventListener('dragstart', startDrag);
   el.docBody.addEventListener('dragover', onDragOver);
   el.docBody.addEventListener('drop', onDrop);

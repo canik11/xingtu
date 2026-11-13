@@ -1,10 +1,11 @@
-// 3D 静默效果：旋转 / 呼吸 / 膨胀，三项可以单独开关并叠加。
+// 3D 静默效果：旋转 / 心跳 / 膨胀，三项可以单独开关并叠加。
+// 键名仍保留 breathe，兼容旧版保存的偏好；界面与效果已改为心跳。
 // “静止”是三项都关闭时的状态；偏好独立保存在 localStorage，不影响知识库数据。
 import { ui } from './state.js';
 
 const KEY = 'starmap.motion.v1';
 const MODES = ['rotate', 'breathe', 'puff'];
-const LABELS = { rotate: '旋转', breathe: '呼吸', puff: '膨胀' };
+const LABELS = { rotate: '旋转', breathe: '心跳', puff: '膨胀' };
 
 export function activeIdleModes() {
   return MODES.filter((mode) => !!ui.idleModes[mode]);

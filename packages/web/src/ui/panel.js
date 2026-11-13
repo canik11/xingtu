@@ -31,7 +31,7 @@ import {
   refreshOutline
 } from '../outline.js';
 import { catColor } from '../scene/renderer.js';
-import { masteryFor, isMastered, toggleMastery } from '../mastery.js';
+import { masteryFor, isMastered, toggleMastery, isLeafBlock } from '../mastery.js';
 import { toast } from './feedback.js';
 import { refreshCategoryDatalist } from './datalist.js';
 import { renderRelations, wireRelEditor } from './relation-editor.js';
@@ -331,12 +331,16 @@ function renderHeadingPanel(entity) {
 
   const masteryRatio = masteryFor(entity);
   const masteryPercent = Math.round(masteryRatio * 100);
+  const leaf = entity.level === 3 && isLeafBlock(entity.block);
   const masteryHtml = entity.level === 3
-    ? `<button class="mastery-toggle${isMastered(entity) ? ' on' : ''}" type="button" data-act="toggle-mastery" aria-pressed="${isMastered(entity)}">
+    ? (leaf
+        ? `<button class="mastery-toggle${isMastered(entity) ? ' on' : ''}" type="button" data-act="toggle-mastery" aria-pressed="${isMastered(entity)}">
         <span class="mastery-box" aria-hidden="true">${isMastered(entity) ? '✓' : ''}</span>
         <span>${isMastered(entity) ? '已掌握' : '标记为已掌握'}</span>
       </button>`
-    : `<div class="mastery-progress"><span>本章掌握</span><b>${masteryPercent}%</b></div>`;
+        : `<div class="mastery-progress"><span>本条及子级掌握</span><b>${masteryPercent}%</b></div>
+      <p class="field-note">只有最末级条目可以单独勾选；这一条包含子条目，掌握度按子级自动汇总。</p>`)
+    : `<div class="mastery-progress"><span>${entity.level === 1 ? '课程掌握' : '本章掌握'}</span><b>${masteryPercent}%</b></div>`;
 
   let content = '';
   if (entity.level === 2) {
@@ -778,6 +782,7 @@ export function bindPanel() {
       const entity = getEntity(ui.panelNodeId);
       if (entity && entity.level === 3) {
         const next = toggleMastery(entity);
+        if (next === null) return;
         toast(next ? '已标记掌握' : '已取消掌握');
         renderHeadingPanel(getEntity(entity.id) || entity);
       }

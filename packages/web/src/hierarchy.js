@@ -172,6 +172,8 @@ function pointBases() {
     const points = pointsOf(chapter.chapter.id);
     if (!points.length) return;
     points.forEach((point, i) => {
+      // 层级 3 只显示直属于章节的知识点；第 4 档“全部”才继续展开更深层。
+      if (ui.sphereScope < 4 && (point.depth || 0) > 0) return;
       const dir = randDir(point.id, `point-pos-${i}`);
       const radius = 14 + rand01(point.id, 'point-r') * 24;
       const own = puffOffset(point.id, chapter, 30);
@@ -346,6 +348,7 @@ function outer2DVisuals() {
       if (ui.sphereScope < 3) continue;
 
       for (const pp of pointMap.get(cp.chapter.id) || []) {
+        if (ui.sphereScope < 4 && (pp.point.depth || 0) > 0) continue;
         const pa = rand01(pp.point.id, 'star-point') * Math.PI * 2;
         const pr = (10 + Math.pow(rand01(pp.point.id, 'star-point-r'), 1.4) * 32) * spread;
         out.push({
@@ -607,9 +610,16 @@ export function tick(dt) {
   }
 
   if (ui.level === 'sphere' && ui.idleModes.breathe) {
-    // 呼吸单独用 breathPhase，避免和膨胀的相位互相加速。
-    ui.breathPhase += dt * 0.00115 * ui.idleSpeed;
-    ui.idleBreath = 1 + Math.sin(ui.breathPhase) * 0.08;
+    // 心跳：每拍两下（lub-dub），中间留出静息间隙；幅度比原来的呼吸更明显。
+    // 单独用 breathPhase，避免和膨胀的相位互相加速。
+    ui.breathPhase += dt * 0.0052 * ui.idleSpeed;
+    const p = ((ui.breathPhase % TAU) + TAU) % TAU;
+    const beat = (center, width) => {
+      const d = Math.atan2(Math.sin(p - center), Math.cos(p - center));
+      return Math.exp(-(d * d) / (2 * width * width));
+    };
+    const pulse = beat(0.55, 0.13) * 0.85 + beat(1.05, 0.16) * 0.55;
+    ui.idleBreath = 1 + pulse * 0.12;
   } else {
     ui.idleBreath = 1;
   }

@@ -3,6 +3,7 @@
 // 参数与首版单文件保持一致，保证视觉完全复刻。
 import { randRange, TAU } from '@starmap/core';
 import { cam, view, flags } from '../state.js';
+import { quality2d } from '../quality.js';
 
 const mod = (value, max) => ((value % max) + max) % max;
 
@@ -153,14 +154,19 @@ export function drawSpace(ctx, t, dt) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   const wrap = (v, max) => ((v % max) + max) % max;
-  for (const m of motes) {
+  const mq = quality2d();
+  const moteBright = Math.max(0.2, Math.min(3, mq.glow || 1));
+  const moteSize = Math.max(0.3, Math.min(3, mq.starSize || 1));
+  const moteLimit = Math.max(1, Math.round(motes.length * Math.min(1, mq.stars || 1)));
+  for (let i = 0; i < moteLimit; i++) {
+    const m = motes[i];
     const drift = t * 0.000012 * m.sp;
     const sx = wrap(m.u * W + drift * W * 0.2 - cam.x * 0.05, W);
     const sy = wrap(m.v * H - drift * H * 0.28 - cam.y * 0.05, H);
-    const a = m.a * (0.55 + 0.45 * Math.sin(t * 0.001 * m.tw + m.ph));
+    const a = Math.min(1, m.a * (0.55 + 0.45 * Math.sin(t * 0.001 * m.tw + m.ph)) * moteBright);
     if (a <= 0.008) continue;
     if (m.bokeh) {
-      const rr = m.r * 6;
+      const rr = m.r * 6 * moteSize;
       const grd = ctx.createRadialGradient(sx, sy, 0, sx, sy, rr);
       grd.addColorStop(0, `rgba(200,225,255,${a * 0.5})`);
       grd.addColorStop(0.5, `rgba(150,190,255,${a * 0.14})`);
@@ -170,7 +176,7 @@ export function drawSpace(ctx, t, dt) {
     } else {
       ctx.fillStyle = `rgba(205,228,255,${a})`;
       ctx.beginPath();
-      ctx.arc(sx, sy, m.r, 0, TAU);
+      ctx.arc(sx, sy, m.r * moteSize, 0, TAU);
       ctx.fill();
     }
   }
@@ -204,23 +210,29 @@ function drawStars(ctx, now) {
   const W = view.w;
   const H = view.h;
   const t = now * 0.001;
+  const q = quality2d();
+  const sizeScale = Math.max(0.3, Math.min(3, q.starSize || 1));
+  const bright = Math.max(0.2, Math.min(3, q.glow || 1));
+  const limit = Math.max(1, Math.round(stars.length * Math.min(1, q.stars || 1)));
   ctx.save();
   ctx.globalCompositeOperation = 'source-over';
-  for (const s of stars) {
+  for (let i = 0; i < limit; i++) {
+    const s = stars[i];
     const par = 0.05 + s.z * 0.12;
     const sx = mod(s.u * W - cam.x * par, W);
     const sy = mod(s.v * H - cam.y * par * 0.7, H);
     const twinkle = 0.72 + 0.28 * Math.sin(t * s.tw + s.ph);
-    const alpha = s.a * twinkle;
+    const alpha = Math.min(1, s.a * twinkle * bright);
     if (alpha < 0.035) continue;
+    const sr = s.r * sizeScale;
     ctx.globalAlpha = alpha;
     ctx.fillStyle = s.tint ? '#fff2dc' : '#e8f2ff';
     ctx.beginPath();
-    ctx.arc(sx, sy, s.r, 0, TAU);
+    ctx.arc(sx, sy, sr, 0, TAU);
     ctx.fill();
     if (s.big) {
       ctx.globalCompositeOperation = 'lighter';
-      const rr = s.r * 9;
+      const rr = sr * 9;
       const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, rr);
       g.addColorStop(0, `rgba(235,245,255,${alpha * 0.34})`);
       g.addColorStop(0.35, `rgba(170,205,255,${alpha * 0.1})`);

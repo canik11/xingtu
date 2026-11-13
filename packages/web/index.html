@@ -31,7 +31,7 @@
             <div class="motion-pop-head">静默效果</div>
             <div class="motion-modes" role="group" aria-label="静默模式">
               <button type="button" data-motion="rotate">旋转</button>
-              <button type="button" data-motion="breathe">呼吸</button>
+              <button type="button" data-motion="breathe">心跳</button>
               <button type="button" data-motion="puff">膨胀</button>
               <button type="button" data-motion="still">静止</button>
             </div>
@@ -40,7 +40,7 @@
               <input id="motionSpeed" type="range" min="1" max="6" step="0.25" value="1" />
               <b id="motionSpeedText">1.0×</b>
             </label>
-            <p class="motion-note">效果可叠加；再点一次关闭。膨胀 = 星海持续胀缩；拖动时暂停自动旋转</p>
+            <p class="motion-note">效果可叠加；再点一次关闭。心跳 = 星海每拍轻跳两下（lub-dub）；膨胀 = 星海持续胀缩；拖动时暂停自动旋转</p>
           </div>
         </div>
       </nav>
@@ -231,25 +231,30 @@
             </label>
             <label class="appearance-slider-row" for="qualityStars">
               <span class="appearance-label">星点密度</span>
-              <input class="appearance-slider" type="range" id="qualityStars" min="20" max="160" step="5" value="100" />
+              <input class="appearance-slider" type="range" id="qualityStars" min="20" max="300" step="5" value="100" />
               <output class="appearance-slider-value" id="qualityStarsValue" for="qualityStars">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualityStarSize">
+              <span class="appearance-label">星点大小</span>
+              <input class="appearance-slider" type="range" id="qualityStarSize" min="30" max="300" step="5" value="100" />
+              <output class="appearance-slider-value" id="qualityStarSizeValue" for="qualityStarSize">100%</output>
             </label>
             <label class="appearance-slider-row" for="qualityGlow">
               <span class="appearance-label">光晕亮度</span>
-              <input class="appearance-slider" type="range" id="qualityGlow" min="40" max="180" step="1" value="100" />
+              <input class="appearance-slider" type="range" id="qualityGlow" min="20" max="300" step="1" value="100" />
               <output class="appearance-slider-value" id="qualityGlowValue" for="qualityGlow">100%</output>
             </label>
             <label class="appearance-slider-row" for="qualitySparkle">
               <span class="appearance-label">星芒闪烁</span>
-              <input class="appearance-slider" type="range" id="qualitySparkle" min="30" max="180" step="1" value="100" />
+              <input class="appearance-slider" type="range" id="qualitySparkle" min="20" max="300" step="1" value="100" />
               <output class="appearance-slider-value" id="qualitySparkleValue" for="qualitySparkle">100%</output>
             </label>
             <label class="appearance-slider-row" for="qualityAmbient">
               <span class="appearance-label">环境粒子</span>
-              <input class="appearance-slider" type="range" id="qualityAmbient" min="20" max="160" step="5" value="100" />
+              <input class="appearance-slider" type="range" id="qualityAmbient" min="20" max="300" step="5" value="100" />
               <output class="appearance-slider-value" id="qualityAmbientValue" for="qualityAmbient">100%</output>
             </label>
-            <p class="field-note">倍率越高越清晰、越吃显卡；像素预算限制单帧总像素，低配设备可调小。光晕与星芒会作用到节点。</p>
+            <p class="field-note">倍率越高越清晰、越吃显卡；像素预算限制单帧总像素，低配设备可调小。星点大小、密度、亮度都已放宽到 300%，光晕与星芒也会作用到节点。</p>
           </section>
           <section class="appearance-section">
             <div class="appearance-section-head">
@@ -263,20 +268,25 @@
             </label>
             <label class="appearance-slider-row" for="qualityGlow2d">
               <span class="appearance-label">光晕亮度</span>
-              <input class="appearance-slider" type="range" id="qualityGlow2d" min="40" max="180" step="1" value="100" />
+              <input class="appearance-slider" type="range" id="qualityGlow2d" min="20" max="300" step="1" value="100" />
               <output class="appearance-slider-value" id="qualityGlow2dValue" for="qualityGlow2d">100%</output>
             </label>
             <label class="appearance-slider-row" for="qualityStars2d">
               <span class="appearance-label">星点密度</span>
-              <input class="appearance-slider" type="range" id="qualityStars2d" min="20" max="160" step="5" value="100" />
+              <input class="appearance-slider" type="range" id="qualityStars2d" min="20" max="300" step="5" value="100" />
               <output class="appearance-slider-value" id="qualityStars2dValue" for="qualityStars2d">100%</output>
+            </label>
+            <label class="appearance-slider-row" for="qualityStarSize2d">
+              <span class="appearance-label">星点大小</span>
+              <input class="appearance-slider" type="range" id="qualityStarSize2d" min="30" max="300" step="5" value="100" />
+              <output class="appearance-slider-value" id="qualityStarSize2dValue" for="qualityStarSize2d">100%</output>
             </label>
             <label class="appearance-slider-row" for="qualitySpread">
               <span class="appearance-label">星点间距</span>
               <input class="appearance-slider" type="range" id="qualitySpread" min="60" max="160" step="5" value="100" />
               <output class="appearance-slider-value" id="qualitySpreadValue" for="qualitySpread">100%</output>
             </label>
-            <p class="field-note">间距调大，2D 星点铺得更开；渲染倍率决定清晰度，越高越吃显卡。</p>
+            <p class="field-note">间距调大，2D 星点铺得更开；星点大小、密度、亮度上限都提高到了 300%，渲染倍率决定清晰度，越高越吃显卡。</p>
           </section>
           <section class="appearance-section">
             <div class="appearance-section-head">

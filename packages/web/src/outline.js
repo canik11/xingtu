@@ -88,7 +88,7 @@ function build() {
             blockId: child.id,
             block: child,
             cat: course.cat,
-            depth: parentHeading === chapter ? 0 : 1,
+            depth: parentHeading === chapter ? 0 : (Number(parentHeading.depth) || 0) + 1,
             children: []
           });
           parentHeading.children.push(point.id);

@@ -93,6 +93,8 @@ export function cacheDom() {
   el.qualityPixelBudgetValue = $id('qualityPixelBudgetValue');
   el.qualityStars = $id('qualityStars');
   el.qualityStarsValue = $id('qualityStarsValue');
+  el.qualityStarSize = $id('qualityStarSize');
+  el.qualityStarSizeValue = $id('qualityStarSizeValue');
   el.qualityGlow = $id('qualityGlow');
   el.qualityGlowValue = $id('qualityGlowValue');
   el.qualitySparkle = $id('qualitySparkle');
@@ -105,6 +107,8 @@ export function cacheDom() {
   el.qualityGlow2dValue = $id('qualityGlow2dValue');
   el.qualityStars2d = $id('qualityStars2d');
   el.qualityStars2dValue = $id('qualityStars2dValue');
+  el.qualityStarSize2d = $id('qualityStarSize2d');
+  el.qualityStarSize2dValue = $id('qualityStarSize2dValue');
   el.qualitySpread = $id('qualitySpread');
   el.qualitySpreadValue = $id('qualitySpreadValue');
   el.qualityModeButtons = document.querySelectorAll('[data-view-mode]');
