@@ -36,6 +36,93 @@ export function setBackend(next) {
 let cameraReader = null;
 let saveTimer = 0;
 
+/* ------------------------- 撤销 / 重做 ------------------------- */
+// 快照式撤销：每次保存前把上一份快照压栈，Ctrl+Z 恢复。只覆盖数据修改，
+// 不记录旋转、缩放、展开层级这类视图操作。栈只存在于本次运行内。
+const UNDO_LIMIT = 50;
+const undoStack = [];
+const redoStack = [];
+let lastCommitted = null;
+let restoring = false;
+let restoreListener = null;
+
+/** 绑定撤销/重做之后的界面刷新。 */
+export function bindRestore(fn) {
+  restoreListener = fn;
+}
+
+/** 把当前状态记为基线（加载完成后调用，避免把首次保存当成可撤销步骤）。 */
+export function markBaseline() {
+  undoStack.length = 0;
+  redoStack.length = 0;
+  lastCommitted = JSON.stringify(snapshot());
+}
+
+export function canUndo() {
+  return undoStack.length > 0;
+}
+
+export function canRedo() {
+  return redoStack.length > 0;
+}
+
+function rememberForUndo(snap) {
+  if (restoring) return;
+  const text = JSON.stringify(snap);
+  if (lastCommitted === null) {
+    lastCommitted = text;
+    return;
+  }
+  if (text === lastCommitted) return;
+  undoStack.push(lastCommitted);
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  redoStack.length = 0;
+  lastCommitted = text;
+}
+
+function applySnapshot(text) {
+  let norm = null;
+  try {
+    norm = normalizeData(JSON.parse(text));
+  } catch (e) {
+    return false;
+  }
+  if (!norm) return false;
+  restoring = true;
+  try {
+    data = norm;
+    rebuild();
+    const snap = snapshot();
+    lastCommitted = JSON.stringify(snap);
+    backend.save(snap);
+    const out = JSON.stringify(snap, null, 2);
+    if (hasHostKb()) saveHostKb(out);
+    else void writeBoundKbFile(out);
+    if (restoreListener) restoreListener();
+  } finally {
+    restoring = false;
+  }
+  return true;
+}
+
+/** 撤销一步数据修改。 */
+export function undo() {
+  if (!undoStack.length) return false;
+  const current = JSON.stringify(snapshot());
+  const prev = undoStack.pop();
+  redoStack.push(current);
+  return applySnapshot(prev);
+}
+
+/** 重做一步。 */
+export function redo() {
+  if (!redoStack.length) return false;
+  const current = JSON.stringify(snapshot());
+  const next = redoStack.pop();
+  undoStack.push(current);
+  return applySnapshot(next);
+}
+
 /** 初始化存储后端：网页版固定使用 localStorage。 */
 export function initBackend() {
   backend = new LocalStorageBackend();
@@ -77,6 +164,7 @@ export function saveNow() {
   if (!data) return false;
   try {
     const snap = snapshot();
+    rememberForUndo(snap);
     backend.save(snap);
     // 桌面壳：把快照交给壳写回绑定文件（完整路径、无需浏览器授权）。
     // 浏览器：无权限/未绑定时静默跳过。

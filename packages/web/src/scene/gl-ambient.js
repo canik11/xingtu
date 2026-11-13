@@ -49,7 +49,7 @@ export class GLAmbient {
     }
 
     this.ripples = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       const s = new Sprite(starRingTexture());
       s.anchor.set(0.5);
       s.blendMode = 'add';
@@ -167,7 +167,7 @@ export class GLAmbient {
     s.s.visible = true;
   }
 
-  spawnRing(x, y, delay, size0, size1, duration, alpha0) {
+  spawnRing(x, y, delay, size0, size1, duration, alpha0, tint = 0xffffff) {
     const ring = this.ripples.find((item) => item.life <= 0);
     if (!ring) return;
     ring.life = duration + delay;
@@ -180,7 +180,7 @@ export class GLAmbient {
     ring.y = y;
     ring.s.visible = false;
     ring.s.position.set(x, y);
-    ring.s.tint = 0xffffff;
+    ring.s.tint = tint;
   }
 
   burst(x, y) {

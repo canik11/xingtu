@@ -2,7 +2,9 @@
 import { screenToWorld, zoomAt, center3DScene } from './camera.js';
 import { el } from './lib/dom.js';
 import { cam, ui, view } from './state.js';
-import { openAddNode, closeAddModal, isMenuOpen, closeMenu } from './actions.js';
+import { openAddNode, closeAddModal, isMenuOpen, closeMenu, deleteSelected } from './actions.js';
+import { undo, redo } from './store.js';
+import { toast } from './ui/feedback.js';
 import { openPanel, closePanel, selectNode, isPanelOpen } from './ui/panel.js';
 import { isAddOpen } from './ui/add-modal.js';
 import { nodeAt3D, rotateScene, rotateFocus, moveSphereNode } from './hierarchy.js';
@@ -311,6 +313,30 @@ export function bindInteraction() {
   });
 
   document.addEventListener('keydown', (e) => {
+    const textField = (target) => {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+    };
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && !e.altKey && !textField(e.target)) {
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        toast(undo() ? '已撤销' : '没有可撤销的操作');
+        return;
+      }
+      if (key === 'y') {
+        e.preventDefault();
+        toast(redo() ? '已重做' : '没有可重做的操作');
+        return;
+      }
+    }
+    if (e.key === 'Delete' && !mod && !e.altKey && !textField(e.target)) {
+      e.preventDefault();
+      deleteSelected();
+      return;
+    }
     if (e.key === 'Escape') {
       if (isAddOpen()) {
         closeAddModal();

@@ -4,7 +4,7 @@ import './styles/app.css';
 import { randRange, ensurePositions, warmup } from '@starmap/core';
 import { el, cacheDom } from './lib/dom.js';
 import { cam, view, ui, flags, clock } from './state.js';
-import { data, index, load, reindex, saveNow, scheduleSave, storageAvailable, bindCameraReader, initBackend, replaceData } from './store.js';
+import { data, index, load, reindex, saveNow, scheduleSave, storageAvailable, bindCameraReader, initBackend, replaceData, bindRestore, markBaseline } from './store.js';
 import { camState, setMaxScale, worldToScreen } from './camera.js';
 import { heat } from './layout.js';
 import { initSpace, buildBackdrop, resetGrainPattern } from './scene/space.js';
@@ -12,13 +12,13 @@ import { initAmbient, bindAmbient, ambientStats } from './scene/ambient.js';
 import { initWebGLScene } from './scene/gl-scene.js';
 import { startLoop } from './loop.js';
 import { bindInteraction } from './interaction.js';
-import { bindActions, updateStats, refreshCategoryDatalist, closeAddModal } from './actions.js';
+import { bindActions, updateStats, refreshCategoryDatalist, closeAddModal, deleteSelected } from './actions.js';
 import { bindPanel, updateDock, bindPanelChrome, openPanel, closePanel, selectNode } from './ui/panel.js';
 import { bindNavigation, syncNav, setPanelApi, enterSphere, applySphereCamera } from './navigation.js';
 import { sceneVisuals, spherePuffState } from './hierarchy.js';
 import { projectFocusNode, buildFocus, fitFocus } from './focus.js';
 import { onQualityChange, quality, qualitySnapshot } from './quality.js';
-import { getOutline, getEntity } from './outline.js';
+import { getOutline, getEntity, refreshOutline } from './outline.js';
 import { appearanceConfig, edgeIsMastered, toggleMastery } from './mastery.js';
 import { bindAddModal } from './ui/add-modal.js';
 import { bindConfirm } from './ui/confirm.js';
@@ -181,8 +181,30 @@ async function boot() {
   enterSphere(false);
   syncNav();
 
+  bindRestore(() => {
+    closePanel();
+    ui.selection = null;
+    reindex();
+    refreshOutline();
+    if (ui.level === 'local' && ui.focusId && getEntity(ui.focusId)) {
+      try {
+        buildFocus(ui.focusId);
+        fitFocus(true);
+      } catch (e) {
+        enterSphere(false);
+      }
+    } else {
+      enterSphere(false);
+    }
+    updateStats();
+    updateDock();
+    syncNav();
+    heat(0.5);
+  });
+
   if (loaded.firstRun) saveNow();
   if (loaded.migrated) saveNow();
+  markBaseline();
   if (loaded.seeded) {
     const added = (loaded.upgraded && loaded.upgraded.addedNodes) || 0;
     setTimeout(() => toast(added > 0 ? `已升级知识库：新增 ${added} 个知识点` : '已升级知识库：已补全详细笔记'), 900);
@@ -330,6 +352,14 @@ async function boot() {
       },
       toScreen(x, y) {
         return { x: (x - cam.x) * cam.scale + view.w / 2, y: (y - cam.y) * cam.scale + view.h / 2 };
+      },
+      select(id) {
+        selectNode(id);
+        openPanel(id);
+        return ui.selection;
+      },
+      deleteSelected() {
+        return deleteSelected();
       }
     };
   }

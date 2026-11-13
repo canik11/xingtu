@@ -610,16 +610,14 @@ export function tick(dt) {
   }
 
   if (ui.level === 'sphere' && ui.idleModes.breathe) {
-    // 心跳：每拍两下（lub-dub），中间留出静息间隙；幅度比原来的呼吸更明显。
-    // 单独用 breathPhase，避免和膨胀的相位互相加速。
-    ui.breathPhase += dt * 0.0052 * ui.idleSpeed;
+    // 心跳：每拍只跳一次——先收缩、再轻轻回弹，像一次真实心跳。
+    // 相位以 0 为收缩峰值；渲染层在相位回绕时从星海轮廓向外放一圈星辉涟漪。
+    ui.breathPhase += dt * 0.0042 * ui.idleSpeed;
     const p = ((ui.breathPhase % TAU) + TAU) % TAU;
-    const beat = (center, width) => {
-      const d = Math.atan2(Math.sin(p - center), Math.cos(p - center));
-      return Math.exp(-(d * d) / (2 * width * width));
-    };
-    const pulse = beat(0.55, 0.13) * 0.85 + beat(1.05, 0.16) * 0.55;
-    ui.idleBreath = 1 + pulse * 0.12;
+    const d = Math.atan2(Math.sin(p), Math.cos(p));
+    const squeeze = Math.exp(-(d * d) / (2 * 0.09 * 0.09));
+    const rebound = Math.exp(-((d - 0.24) * (d - 0.24)) / (2 * 0.13 * 0.13));
+    ui.idleBreath = 1 - squeeze * 0.075 + rebound * 0.045;
   } else {
     ui.idleBreath = 1;
   }

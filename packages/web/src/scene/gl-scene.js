@@ -115,6 +115,7 @@ class WebGLScene {
 
     this.ambient = new GLAmbient();
     this.root.addChild(this.ambient.root);
+    this.breathMark = -1;
 
     this.edgeGlow = new Graphics();
     this.edgeGlow.blendMode = 'add';
@@ -650,9 +651,39 @@ class WebGLScene {
     return p.x > -margin && p.x < view.w + margin && p.y > -margin && p.y < view.h + margin;
   }
 
+  /** 心跳节拍：从当前星海整体轮廓向外扩散一圈星辉涟漪。 */
+  breathRipple() {
+    if (ui.level !== 'sphere' || !ui.idleModes.breathe) {
+      this.breathMark = -1;
+      return;
+    }
+    const p = ((ui.breathPhase % TAU) + TAU) % TAU;
+    const prev = this.breathMark;
+    this.breathMark = p;
+    // 相位回绕时正好是收缩峰值：每拍只触发一次。
+    if (prev < 0 || p >= prev) return;
+    const visuals = sceneVisuals();
+    if (!visuals || !visuals.length) return;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const v of visuals) {
+      minX = Math.min(minX, v.x);
+      maxX = Math.max(maxX, v.x);
+      minY = Math.min(minY, v.y);
+      maxY = Math.max(maxY, v.y);
+    }
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    const r0 = Math.max(80, Math.hypot(maxX - minX, maxY - minY) / 2);
+    this.ambient.spawnRing(cx, cy, 0, r0 * 0.98, r0 * 1.38, 1500, 0.36, 0xa9c8ff);
+  }
+
   render(t, dt) {
     this.backdrop.update(t, dt);
     this.ambient.update(dt, t);
+    this.breathRipple();
     if (isLocal()) this.drawGraphLocal(t, dt);
     else this.drawGraph3D(t, dt);
     this.app.renderer.render(this.app.stage);

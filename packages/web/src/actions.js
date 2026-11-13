@@ -3,7 +3,6 @@
 import {
   BUILTIN_CATEGORY_IDS,
   buildNode,
-  createDefaultData,
   ensureAnchors,
   getOrCreateCategory,
   makeNoteBlock,
@@ -488,23 +487,6 @@ export async function applyDocImport(items) {
   };
 }
 
-/** 恢复初始知识库。 */
-export function resetData() {
-  if (!window.confirm('恢复初始知识库？你新增和修改的内容会被清除。')) return;
-  if (isPanelOpen()) closePanel();
-  ui.selection = null;
-  replaceData(createDefaultData());
-  refreshOutline();
-  ensureAnchors(data);
-  warmup(data, data.edges, index.categoryMap, 300);
-  enterSphere(false);
-  updateStats();
-  updateDock();
-  refreshCategoryDatalist();
-  saveNow();
-  toast('已恢复初始知识库');
-}
-
 /* ------------------------- 绑定 ------------------------- */
 
 /** 缩放按钮：2D 用相机缩放，3D 用球心缩放。 */
@@ -588,7 +570,6 @@ export function bindActions() {
       openGlobalDoc();
     }
     else if (action === 'reward') openRewardDialog();
-    else if (action === 'reset') resetData();
   });
 
   el.kbPathInput.addEventListener('change', () => {
