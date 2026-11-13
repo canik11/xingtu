@@ -39,7 +39,7 @@ app/index.html
 - 想放到开始菜单：`create-shortcut.ps1 -Place startmenu`；
 - 需要重新编译 exe 时运行 `scripts/build-shell.ps1`（调用系统自带 csc，依赖 `packaging/webview2/` 里的 WebView2 DLL）。
 
-注意：exe 版的数据存在 `%LOCALAPPDATA%\KnowledgeStarmap\WebView2`，与 Edge 浏览器里的 localStorage 不是同一份。如果你之前在浏览器 --app 窗口里录入过内容，先在旧窗口「导出数据」，再到 exe 里用「知识库路径 → 选择知识文件」导入。
+注意：exe 版的数据存在 `%LOCALAPPDATA%\KnowledgeStarmap\WebView2`，与 Edge 浏览器里的 localStorage 不是同一份。如果你之前在浏览器 --app 窗口里录入过内容，先在旧窗口「导出数据」，再到 exe 里用「知识库路径 → 选择知识文件」导入。exe 版绑定知识文件后会记住完整路径，之后自动读取、自动写回，重启不需要重新授权。
 
 分发时把整个 `app/` 文件夹打包发给对方（exe、3 个 DLL、`index.html`、图标和快捷方式脚本），对方双击 `create-shortcut.cmd` 即可。快捷方式记录的是绝对路径，换电脑或换文件夹后需要重新运行一次脚本。只想发一个 HTML 也可以：直接发 `app/index.html`，双击仍能离线使用，只是任务栏会显示浏览器的图标。
 
@@ -106,13 +106,10 @@ app/index.html
 
 `⋯ → 知识库路径` 可以把这个知识库绑定到一个本地 JSON 文件，之后打开自动读取、修改自动写回：
 
-- 按钮会根据运行环境自动选择方式：
-  - 浏览器支持文件读写（Chrome / Edge 等）时显示“选择知识文件”：选一个 JSON 绑定，浏览器会请求一次读写授权，之后保存自动写回该文件
-  - 不支持文件读写的环境显示“从路径载入”：按输入框里的路径读取（相对路径或 `http(s)://` 地址），只读、不写回
-- 输入框里填了非默认路径时，按钮会按该路径载入
-- 绑定信息只保存在本机（文件句柄存在 IndexedDB，路径存在 `localStorage`），不影响导出的 JSON 数据；不会删除文件夹里已有的文件
-
-> 提示：`file://` 双击打开时，浏览器对本地文件的授权行为因版本而异；如果选择文件后刷新需要重新授权，重新点一次“选择知识文件”即可。
+- 在桌面版（`知识星图.exe`）里：点“选择知识文件”会弹出 Windows 原生文件对话框；绑定后输入框显示完整路径，之后每次保存自动写回该文件。绑定信息记在 `%LOCALAPPDATA%\KnowledgeStarmap\kb-file.txt`，重启程序会自动读取，不需要重新授权。
+- 在浏览器里：Chrome / Edge 会显示“选择知识文件”，通过浏览器的文件读写授权绑定，保存自动写回；输入框只显示文件名，不显示完整路径（浏览器的安全限制）。`file://` 双击打开时，浏览器可能每次启动都收回权限，需要重新点一次“选择知识文件”。
+- 不支持文件读写的环境显示“从路径载入”：按输入框里的路径读取（相对路径或 `http(s)://` 地址），只读、不写回。
+- 绑定不会删除文件夹里已有的文件，也不影响导出的 JSON 数据。
 
 演示库 `seed.json` 是构建原料，和种子模型一起放在 `packages/core/src/seed/`，构建时内联进 `app/index.html`；已经构建好的单文件不依赖它。想放自己的知识库，用 `private_knowledge_data/`（已被 `.gitignore` 忽略）或任意本地目录，再通过「知识库路径」绑定。
 
@@ -206,7 +203,7 @@ node scripts/smoke.cjs "file:///D:/dsh/WorkSpace/xintu/app/index.html?debug"
 - `packages/core/src/seed/seed.json` 是出厂演示库，只含 3 个示例知识点；应用默认使用构建时内联的这份数据
 - `localStorage` 是浏览器里的实时数据库，键名 `starmap.knowledge.v1`
 - JSON 是数据快照，可导入 / 导出
-- “知识库路径”可以把知识库绑定到一个本地 JSON 文件（自动读写），也可以载入一个 `http(s)` 地址（只读）
+- “知识库路径”可以把知识库绑定到一个本地 JSON 文件（自动读写），也可以载入一个 `http(s)` 地址（只读）：exe 版由桌面壳直接读写并显示完整路径，浏览器版走文件系统授权
 - `private_knowledge_data/` 是本机私有数据目录，已被 `.gitignore` 忽略，不会上传
   - `my_knowledge.json`：当前完整知识库，可在应用里通过 `⋯ → 知识库路径` 绑定或载入
   - `知识星图-*.json`：历史导出快照

@@ -26,6 +26,7 @@ import { enterLocal, enterSphere } from './navigation.js';
 import { openAppearance } from './ui/appearance.js';
 import { bindKbDialog, openKbDialog, syncKbUi } from './ui/kb-dialog.js';
 import { getKbFileName, kbFileSupported, pickKbFile, unbindKbFile } from './kb-file.js';
+import { hostKbSupported, pickHostKb } from './kb-host.js';
 import { bindRewardDialog, openRewardDialog } from './ui/reward-dialog.js';
 import { openGlobalDoc } from './ui/global-doc.js';
 import { fitFocus, rebuildFocus } from './focus.js';
@@ -297,6 +298,19 @@ function applyLoadedData(norm) {
  * 不支持时按输入框里的路径载入（只读）。
  */
 export async function openKnowledge() {
+  // 桌面壳：原生文件对话框 + 完整路径，读写由壳负责。
+  if (hostKbSupported()) {
+    try {
+      const res = await pickHostKb();
+      if (!res || res.status !== 'picked' || !res.content) return;
+      applyLoadedData(JSON.parse(res.content));
+      syncKbUi();
+      toast(`已绑定知识文件：${res.path}`);
+    } catch (err) {
+      toast('选择文件失败或文件格式不正确');
+    }
+    return;
+  }
   if (!kbFileSupported()) {
     await loadKnowledgeFromPath();
     return;

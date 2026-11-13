@@ -13,6 +13,7 @@ import {
 } from '@starmap/core';
 import { cam, ui } from './state.js';
 import { writeBoundKbFile } from './kb-file.js';
+import { hasHostKb, saveHostKb } from './kb-host.js';
 
 /** @type {import('@starmap/core').KnowledgeData} */
 export let data = null;
@@ -77,8 +78,11 @@ export function saveNow() {
   try {
     const snap = snapshot();
     backend.save(snap);
-    // 绑定了本地知识文件时同步写回（无权限/未绑定时静默跳过）。
-    void writeBoundKbFile(JSON.stringify(snap, null, 2));
+    // 桌面壳：把快照交给壳写回绑定文件（完整路径、无需浏览器授权）。
+    // 浏览器：无权限/未绑定时静默跳过。
+    const text = JSON.stringify(snap, null, 2);
+    if (hasHostKb()) saveHostKb(text);
+    else void writeBoundKbFile(text);
     return true;
   } catch (e) {
     return false;

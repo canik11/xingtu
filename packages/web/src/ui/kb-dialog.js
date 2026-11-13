@@ -2,6 +2,7 @@
 import { el } from '../lib/dom.js';
 import { getKbPath, isDefaultKbPath } from '../kb-path.js';
 import { getKbFileName, kbFileSupported } from '../kb-file.js';
+import { getHostKbPath, hostKbSupported } from '../kb-host.js';
 
 let open = false;
 
@@ -12,6 +13,17 @@ export function isKbDialogOpen() {
 /** 同步绑定文件、输入框与按钮文案，供载入/绑定后刷新。 */
 export function syncKbUi() {
   if (!el.kbPathInput) return;
+  // 桌面壳：显示壳记住的完整路径，选择/读写都由壳负责。
+  if (hostKbSupported()) {
+    const hostPath = getHostKbPath();
+    el.kbPathInput.value = hostPath;
+    el.kbPathInput.readOnly = true;
+    el.kbPathHint.textContent = hostPath
+      ? `已绑定知识文件：${hostPath}`
+      : '默认使用内置演示库';
+    el.kbPickBtn.textContent = '选择知识文件';
+    return;
+  }
   const name = getKbFileName();
   const path = getKbPath();
   const value = name || path;

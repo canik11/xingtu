@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -35,10 +36,13 @@ namespace KnowledgeStarmap
 
     internal sealed class MainForm : Form
     {
+        // 页面 → 壳：纯文本协议，避免 JSON 转义；路径与内容用换行分隔。
+        private const string KbSaveCommand = "starmap:kb-save\n";
         private readonly WebView2 webView;
         private readonly string userDataFolder;
-        private readonly string dataDirFile;
+        private readonly string kbConfigFile;
         private readonly string htmlPath;
+        private string kbPath;
         private bool isFullscreen;
         private FormBorderStyle savedBorderStyle;
         private FormWindowState savedWindowState;
@@ -47,10 +51,10 @@ namespace KnowledgeStarmap
         public MainForm(string baseDir, string htmlPath)
         {
             this.htmlPath = htmlPath;
-            this.dataDirFile = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "KnowledgeStarmap", "data-dir.txt");
-            this.userDataFolder = ResolveDataDir(this.dataDirFile);
+            string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            this.userDataFolder = Path.Combine(local, "KnowledgeStarmap", "WebView2");
+            this.kbConfigFile = Path.Combine(local, "KnowledgeStarmap", "kb-file.txt");
+            this.kbPath = ReadKbPath();
 
             Text = "知识星图";
             StartPosition = FormStartPosition.CenterScreen;
@@ -88,75 +92,125 @@ namespace KnowledgeStarmap
 })();
 ";
 
+        // 记住的知识文件路径（%LOCALAPPDATA%\KnowledgeStarmap\kb-file.txt 一行）。
+        private string ReadKbPath()
+        {
+            try
+            {
+                if (File.Exists(kbConfigFile))
+                {
+                    string path = File.ReadAllText(kbConfigFile, Encoding.UTF8).Trim();
+                    if (path.Length > 0) return path;
+                }
+            }
+            catch { }
+            return "";
+        }
+
+        private void WriteKbPath(string path)
+        {
+            try
+            {
+                string dir = Path.GetDirectoryName(kbConfigFile);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                if (path.Length > 0) File.WriteAllText(kbConfigFile, path, new UTF8Encoding(false));
+                else if (File.Exists(kbConfigFile)) File.Delete(kbConfigFile);
+            }
+            catch { }
+        }
+
+        private void PostKbPlain(string text)
+        {
+            try { webView.CoreWebView2.PostWebMessageAsString(text); } catch { }
+        }
+
+        private void PostKbFile(string prefix, string path, string content)
+        {
+            try
+            {
+                webView.CoreWebView2.PostWebMessageAsString(prefix + "\n" + path + "\n" + content);
+            }
+            catch { }
+        }
+
+        // 页面启动时询问：有绑定文件就回传完整路径与内容。
+        private void SendKbFile()
+        {
+            if (kbPath.Length == 0 || !File.Exists(kbPath))
+            {
+                PostKbPlain("starmap:kb-none");
+                return;
+            }
+            try
+            {
+                PostKbFile("starmap:kb-loaded", kbPath, File.ReadAllText(kbPath, Encoding.UTF8));
+            }
+            catch
+            {
+                PostKbPlain("starmap:kb-error");
+            }
+        }
+
+        // 原生文件对话框：路径在壳手里，页面拿到的是完整路径。
+        private void PickKbFile()
+        {
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Title = "选择知识文件";
+                dialog.Filter = "知识库 JSON (*.json)|*.json|所有文件 (*.*)|*.*";
+                dialog.CheckFileExists = true;
+                if (kbPath.Length > 0)
+                {
+                    try { dialog.InitialDirectory = Path.GetDirectoryName(kbPath); } catch { }
+                }
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    PostKbPlain("starmap:kb-cancel");
+                    return;
+                }
+                try
+                {
+                    string content = File.ReadAllText(dialog.FileName, Encoding.UTF8);
+                    kbPath = dialog.FileName;
+                    WriteKbPath(kbPath);
+                    PostKbFile("starmap:kb-picked", kbPath, content);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("无法读取这个文件：\n" + ex.Message, "知识星图",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    PostKbPlain("starmap:kb-error");
+                }
+            }
+        }
+
+        private void SaveKbFile(string content)
+        {
+            if (kbPath.Length == 0) return;
+            try
+            {
+                // 保持 UTF-8 无 BOM，和导出的 JSON 一致。
+                File.WriteAllText(kbPath, content, new UTF8Encoding(false));
+            }
+            catch { }
+        }
+
+        private void UnbindKbFile()
+        {
+            kbPath = "";
+            WriteKbPath("");
+        }
+
         private void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
             string msg;
             try { msg = e.TryGetWebMessageAsString(); } catch { return; }
             if (msg == "starmap:fullscreen") ToggleFullscreen();
             else if (msg == "starmap:escape" && isFullscreen) ToggleFullscreen();
-            else if (msg == "starmap:get-data-dir") SendDataDir();
-            else if (msg == "starmap:pick-data-dir") PickDataDir();
-        }
-
-        private static string DefaultDataDir()
-        {
-            return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "KnowledgeStarmap", "WebView2");
-        }
-
-        // 默认放在 %LOCALAPPDATA%；用户改过 data-dir.txt 时用用户指定的目录。
-        private static string ResolveDataDir(string dataDirFile)
-        {
-            try
-            {
-                if (File.Exists(dataDirFile))
-                {
-                    string dir = File.ReadAllText(dataDirFile).Trim();
-                    if (dir.Length > 0) return dir;
-                }
-            }
-            catch { }
-            return DefaultDataDir();
-        }
-
-        private void SendDataDir()
-        {
-            try
-            {
-                webView.CoreWebView2.PostWebMessageAsString("starmap:data-dir:" + userDataFolder);
-            }
-            catch { }
-        }
-
-        private void PickDataDir()
-        {
-            using (var dialog = new FolderBrowserDialog())
-            {
-                dialog.Description = "选择知识星图的数据目录。切换后需要重启，旧目录里的内容不会自动迁移。";
-                dialog.SelectedPath = userDataFolder;
-                dialog.ShowNewFolderButton = true;
-                if (dialog.ShowDialog(this) != DialogResult.OK) return;
-                string dir = dialog.SelectedPath;
-                if (string.IsNullOrEmpty(dir)) return;
-                try
-                {
-                    Directory.CreateDirectory(dir);
-                    Directory.CreateDirectory(Path.GetDirectoryName(dataDirFile));
-                    File.WriteAllText(dataDirFile, dir);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("无法使用这个目录：\n" + ex.Message, "知识星图",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                DialogResult answer = MessageBox.Show(
-                    "数据目录已改为：\n" + dir +
-                    "\n\n重启后生效。旧目录里的数据不会自动搬迁；如果里面有内容，请先在旧窗口「导出数据」，重启后再导入。\n\n现在重启吗？",
-                    "知识星图", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (answer == DialogResult.Yes) Application.Restart();
-            }
+            else if (msg == "starmap:kb-get") SendKbFile();
+            else if (msg == "starmap:kb-pick") PickKbFile();
+            else if (msg == "starmap:kb-unbind") UnbindKbFile();
+            else if (msg.StartsWith(KbSaveCommand)) SaveKbFile(msg.Substring(KbSaveCommand.Length));
         }
 
         private void ToggleFullscreen()

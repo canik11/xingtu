@@ -27,6 +27,7 @@ import { bindGlobalDoc } from './ui/global-doc.js';
 import { showFatal, toast } from './ui/feedback.js';
 import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath } from './kb-path.js';
 import { restoreKbFile } from './kb-file.js';
+import { hostKbSupported, requestHostKb } from './kb-host.js';
 
 let glScene = null;
 
@@ -97,16 +98,29 @@ async function boot() {
   });
 
   const loaded = load();
-  // 绑定了本地知识文件时优先恢复它；首次打开再尝试自定义路径。
+  // 桌面壳：优先用壳记住的知识文件（完整路径、重启自动读写）。
+  // 浏览器：绑定了本地知识文件时优先恢复它；首次打开再尝试自定义路径。
   let bound = null;
-  try {
-    bound = await restoreKbFile();
-  } catch (e) {
-    bound = null;
+  if (hostKbSupported()) {
+    const host = await requestHostKb();
+    if (host && host.status === 'loaded' && host.content) {
+      try {
+        if (replaceData(JSON.parse(host.content))) bound = { data: true };
+      } catch (e) {
+        /* 绑定文件损坏时静默回退到内置演示库。 */
+      }
+    }
+  } else {
+    try {
+      bound = await restoreKbFile();
+    } catch (e) {
+      bound = null;
+    }
+    if (bound && bound.data) {
+      replaceData(bound.data);
+    }
   }
-  if (bound && bound.data) {
-    replaceData(bound.data);
-  } else if (loaded.firstRun && !isDefaultKbPath() && canFetchKbPath(getKbPath())) {
+  if (!bound && loaded.firstRun && !isDefaultKbPath() && canFetchKbPath(getKbPath())) {
     try {
       const fromPath = await fetchKnowledge(getKbPath());
       if (fromPath) replaceData(fromPath);
