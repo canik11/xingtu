@@ -611,8 +611,8 @@ export function tick(dt) {
 
   if (ui.level === 'sphere' && ui.idleModes.breathe) {
     // 心跳：每拍只跳一次——先收缩、再轻轻回弹，像一次真实心跳。
-    // 固定 1.5Hz，不受速度滑条影响（滑条只控制旋转/膨胀）。
-    ui.breathPhase += dt * TAU * 1.5;
+    // 固定 0.5Hz（每 2 秒一拍），不受速度滑条影响（滑条只控制旋转/膨胀）。
+    ui.breathPhase += dt * TAU * 0.5;
     const p = ((ui.breathPhase % TAU) + TAU) % TAU;
     const d = Math.atan2(Math.sin(p), Math.cos(p));
     const squeeze = Math.exp(-(d * d) / (2 * 0.09 * 0.09));

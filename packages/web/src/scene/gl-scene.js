@@ -672,9 +672,11 @@ class WebGLScene {
       if (p.x < -120 || p.x > view.w + 120 || p.y < -120 || p.y > view.h + 120) continue;
       r0 = Math.max(r0, Math.hypot(p.x - center.x, p.y - center.y));
     }
-    r0 += 12;
-    // spawnRing 的 size 是精灵直径，这里换算成直径。
-    this.ambient.spawnRing(center.x, center.y, 0, r0 * 1.96, r0 * 2.76, 1500, 0.36, 0xa9c8ff);
+    r0 += 10;
+    // 潮汐：三圈错开涌出，先涨后退，像海浪一层层漫过球体轮廓。
+    this.ambient.spawnRing(center.x, center.y, 0, r0 * 1.92, r0 * 3.05, 2400, 0.3, 0x9fd0ff, 'tide');
+    this.ambient.spawnRing(center.x, center.y, 160, r0 * 2.02, r0 * 3.2, 2300, 0.22, 0xa9d8ff, 'tide');
+    this.ambient.spawnRing(center.x, center.y, 320, r0 * 2.14, r0 * 3.35, 2200, 0.16, 0xbfe4ff, 'tide');
   }
 
   render(t, dt) {

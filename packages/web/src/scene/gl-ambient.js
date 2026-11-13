@@ -49,13 +49,13 @@ export class GLAmbient {
     }
 
     this.ripples = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 9; i++) {
       const s = new Sprite(starRingTexture());
       s.anchor.set(0.5);
       s.blendMode = 'add';
       s.visible = false;
       this.rippleLayer.addChild(s);
-      this.ripples.push({ s, life: 0, max: 1, delay: 0, size0: 12, size1: 180, alpha0: 0.8, x: 0, y: 0 });
+      this.ripples.push({ s, life: 0, max: 1, delay: 0, size0: 12, size1: 180, alpha0: 0.8, x: 0, y: 0, curve: 'fade' });
     }
 
     this.burstStars = [];
@@ -167,7 +167,7 @@ export class GLAmbient {
     s.s.visible = true;
   }
 
-  spawnRing(x, y, delay, size0, size1, duration, alpha0, tint = 0xffffff) {
+  spawnRing(x, y, delay, size0, size1, duration, alpha0, tint = 0xffffff, curve = 'fade') {
     const ring = this.ripples.find((item) => item.life <= 0);
     if (!ring) return;
     ring.life = duration + delay;
@@ -176,6 +176,7 @@ export class GLAmbient {
     ring.size0 = size0;
     ring.size1 = size1;
     ring.alpha0 = alpha0;
+    ring.curve = curve;
     ring.x = x;
     ring.y = y;
     ring.s.visible = false;
@@ -279,7 +280,10 @@ export class GLAmbient {
       r.s.position.set(r.x, r.y);
       r.s.width = size;
       r.s.height = size;
-      r.s.alpha = r.alpha0 * Math.pow(1 - k, 1.5);
+      const envelope = r.curve === 'tide'
+        ? Math.sin(Math.PI * Math.min(1, k))
+        : Math.pow(1 - k, 1.5);
+      r.s.alpha = r.alpha0 * envelope;
     }
 
     for (const star of this.burstStars) {
