@@ -4,29 +4,6 @@ import { getKbPath, isDefaultKbPath } from '../kb-path.js';
 import { getKbFileName, kbFileSupported } from '../kb-file.js';
 
 let open = false;
-let dataDirBound = false;
-
-/** 桌面壳（WebView2）里才有 window.chrome.webview，浏览器里没有。 */
-function hostBridge() {
-  return (typeof window !== 'undefined' && window.chrome && window.chrome.webview) || null;
-}
-
-/** 数据目录只在 exe 壳里可设置；浏览器版保持隐藏。 */
-function setupDataDir() {
-  const bridge = hostBridge();
-  if (!bridge || !el.dataDirField) return;
-  el.dataDirField.hidden = false;
-  if (!dataDirBound) {
-    dataDirBound = true;
-    bridge.addEventListener('message', (event) => {
-      const msg = String(event.data || '');
-      const prefix = 'starmap:data-dir:';
-      if (msg.startsWith(prefix)) el.dataDirInput.value = msg.slice(prefix.length);
-    });
-    el.dataDirBtn.addEventListener('click', () => bridge.postMessage('starmap:pick-data-dir'));
-  }
-  bridge.postMessage('starmap:get-data-dir');
-}
 
 export function isKbDialogOpen() {
   return open;
@@ -52,7 +29,6 @@ export function openKbDialog() {
   open = true;
   el.moreWrap.classList.remove('open');
   syncKbUi();
-  setupDataDir();
   el.kbLayer.hidden = false;
   void el.kbLayer.offsetWidth;
   el.kbLayer.classList.add('open');
