@@ -264,7 +264,13 @@ async function boot() {
         return [...ui.sphereOffsets.entries()].map(([id, p]) => ({ id, ...p }));
       },
       get motion() {
-        return { modes: { ...ui.idleModes }, speed: ui.idleSpeed, breath: ui.idleBreath };
+        return {
+          modes: { ...ui.idleModes },
+          speed: ui.idleSpeed,
+          breath: ui.idleBreath,
+          pulse: ui.idlePulse,
+          breathAge: ui.breathAge
+        };
       },
       get appearance() {
         return JSON.parse(JSON.stringify(appearanceConfig()));

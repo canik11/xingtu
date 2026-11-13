@@ -151,6 +151,40 @@ export function starRingTexture() {
 }
 
 /**
+ * 心跳涟漪：一圈被拍点推散的星尘，不是完整圆环。
+ * 22 段长短、粗细、亮度都不一样的短弧随机分布在同一圈上，中间垫一层极淡的连续柔光；
+ * 放大到 600–900px 后仍然是一段段细光，不会像 star-ring 那样糊成光带，也不会被看成 UI 圆环。
+ */
+export function pulseRingTexture() {
+  return texture('pulse-ring', 512, (ctx, s) => {
+    const c = s / 2;
+    const r = c * 0.9;
+    ctx.strokeStyle = 'rgba(206,230,255,.05)';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(c, c, r, 0, TAU);
+    ctx.stroke();
+    let seed = 7.31;
+    const rand = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 22; i++) {
+      const a0 = rand() * TAU;
+      const len = 0.05 + rand() * 0.16;
+      const width = 1.2 + rand() * 1.4;
+      const alpha = 0.18 + rand() * 0.62;
+      ctx.strokeStyle = `rgba(226,240,255,${alpha.toFixed(3)})`;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.arc(c, c, r, a0, a0 + len);
+      ctx.stroke();
+    }
+  });
+}
+
+/**
  * 节点静默星芒：四臂十字。每条臂不是线条，而是一枚顶角 5° 的棱状三角形，
  * 中间用高亮脊线表现棱面；纹理按高倍率绘制，镜头放大后依然锐利。
  */

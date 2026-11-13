@@ -36,6 +36,18 @@ namespace KnowledgeStarmap
 
     internal sealed class MainForm : Form
     {
+        // 标题栏跟随网页的深色顶栏：Win10 用沉浸式深色模式，Win11 再自绘标题栏颜色。
+        private const int DWMWA_BORDER_COLOR = 34;
+        private const int DWMWA_CAPTION_COLOR = 35;
+        private const int DWMWA_TEXT_COLOR = 36;
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
+        private static extern int SetWindowTheme(IntPtr hwnd, string appName, string idList);
         // 页面 → 壳：纯文本协议，避免 JSON 转义；路径与内容用换行分隔。
         private const string KbSaveCommand = "starmap:kb-save\n";
         private readonly WebView2 webView;
@@ -75,6 +87,30 @@ namespace KnowledgeStarmap
             };
             Controls.Add(webView);
             Load += async (sender, args) => await InitAsync();
+            Shown += (sender, args) => ApplyDarkTitleBar();
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            ApplyDarkTitleBar();
+        }
+
+        private void ApplyDarkTitleBar()
+        {
+            IntPtr hwnd = Handle;
+            if (hwnd == IntPtr.Zero) return;
+            int dark = 1;
+            if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int)) != 0)
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref dark, sizeof(int));
+            // Win11 22000+ 才支持下面三个属性，旧系统调用失败直接忽略。
+            int caption = 0x00120905; // COLORREF 0x00BBGGRR → #050912，与网页顶栏同色
+            int text = 0x00FFF7F2;    // #F2F7FF
+            int border = 0x00120905;
+            DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref caption, sizeof(int));
+            DwmSetWindowAttribute(hwnd, DWMWA_TEXT_COLOR, ref text, sizeof(int));
+            DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref border, sizeof(int));
+            SetWindowTheme(hwnd, "DarkMode_Explorer", null);
         }
 
         // 网页里按 F11 时通过 postMessage 通知壳程序切换全屏；Esc 只用于退出全屏。
@@ -231,6 +267,7 @@ namespace KnowledgeStarmap
                 Bounds = savedBounds;
                 WindowState = savedWindowState;
                 isFullscreen = false;
+                ApplyDarkTitleBar();
             }
         }
 

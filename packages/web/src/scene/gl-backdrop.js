@@ -1,7 +1,7 @@
 // WebGL 星空背景：底色、星云、星点、微粒与流星，全部走 Pixi 批处理。
 import { Container, Graphics, Sprite, TilingSprite } from 'pixi.js';
 import { clamp, randRange, TAU } from '@starmap/core';
-import { cam, view } from '../state.js';
+import { cam, ui, view } from '../state.js';
 import { quality } from '../quality.js';
 import {
   bgTexture,
@@ -184,6 +184,20 @@ export class GLBackdrop {
     const bright = clamp(q.glow || 1, 0.2, 3);
     const sparkle = clamp(q.sparkle || q.glow || 1, 0.2, 3);
 
+    // 心跳的“星尘波”：从画面中心向外扫过背景星点，星星依次亮一下。
+    // 波只在 0.85s 内走完，幅度很轻，不与星海主体的光脉冲抢戏。
+    const waveOn = ui.level === 'sphere' && ui.idleModes.breathe && ui.breathAge < 850;
+    const waveFront = waveOn ? ui.breathAge * 1.9 : -1;
+    const waveBand = 280;
+    const beat = 1 + (ui.idlePulse || 0) * 0.1;
+    const waveAt = (x, y) => {
+      if (!waveOn) return 0;
+      const dx = x - W * 0.5;
+      const dy = y - H * 0.5;
+      const delta = Math.sqrt(dx * dx + dy * dy) - waveFront;
+      return Math.exp(-(delta * delta) / (2 * waveBand * waveBand)) * 0.45;
+    };
+
     for (const { cfg, s } of this.nebulas) {
       const x = cfg.u * W + Math.sin(nt * cfg.sp + cfg.ph) * W * 0.018 + cam.x * 0.012;
       const y = cfg.v * H + Math.cos(nt * cfg.sp * 0.8 + cfg.ph) * H * 0.018 + cam.y * 0.012;
@@ -200,8 +214,9 @@ export class GLBackdrop {
       const sx = mod(s.u * W - cam.x * par, W);
       const sy = mod(s.v * H - cam.y * par * 0.7, H);
       const twinkle = 0.72 + 0.28 * Math.sin(time * s.tw + s.ph);
-      const alpha = Math.min(1, s.a * twinkle * bright);
-      const size = Math.max(0.7, s.r * 4.2 * sizeScale);
+      const wave = waveAt(sx, sy);
+      const alpha = Math.min(1, s.a * twinkle * bright * (1 + wave) * beat);
+      const size = Math.max(0.7, s.r * 4.2 * sizeScale * (1 + wave * 0.7));
       s.sprite.position.set(sx, sy);
       s.sprite.width = size;
       s.sprite.height = size;
@@ -224,8 +239,9 @@ export class GLBackdrop {
       const drift = t * 0.000012 * m.sp;
       const sx = mod(m.u * W + drift * W * 0.2 - cam.x * 0.05, W);
       const sy = mod(m.v * H - drift * H * 0.28 - cam.y * 0.05, H);
-      const a = Math.min(1, m.a * (0.55 + 0.45 * Math.sin(time * m.tw + m.ph)) * bright);
-      const size = Math.max(1.2, m.r * 2.0 * sizeScale);
+      const wave = waveAt(sx, sy);
+      const a = Math.min(1, m.a * (0.55 + 0.45 * Math.sin(time * m.tw + m.ph)) * bright * (1 + wave * 0.8) * beat);
+      const size = Math.max(1.2, m.r * 2.0 * sizeScale * (1 + wave * 0.5));
       m.s.position.set(sx, sy);
       m.s.width = size;
       m.s.height = size;

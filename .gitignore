@@ -1,6 +1,8 @@
 # 依赖与构建中间产物
 node_modules/
+dist/
 packages/web/dist/
+.edge-idle-profile/
 packaging/sdk/
 packaging/dist/
 packaging/*.nupkg

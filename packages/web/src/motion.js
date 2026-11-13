@@ -40,6 +40,7 @@ export function toggleIdleMode(mode) {
   if (mode === 'still') {
     for (const key of MODES) ui.idleModes[key] = false;
     ui.idleBreath = 1;
+    ui.idlePulse = 0;
     ui.spherePuffTarget = 0;
     saveMotionPrefs();
     return;
@@ -48,8 +49,13 @@ export function toggleIdleMode(mode) {
   const next = !ui.idleModes[mode];
   ui.idleModes[mode] = next;
   if (mode === 'breathe') {
-    if (next) ui.breathPhase = 0;
-    else ui.idleBreath = 1;
+    if (next) {
+      ui.breathPhase = 0;
+      ui.breathAge = 0;
+    } else {
+      ui.idleBreath = 1;
+      ui.idlePulse = 0;
+    }
   }
   if (mode === 'puff') {
     if (next) initPuff();
@@ -65,8 +71,13 @@ export function setIdleModes(next) {
     if (ui.idleModes[mode] === value) continue;
     ui.idleModes[mode] = value;
     if (mode === 'breathe') {
-      if (value) ui.breathPhase = 0;
-      else ui.idleBreath = 1;
+      if (value) {
+        ui.breathPhase = 0;
+        ui.breathAge = 0;
+      } else {
+        ui.idleBreath = 1;
+        ui.idlePulse = 0;
+      }
     }
     if (mode === 'puff') {
       if (value) initPuff();
@@ -96,7 +107,10 @@ export function loadMotionPrefs() {
     if (saved) {
       for (const mode of MODES) ui.idleModes[mode] = !!saved[mode];
       if (ui.idleModes.puff) initPuff();
-      if (ui.idleModes.breathe) ui.breathPhase = 0;
+      if (ui.idleModes.breathe) {
+        ui.breathPhase = 0;
+        ui.breathAge = 0;
+      }
     } else if (raw.mode === 'still') {
       for (const mode of MODES) ui.idleModes[mode] = false;
     }

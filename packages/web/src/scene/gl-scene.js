@@ -113,6 +113,13 @@ class WebGLScene {
     this.backdrop = new GLBackdrop();
     this.root.addChild(this.backdrop.root);
 
+    // 心跳时的整片透光：垫在星尘和节点后面，只让球心附近亮起一层很淡的冷光。
+    this.breathGlow = new Sprite(glowTexture());
+    this.breathGlow.anchor.set(0.5);
+    this.breathGlow.blendMode = 'add';
+    this.breathGlow.visible = false;
+    this.root.addChild(this.breathGlow);
+
     this.ambient = new GLAmbient();
     this.root.addChild(this.ambient.root);
     this.breathMark = -1;
@@ -251,19 +258,21 @@ class WebGLScene {
     const haloR = rad * 3.0 * haloScale;
     const haloBase = active || hovered ? 0.11 + depth * 0.16 : 0.075 + depth * 0.10;
     const glowK = modeGlow();
+    // 心跳光脉冲：整片星海一起轻轻亮一下，节点光晕再放大一点，但不刺眼。
+    const pulse = 1 + (ui.idlePulse || 0) * 0.34;
     const alpha = haloBase * dim * born * (active ? 1.4 : hovered ? 1.2 : 1) * glowK;
     rec.halo.visible = alpha > 0.012 && rad > 0.4 && !(isPoint && lowDetail);
     rec.halo.position.set(x, y);
     rec.halo.width = haloR * 2;
     rec.halo.height = haloR * 2;
-    rec.halo.alpha = Math.min(active || hovered ? 0.44 : 0.30, alpha * 1.5 * gain);
+    rec.halo.alpha = Math.min(active || hovered ? 0.5 : 0.38, alpha * 1.5 * gain * pulse);
     rec.halo.tint = rgbHex(rgb);
 
     rec.core.visible = rad > 0.3 && dim * born > 0.02;
     rec.core.position.set(x, y);
     rec.core.width = rad * 2;
     rec.core.height = rad * 2;
-    rec.core.alpha = Math.min(1, 0.76 * dim * born * gain);
+    rec.core.alpha = Math.min(1, 0.76 * dim * born * gain * (1 + (ui.idlePulse || 0) * 0.14));
     rec.core.tint = rgbHex(rgb.map((v) => Math.min(255, v + 8)));
 
     // Every node gets its own resting cross-star. The star is four
@@ -273,11 +282,12 @@ class WebGLScene {
     const flareAlpha = active || hovered ? 0 : (0.34 + depth * 0.20) * dim * born * detail * modeSparkle();
     rec.flare.visible = flareAlpha > 0.012 && rad > 0.45;
     if (rec.flare.visible) {
-      const size = rad * (isPoint ? 5.4 : 6.4) * (isPoint && lowDetail ? 0.68 : 1) * (0.94 + 0.06 * twinkle);
+      const beat = (ui.idlePulse || 0) * 0.42;
+      const size = rad * (isPoint ? 5.4 : 6.4) * (isPoint && lowDetail ? 0.68 : 1) * (0.94 + 0.06 * twinkle) * (1 + beat * 0.16);
       rec.flare.position.set(x, y);
       rec.flare.width = size;
       rec.flare.height = size;
-      rec.flare.alpha = Math.min(0.68, flareAlpha * (0.58 + 0.42 * twinkle) * gain);
+      rec.flare.alpha = Math.min(0.82, flareAlpha * (0.58 + 0.42 * twinkle) * gain * (1 + beat));
       rec.flare.tint = rgbHex(rgb.map((v) => Math.min(255, v + 10)));
       rec.flare.rotation = 0;
     }
@@ -407,15 +417,17 @@ class WebGLScene {
       const gold = edgeIsMastered(e.pa.node, e.pb.node);
       const edgeRgb = gold ? edgeMasteredRgb(e.pa.node, e.pb.node) : edgeDefaultRgb(e.pa.node, e.pb.node);
       const color = rgbHex(edgeRgb);
+      // 心跳时关系光丝跟着亮一点，让“整片星海亮一下”也扫到连线。
+      const beat = 1 + (ui.idlePulse || 0) * 0.12;
       this.edgeGlow.moveTo(pa.x, pa.y).lineTo(pb.x, pb.y).stroke({
         width: isActive ? 8 : 5.2,
         color,
-        alpha: gold ? Math.min(0.3, alpha * 0.24) : alpha * 0.16
+        alpha: Math.min(1, (gold ? Math.min(0.3, alpha * 0.24) : alpha * 0.16) * beat)
       });
       this.edgeMain.moveTo(pa.x, pa.y).lineTo(pb.x, pb.y).stroke({
         width: isActive ? 1.45 : 0.95,
         color,
-        alpha: gold ? Math.min(0.8, alpha * 1.08) : alpha
+        alpha: Math.min(1, (gold ? Math.min(0.8, alpha * 1.08) : alpha) * beat)
       });
       if (isActive) {
         pulseInfos.push({ pa, pb, color, alpha, gold });
@@ -651,32 +663,48 @@ class WebGLScene {
     return p.x > -margin && p.x < view.w + margin && p.y > -margin && p.y < view.h + margin;
   }
 
-  /** 心跳节拍：从当前星海整体轮廓向外扩散一圈星辉涟漪。 */
+  /**
+   * 心跳节拍：球心透光随节拍亮起又落下，每拍再从星海轮廓荡出一圈极细的柔光。
+   * 透光是整片区域一起呼吸，细环只在轮廓外 1.45 倍以内扩散，两层都很轻，
+   * 不会像旧版那样把潮汐环放大成粗重光带。
+   */
   breathRipple() {
-    if (ui.level !== 'sphere' || !ui.idleModes.breathe) {
+    const on = ui.level === 'sphere' && ui.idleModes.breathe;
+    if (!on) {
       this.breathMark = -1;
+      this.breathGlow.visible = false;
       return;
     }
-    const p = ((ui.breathPhase % TAU) + TAU) % TAU;
-    const prev = this.breathMark;
-    this.breathMark = p;
-    // 相位回绕时正好是收缩峰值：每拍只触发一次。
-    if (prev < 0 || p >= prev) return;
-    const visuals = sceneVisuals();
-    if (!visuals || !visuals.length) return;
+    const pulse = ui.idlePulse || 0;
+    const visuals = sceneVisuals() || [];
     // 以球心为圆心，取最远可见节点的投影距离作为轮廓半径。
     const center = worldToScreen(0, 0);
     let r0 = 80;
     for (const v of visuals) {
-      const p = worldToScreen(v.x, v.y);
-      if (p.x < -120 || p.x > view.w + 120 || p.y < -120 || p.y > view.h + 120) continue;
-      r0 = Math.max(r0, Math.hypot(p.x - center.x, p.y - center.y));
+      const vp = worldToScreen(v.x, v.y);
+      if (vp.x < -120 || vp.x > view.w + 120 || vp.y < -120 || vp.y > view.h + 120) continue;
+      r0 = Math.max(r0, Math.hypot(vp.x - center.x, vp.y - center.y));
     }
     r0 += 10;
-    // 潮汐：三圈错开涌出，先涨后退，像海浪一层层漫过球体轮廓。
-    this.ambient.spawnRing(center.x, center.y, 0, r0 * 1.92, r0 * 3.05, 2400, 0.3, 0x9fd0ff, 'tide');
-    this.ambient.spawnRing(center.x, center.y, 160, r0 * 2.02, r0 * 3.2, 2300, 0.22, 0xa9d8ff, 'tide');
-    this.ambient.spawnRing(center.x, center.y, 320, r0 * 2.14, r0 * 3.35, 2200, 0.16, 0xbfe4ff, 'tide');
+
+    const glow = this.breathGlow;
+    glow.visible = pulse > 0.015;
+    if (glow.visible) {
+      const size = r0 * (2.7 + pulse * 0.4);
+      glow.position.set(center.x, center.y);
+      glow.width = size;
+      glow.height = size;
+      glow.alpha = Math.min(0.12, pulse * 0.075);
+    }
+
+    const p = ((ui.breathPhase % TAU) + TAU) % TAU;
+    const prev = this.breathMark;
+    this.breathMark = p;
+    // 相位回绕时正好是收缩峰值：每拍只触发一次。
+    if (prev < 0 || p >= prev || !visuals.length) return;
+    // 纹理里的环在精灵宽度的 90% 处，所以尺寸 = 目标环直径 / 0.9。
+    const ringSize = (radius) => (radius * 2) / 0.9;
+    this.ambient.spawnPulseRing(center.x, center.y, ringSize(r0 * 1.02), ringSize(r0 * 1.48), 1200, 0.16, 0xd4e7ff);
   }
 
   render(t, dt) {

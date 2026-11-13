@@ -2,7 +2,7 @@
 import { Container, Sprite } from 'pixi.js';
 import { clamp, TAU } from '@starmap/core';
 import { view } from '../state.js';
-import { flareTexture, sparkTexture, starRingTexture } from './gl-textures.js';
+import { flareTexture, pulseRingTexture, sparkTexture, starRingTexture } from './gl-textures.js';
 
 const PARTICLE_COUNT = 240;
 const PARTICLE_POOL = Math.ceil(PARTICLE_COUNT * 3.0);
@@ -56,6 +56,17 @@ export class GLAmbient {
       s.visible = false;
       this.rippleLayer.addChild(s);
       this.ripples.push({ s, life: 0, max: 1, delay: 0, size0: 12, size1: 180, alpha0: 0.8, x: 0, y: 0, curve: 'fade' });
+    }
+
+    // 心跳涟漪单独一组：细柔光弧，绝不复用带星芒的点击星环。
+    this.pulseRipples = [];
+    for (let i = 0; i < 3; i++) {
+      const s = new Sprite(pulseRingTexture());
+      s.anchor.set(0.5);
+      s.blendMode = 'add';
+      s.visible = false;
+      this.rippleLayer.addChild(s);
+      this.pulseRipples.push({ s, life: 0, max: 1, delay: 0, size0: 12, size1: 180, alpha0: 0.8, x: 0, y: 0, curve: 'fade' });
     }
 
     this.burstStars = [];
@@ -184,6 +195,24 @@ export class GLAmbient {
     ring.s.tint = tint;
   }
 
+  /** 心跳涟漪：细柔光弧，从轮廓向外荡开；没有星芒，不会糊成光带。 */
+  spawnPulseRing(x, y, size0, size1, duration, alpha0, tint = 0xffffff) {
+    const ring = this.pulseRipples.find((item) => item.life <= 0);
+    if (!ring) return;
+    ring.life = duration;
+    ring.max = duration;
+    ring.delay = 0;
+    ring.size0 = size0;
+    ring.size1 = size1;
+    ring.alpha0 = alpha0;
+    ring.curve = 'tide';
+    ring.x = x;
+    ring.y = y;
+    ring.s.visible = false;
+    ring.s.position.set(x, y);
+    ring.s.tint = tint;
+  }
+
   burst(x, y) {
     // 点击只绽开一圈细星环，外加一次很短的星芒中心闪光。
     this.spawnRing(x, y, 0, 14, 180, 640, 0.95);
@@ -258,7 +287,31 @@ export class GLAmbient {
       s.s.tint = 0xffffff;
     }
 
-    for (const r of this.ripples) {
+    this.updateRipples(this.ripples, dt);
+    this.updateRipples(this.pulseRipples, dt);
+
+    for (const star of this.burstStars) {
+      if (star.life <= 0) {
+        star.s.visible = false;
+        continue;
+      }
+      star.life -= dt;
+      if (star.life <= 0) {
+        star.s.visible = false;
+        continue;
+      }
+      const k = 1 - star.life / star.max;
+      star.s.position.set(star.x, star.y);
+      star.s.width = 8 + k * 22;
+      star.s.height = star.s.width;
+      star.s.alpha = Math.min(1, 0.92 * (1 - k));
+      star.s.rotation = k * 0.5;
+      star.s.tint = 0xffffff;
+    }
+  }
+
+  updateRipples(list, dt) {
+    for (const r of list) {
       if (r.life <= 0) {
         r.s.visible = false;
         continue;
@@ -285,25 +338,6 @@ export class GLAmbient {
         : Math.pow(1 - k, 1.5);
       r.s.alpha = r.alpha0 * envelope;
     }
-
-    for (const star of this.burstStars) {
-      if (star.life <= 0) {
-        star.s.visible = false;
-        continue;
-      }
-      star.life -= dt;
-      if (star.life <= 0) {
-        star.s.visible = false;
-        continue;
-      }
-      const k = 1 - star.life / star.max;
-      star.s.position.set(star.x, star.y);
-      star.s.width = 8 + k * 22;
-      star.s.height = star.s.width;
-      star.s.alpha = Math.min(1, 0.92 * (1 - k));
-      star.s.rotation = k * 0.5;
-      star.s.tint = 0xffffff;
-    }
   }
 
   stats() {
@@ -311,6 +345,7 @@ export class GLAmbient {
       particles: this.particles.length,
       sparks: this.sparks.filter((s) => s.life > 0).length,
       ripples: this.ripples.filter((r) => r.life > 0).length,
+      pulseRipples: this.pulseRipples.filter((r) => r.life > 0).length,
       stars: this.burstStars.filter((s) => s.life > 0).length
     };
   }

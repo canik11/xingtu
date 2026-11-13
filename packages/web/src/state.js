@@ -65,12 +65,17 @@ export const ui = {
   sphereOffsets: new Map(),
   orbitDrag: null,
 
-  /* 3D 静默效果可以叠加：旋转 / 呼吸 / 膨胀；三项都关即静止。 */
+  /* 3D 静默效果可以叠加：旋转 / 心跳 / 膨胀；三项都关即静止。 */
   idleModes: { rotate: true, breathe: false, puff: false },
   idleSpeed: 1,
   idlePhase: 0,
   breathPhase: 0,
+  /** 心跳的几何收缩（1 = 静止），幅度只有百分之几，只当轻颤。 */
   idleBreath: 1,
+  /** 心跳的光脉冲（0..1），驱动节点星辉与背景星尘一起亮一下。 */
+  idlePulse: 0,
+  /** 距上一次心跳主拍的秒数，用于背景星尘波向外扩散。 */
+  breathAge: 0,
 
   /* 从 3D 平铺到 2D 的过渡：{ from: Map<id,{x,y}>, start, dur }。 */
   transition: null

@@ -87,6 +87,8 @@ function drawEdges3D(ctx, t, edges) {
   ctx.globalCompositeOperation = 'lighter';
   const activeSel = ui.level === 'inner' ? ui.innerSelection : ui.selection;
   const labels = [];
+  // 心跳光脉冲：连线跟着整片星海一起亮一点。
+  const beat = 1 + (ui.idlePulse || 0) * 0.12;
 
   for (const e of edges) {
     const pa = screenPos(e.pa);
@@ -101,18 +103,18 @@ function drawEdges3D(ctx, t, edges) {
     if (e.kind === 'topic') alpha *= 1.18;
     if (activeSel) alpha = active ? 0.58 : alpha * 0.2;
     if (ui.searchTerm && ui.level === 'sphere') alpha *= 0.25;
-    alpha = clamp(alpha, 0, 0.66);
+    alpha = clamp(alpha, 0, 0.66) * beat;
     const goldEdge = edgeIsMastered(e.pa.node, e.pb.node);
     const edgeRgb = goldEdge ? edgeMasteredRgb(e.pa.node, e.pb.node) : edgeDefaultRgb(e.pa.node, e.pb.node);
 
-    ctx.strokeStyle = rgba(edgeRgb, goldEdge ? Math.min(0.3, alpha * 0.24) : alpha * 0.16);
+    ctx.strokeStyle = rgba(edgeRgb, goldEdge ? Math.min(0.34, alpha * 0.24) : alpha * 0.16);
     ctx.lineWidth = active ? 8 : 5.2;
     ctx.beginPath();
     ctx.moveTo(pa.x, pa.y);
     ctx.lineTo(pb.x, pb.y);
     ctx.stroke();
 
-    ctx.strokeStyle = rgba(edgeRgb, goldEdge ? Math.min(0.8, alpha * 1.08) : alpha);
+    ctx.strokeStyle = rgba(edgeRgb, goldEdge ? Math.min(0.86, alpha * 1.08) : Math.min(1, alpha));
     ctx.lineWidth = active ? 1.45 : 0.95;
     ctx.beginPath();
     ctx.moveTo(pa.x, pa.y);
@@ -177,6 +179,8 @@ function drawPulse(ctx, ax, ay, bx, by, t, alpha, active, edgeRgb) {
 function drawHalos3D(ctx, t, visuals) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
+  // 心跳光脉冲：光晕与星芒随主拍一起亮，幅度很小。
+  const beat = 1 + (ui.idlePulse || 0) * 0.3;
   for (const v of visuals) {
     const dim = dimOf(v) * bornAge(v, t);
     if (dim < 0.02) continue;
@@ -185,8 +189,8 @@ function drawHalos3D(ctx, t, visuals) {
     const hovered = isHovered(v);
     const rad = radiusOf(v);
     const rgb = masteryRgb(v.node);
-    const a = (0.16 + v.depth * 0.2) * dim * (active ? 1.5 : hovered ? 1.25 : 1);
-    const haloR = rad * (active ? 8.5 : 6.6);
+    const a = (0.16 + v.depth * 0.2) * dim * (active ? 1.5 : hovered ? 1.25 : 1) * beat;
+    const haloR = rad * (active ? 8.5 : 6.6) * (1 + (ui.idlePulse || 0) * 0.06);
     const g = ctx.createRadialGradient(p.x, p.y, rad * 0.1, p.x, p.y, haloR);
     g.addColorStop(0, rgba(rgb.map((x) => Math.min(255, x + 24)), Math.min(1, a * 2.3)));
     g.addColorStop(0.18, rgba(rgb, Math.min(1, a * 1.35)));
@@ -198,9 +202,9 @@ function drawHalos3D(ctx, t, visuals) {
     ctx.fill();
 
     if (active || hovered || (v.kind === 'center' && cam.scale > 0.55)) {
-      drawFlare(ctx, p.x, p.y, rad * (active ? 9 : 6), (active ? 0.55 : hovered ? 0.4 : 0.2) * dim);
+      drawFlare(ctx, p.x, p.y, rad * (active ? 9 : 6), (active ? 0.55 : hovered ? 0.4 : 0.2) * dim * beat);
     } else {
-      drawIdleFlare(ctx, p.x, p.y, rad, v.id, t, rgb, dim, v.depth);
+      drawIdleFlare(ctx, p.x, p.y, rad, v.id, t, rgb, dim * (1 + (ui.idlePulse || 0) * 0.22), v.depth);
     }
   }
   ctx.restore();
@@ -233,8 +237,9 @@ function drawFlare(ctx, x, y, len, alpha) {
 
 function drawCores3D(ctx, t, visuals) {
   ctx.save();
+  const beat = 1 + (ui.idlePulse || 0) * 0.12;
   for (const v of visuals) {
-    const dim = dimOf(v) * bornAge(v, t);
+    const dim = dimOf(v) * bornAge(v, t) * beat;
     if (dim < 0.02) continue;
     const p = screenPos(v);
     const active = isSelected(v);

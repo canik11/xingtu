@@ -610,16 +610,27 @@ export function tick(dt) {
   }
 
   if (ui.level === 'sphere' && ui.idleModes.breathe) {
-    // 心跳：每拍只跳一次——先收缩、再轻轻回弹，像一次真实心跳。
-    // 固定 0.5Hz（每 2 秒一拍），不受速度滑条影响（滑条只控制旋转/膨胀）。
-    ui.breathPhase += dt * TAU * 0.5;
+    // 心跳：一拍 2.4s。主拍先收缩 2.8%，跟一个很轻的次拍（lub-dub），
+    // 中间带一点回弹。几何上几乎只是轻颤，真正的心跳感交给光脉冲。
+    // 每拍幅度上下浮动 ±10%，避免机械重复。频率固定，不受速度滑条影响。
+    const PERIOD = 2400;
+    ui.breathPhase += (dt / PERIOD) * TAU;
     const p = ((ui.breathPhase % TAU) + TAU) % TAU;
     const d = Math.atan2(Math.sin(p), Math.cos(p));
-    const squeeze = Math.exp(-(d * d) / (2 * 0.09 * 0.09));
-    const rebound = Math.exp(-((d - 0.24) * (d - 0.24)) / (2 * 0.13 * 0.13));
-    ui.idleBreath = 1 - squeeze * 0.075 + rebound * 0.045;
+    const beat = Math.floor(ui.breathPhase / TAU);
+    const noise = Math.sin(beat * 12.9898) * 43758.5453;
+    const gain = 0.9 + (noise - Math.floor(noise)) * 0.2;
+    const main = Math.exp(-(d * d) / (2 * 0.3 * 0.3));
+    const dub = Math.exp(-((d - 0.72) * (d - 0.72)) / (2 * 0.3 * 0.3));
+    const rebound = Math.exp(-((d - 0.36) * (d - 0.36)) / (2 * 0.35 * 0.35));
+    ui.idleBreath = 1 - (main * 0.028 + dub * 0.014) * gain + rebound * 0.01;
+    const pMain = Math.exp(-(d * d) / (2 * 0.42 * 0.42));
+    const pDub = Math.exp(-((d - 0.72) * (d - 0.72)) / (2 * 0.38 * 0.38));
+    ui.idlePulse = Math.min(1.2, (pMain + pDub * 0.55) * gain);
+    ui.breathAge = (p / TAU) * PERIOD;
   } else {
     ui.idleBreath = 1;
+    ui.idlePulse = 0;
   }
 
   if (ui.orbitDrag || ui.level === 'local') return;
