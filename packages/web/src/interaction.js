@@ -10,6 +10,7 @@ import { isAddOpen } from './ui/add-modal.js';
 import { nodeAt3D, rotateScene, rotateFocus, moveSphereNode } from './hierarchy.js';
 import { enterLocal, back } from './navigation.js';
 import { nodeAtFocus, edgeAtFocus, fitFocus, moveFocusNode } from './focus.js';
+import { isPresenting } from './ui/presentation.js';
 
 /** 屏幕坐标命中当前的局部图节点（兼容旧调试接口）。 */
 export function nodeAtScreen(x, y) {
@@ -57,6 +58,7 @@ export function bindInteraction() {
     const oldW = view.w;
     const oldH = view.h;
     if (typeof window.__resizeStage === 'function') window.__resizeStage();
+    if (isPresenting()) return;
     if (ui.level !== 'local') {
       const radius = ui.level === 'inner' ? 250 : ui.spherePuffTarget > 0.5 ? 430 : 300;
       center3DScene(false, radius);
@@ -80,6 +82,7 @@ export function bindInteraction() {
   });
 
   canvas.addEventListener('pointerdown', (e) => {
+    if (isPresenting()) return;
     ui.pointer.x = e.clientX;
     ui.pointer.y = e.clientY;
 
@@ -155,6 +158,7 @@ export function bindInteraction() {
   });
 
   canvas.addEventListener('pointermove', (e) => {
+    if (isPresenting()) return;
     ui.pointer.x = e.clientX;
     ui.pointer.y = e.clientY;
     const drag = ui.dragNode;
@@ -274,6 +278,7 @@ export function bindInteraction() {
   });
 
   canvas.addEventListener('dblclick', (e) => {
+    if (isPresenting()) return;
     if (ui.level !== 'local') {
       const hit = nodeAt3D(e.clientX, e.clientY);
       if (!hit) return;
@@ -293,6 +298,7 @@ export function bindInteraction() {
     'wheel',
     (e) => {
       e.preventDefault();
+      if (isPresenting()) return;
       zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0011));
     },
     { passive: false }
@@ -303,6 +309,7 @@ export function bindInteraction() {
   });
 
   document.addEventListener('keydown', (e) => {
+    if (isPresenting()) return;
     const textField = (target) => {
       if (!target) return false;
       const tag = target.tagName;

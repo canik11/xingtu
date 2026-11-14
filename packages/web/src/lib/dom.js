@@ -38,6 +38,10 @@ export function cacheDom() {
   el.menu = $id('menu');
   el.menuDelete = $id('menuDelete');
   el.moreWrap = $id('moreWrap');
+  el.btnPresent = $id('btnPresent');
+  el.showLayer = $id('showLayer');
+  el.showCaption = $id('showCaption');
+  el.showExit = $id('showExit');
   el.zoomIn = $id('zoomIn');
   el.zoomOut = $id('zoomOut');
   el.zoomFit = $id('zoomFit');
