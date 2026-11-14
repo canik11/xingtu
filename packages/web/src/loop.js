@@ -9,8 +9,6 @@ import { updateAmbient } from './scene/ambient.js';
 import { draw } from './scene/renderer.js';
 
 let raf = 0;
-let args = null;
-let paused = false;
 
 /**
  * 开始渲染循环。
@@ -18,9 +16,6 @@ let paused = false;
  * @param {{render:(t:number,dt:number)=>void}|null} gpu
  */
 export function startLoop(ctx, gpu = null) {
-  args = [ctx, gpu];
-  paused = false;
-  if (raf) cancelAnimationFrame(raf);
   clock.last = performance.now();
   const frame = (now) => {
     raf = requestAnimationFrame(frame);
@@ -50,24 +45,4 @@ export function startLoop(ctx, gpu = null) {
 export function stopLoop() {
   if (raf) cancelAnimationFrame(raf);
   raf = 0;
-  paused = false;
-}
-
-export function isLoopPaused() {
-  return paused;
-}
-
-/** 暂停主循环，把这一帧的画面留给别人（放映模式用）。 */
-export function pauseLoop() {
-  if (!args || paused) return;
-  paused = true;
-  if (raf) cancelAnimationFrame(raf);
-  raf = 0;
-}
-
-/** 放映结束后把主循环接回来。 */
-export function resumeLoop() {
-  if (!args || !paused) return;
-  const [ctx, gpu] = args;
-  startLoop(ctx, gpu);
 }

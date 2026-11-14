@@ -49,7 +49,6 @@ import { toast } from './ui/feedback.js';
 import { askConfirm } from './ui/confirm.js';
 import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath, setKbPath } from './kb-path.js';
 import { updateStats } from './stats.js';
-import { startShow } from './show.js';
 
 export { refreshCategoryDatalist, updateStats };
 
@@ -526,15 +525,6 @@ export function bindActions() {
   bindRewardDialog();
   bindSearch();
   el.btnAdd.addEventListener('click', () => openAddNode(null));
-  el.btnShow.addEventListener('click', () => {
-    el.moreWrap.classList.remove('open');
-    closePanelAction();
-    closeModal();
-    void startShow().catch((err) => {
-      console.error('[show]', err);
-      toast('放映模式启动失败');
-    });
-  });
   el.dockOpen.addEventListener('click', () => {
     if (ui.selection) openPanel(ui.selection);
   });
