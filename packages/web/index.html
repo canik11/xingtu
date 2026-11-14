@@ -66,7 +66,6 @@
           <button class="search-clear" id="searchClear" type="button" aria-label="清空搜索" hidden>×</button>
           <span class="search-count" id="searchCount" hidden>0</span>
         </div>
-        <button class="btn icon" id="btnPresent" type="button" aria-label="放映模式" title="放映模式：让星棋落成星盘">✦</button>
         <button class="btn primary" id="btnAdd" type="button"><span class="plus">＋</span> 添加知识点</button>
         <div class="more-wrap" id="moreWrap">
           <button class="btn icon" id="btnMenu" type="button" aria-label="更多操作" aria-haspopup="true">⋯</button>
@@ -78,7 +77,6 @@
             <button type="button" data-menu="kb">知识库路径</button>
             <button type="button" data-menu="appearance">外观设置</button>
             <button type="button" data-menu="global-doc">全项目大纲</button>
-            <button type="button" data-menu="present">放映模式</button>
             <button type="button" data-menu="reward">打赏作者</button>
           </div>
         </div>
@@ -438,12 +436,6 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <div class="fatal" id="fatal" role="alert" hidden></div>
-
-    <div id="showLayer" hidden>
-      <div class="show-veil"></div>
-      <p class="show-caption" id="showCaption"></p>
-      <button class="show-exit" id="showExit" type="button">退出放映 · Esc</button>
-    </div>
     <input id="docFileInput" type="file" accept=".md,.markdown,.pdf,text/markdown,application/pdf" multiple hidden />
     <input id="docFolderInput" type="file" accept=".md,.markdown,text/markdown" webkitdirectory multiple hidden />
 

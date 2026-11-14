@@ -176,31 +176,6 @@ class WebGLScene {
     this.usedNodes = new Set();
     this.usedLabels = new Set();
     this.bound = false;
-    this.presentation = null;
-  }
-
-  /** 放映模式接管渲染；传 null 恢复常规知识图。 */
-  setPresentation(renderer) {
-    this.presentation = renderer || null;
-  }
-
-  /** 清掉常规知识图的残留（节点、关系线、标签、选中环），供放映模式独占画面。 */
-  resetScene() {
-    for (const record of this.nodes.values()) {
-      record.halo.visible = false;
-      record.core.visible = false;
-      record.flare.visible = false;
-    }
-    for (const label of this.labels.values()) label.visible = false;
-    this.edgeGlow.clear();
-    this.edgeMain.clear();
-    for (const pulse of this.edgePulses) {
-      pulse.core.visible = false;
-      pulse.spike.visible = false;
-    }
-    this.ringA.visible = false;
-    for (const spark of this.orbit) spark.visible = false;
-    this.breathGlow.visible = false;
   }
 
   bind(stage) {
@@ -750,11 +725,6 @@ class WebGLScene {
   render(t, dt) {
     this.backdrop.update(t, dt);
     this.ambient.update(dt, t);
-    if (this.presentation && this.presentation.active) {
-      this.presentation.render(this, t, dt);
-      this.app.renderer.render(this.app.stage);
-      return;
-    }
     this.breathRipple();
     if (isLocal()) this.drawGraphLocal(t, dt);
     else this.drawGraph3D(t, dt);
@@ -807,9 +777,6 @@ export async function initWebGLScene(canvas) {
     },
     stats() {
       return scene.stats();
-    },
-    setPresentation(renderer) {
-      scene.setPresentation(renderer);
     },
     scene
   };

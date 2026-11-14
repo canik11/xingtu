@@ -24,7 +24,6 @@ import { bindAddModal } from './ui/add-modal.js';
 import { bindConfirm } from './ui/confirm.js';
 import { bindAppearance } from './ui/appearance.js';
 import { bindGlobalDoc } from './ui/global-doc.js';
-import { bindPresentation } from './ui/presentation.js';
 import { showFatal, toast } from './ui/feedback.js';
 import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath } from './kb-path.js';
 import { restoreKbFile } from './kb-file.js';
@@ -151,7 +150,6 @@ async function boot() {
   bindGlobalDoc();
   bindActions();
   bindNavigation();
-  bindPresentation(glScene);
   onQualityChange((q) => {
     setMaxScale(q.three.maxScale);
     resizeCanvas();
