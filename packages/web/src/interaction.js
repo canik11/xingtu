@@ -47,6 +47,9 @@ function openFocusNode(node) {
     openPanel(entity.id);
   } else if (entity.level === 2) {
     enterLocal(entity.id, { from3D: false, openSidebar: true, origin });
+  } else if (entity.id !== ui.focusId) {
+    // 三级知识点：进入以它为中心的同章关系图，和章节下钻保持一致。
+    enterLocal(entity.id, { from3D: false, openSidebar: true, origin });
   } else {
     openPanel(entity.id);
   }

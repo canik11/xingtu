@@ -176,6 +176,13 @@ function closeSidebar() {
   ui.panelOpen = false;
 }
 
+/** 局部图之间切换时，复用旧节点的屏幕位置，让同名节点从原处飞入新位置。 */
+function captureLocalBridge() {
+  const from = captureFocusScreenMap();
+  if (!from || !from.size) return null;
+  return { from, screenFrom: from, start: performance.now(), dur: 720 };
+}
+
 /** 回到星海。 */
 export function enterSphere(animate = true) {
   const origin = sceneOrigin();
@@ -206,8 +213,13 @@ export function enterLocal(id, opts = {}) {
   refreshOutline();
   const entity = getEntity(id);
   if (!entity) return false;
-  const from3D = (opts.from3D !== false && ui.level === 'sphere') || ui.level === 'sphere';
-  const bridge = from3D && entity.level === 1 ? captureTransitionFrom3D() : null;
+  const from3D = ui.level === 'sphere';
+  // 星海 → 局部：从球面位置飞入；局部内下钻 / 返回：从旧图上的屏幕位置飞入。
+  const bridge = from3D
+    ? captureTransitionFrom3D()
+    : ui.level === 'local' && ui.focusGraph
+      ? captureLocalBridge()
+      : null;
   const origin = opts.origin || sceneOrigin();
   closeSidebar();
   ui.level = 'local';
@@ -219,7 +231,7 @@ export function enterLocal(id, opts = {}) {
   ui.hover = null;
   ui.hoverEdge = null;
   if (opts.animate !== false) startTransition({ kind: 'local', origin, dur: 640 });
-  ui.transition = bridge;
+  ui.transition = opts.animate === false ? null : bridge;
   buildFocus(id);
   fitFocus(opts.animate !== false);
   panelApi.selectNode(id);

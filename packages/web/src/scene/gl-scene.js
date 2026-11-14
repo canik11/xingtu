@@ -3,7 +3,8 @@ import { Application, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { TAU, clamp, mod } from '@starmap/core';
 import { cam, ui, view } from '../state.js';
 import { MAX_SCALE, worldToScreen } from '../camera.js';
-import { sceneVisuals, sceneEdges, innerSelectionSet } from '../hierarchy.js';
+import { OUTER_R, projectPoint, sceneVisuals, sceneEdges, innerSelectionSet } from '../hierarchy.js';
+import { shapePoint } from '../shapes.js';
 import { getFocus, projectFocusNode } from '../focus.js';
 import { appearanceConfig, edgeDefaultRgb, edgeIsMastered, edgeMasteredRgb, masteryRgb, scaledAppearance } from '../mastery.js';
 import { GLBackdrop } from './gl-backdrop.js';
@@ -15,12 +16,17 @@ import {
   glowTexture,
   nodeStarTexture,
   ringTexture,
-  sparkTexture
+  sparkTexture,
+  starTexture
 } from './gl-textures.js';
 
 const FONT =
   '"Segoe UI Variable Text","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif';
 const LABEL_SCALE = 0.85;
+
+/** 形状骨架星尘的数量与变形时长（毫秒）。 */
+const DUST_COUNT = 720;
+const DUST_DUR = 900;
 
 const rgbHex = (rgb) => (rgb[0] << 16) | (rgb[1] << 8) | rgb[2];
 const mixRgb = (a, b, t) => [
@@ -130,6 +136,28 @@ class WebGLScene {
     this.graphMask = new Graphics();
     this.graphMask.visible = false;
     this.root.addChild(this.graphMask);
+
+    // 形状骨架星尘：几百个极小的星点把当前星海的轮廓勾出来，
+    // 这样即便课程只有两三门，切换形状时也能看见星系盘、星环或双螺旋的骨架。
+    this.shapeDust = new Container();
+    this.shapeDust.eventMode = 'none';
+    this.graphRoot.addChild(this.shapeDust);
+    this.dustSprites = [];
+    const dustTex = starTexture();
+    for (let i = 0; i < DUST_COUNT; i++) {
+      const sprite = new Sprite(dustTex);
+      sprite.anchor.set(0.5);
+      sprite.blendMode = 'add';
+      sprite.tint = 0x9fc4ff;
+      sprite.alpha = 0;
+      this.shapeDust.addChild(sprite);
+      this.dustSprites.push(sprite);
+    }
+    this.dustWorld = new Float32Array(DUST_COUNT * 3);
+    this.dustTarget = null;
+    this.dustFrom = null;
+    this.dustShape = null;
+    this.dustStart = 0;
 
     this.edgeGlow = new Graphics();
     this.edgeGlow.blendMode = 'add';
@@ -736,6 +764,66 @@ class WebGLScene {
   }
 
   /**
+   * 形状骨架星尘：按当前形状采样一小批星点，让整体轮廓始终可见。
+   * 切换形状时从旧位置平滑飞到新位置，投影方式与节点完全一致。
+   */
+  updateShapeDust(t) {
+    const shape = ui.shape || 'sphere';
+    if (shape !== this.dustShape || !this.dustTarget) {
+      this.dustFrom = this.dustShape ? new Float32Array(this.dustWorld) : null;
+      this.dustTarget = new Float32Array(DUST_COUNT * 3);
+      for (let i = 0; i < DUST_COUNT; i++) {
+        const p = shapePoint(shape, i, DUST_COUNT);
+        const k = i * 3;
+        this.dustTarget[k] = p.x * OUTER_R;
+        this.dustTarget[k + 1] = p.y * OUTER_R;
+        this.dustTarget[k + 2] = p.z * OUTER_R;
+      }
+      this.dustShape = shape;
+      this.dustStart = t;
+      if (!this.dustFrom) this.dustWorld.set(this.dustTarget);
+    }
+
+    const raw = clamp((t - this.dustStart) / DUST_DUR, 0, 1);
+    const eased = 1 - Math.pow(1 - raw, 3);
+    const breath = ui.idleBreath || 1;
+    const gain = modeGlow();
+    const rot = ui.sphereRot;
+    // 球形保持原来的干净球面，只留一层很淡的星尘；其他形状才把骨架点亮。
+    const shapeDim = shape === 'sphere' ? 0.45 : 1;
+    for (let i = 0; i < DUST_COUNT; i++) {
+      const k = i * 3;
+      const tx = this.dustTarget[k] * breath;
+      const ty = this.dustTarget[k + 1] * breath;
+      const tz = this.dustTarget[k + 2];
+      let x = tx;
+      let y = ty;
+      let z = tz;
+      if (this.dustFrom) {
+        const fx = this.dustFrom[k];
+        const fy = this.dustFrom[k + 1];
+        const fz = this.dustFrom[k + 2];
+        x = fx + (tx - fx) * eased;
+        y = fy + (ty - fy) * eased;
+        z = fz + (tz - fz) * eased;
+      }
+      this.dustWorld[k] = x;
+      this.dustWorld[k + 1] = y;
+      this.dustWorld[k + 2] = z;
+
+      const q = projectPoint({ x, y, z }, rot, OUTER_R);
+      const s = worldToScreen(q.x, q.y);
+      const sprite = this.dustSprites[i];
+      sprite.position.set(s.x, s.y);
+      const twinkle = 0.72 + 0.28 * Math.sin(t * 0.0011 + i * 1.7);
+      sprite.alpha = Math.min(0.7, (0.14 + q.depth * 0.34) * twinkle) * gain * shapeDim;
+      const scale = (0.055 + q.depth * 0.075) * (0.8 + (q.persp - 1) * 0.3);
+      sprite.scale.set(scale);
+    }
+    if (raw >= 1) this.dustFrom = null;
+  }
+
+  /**
    * 场景转场：球形遮罩从 origin 展开 + 整图轻微推近/淡入。
    * 只作用于 graphRoot，星空背景与粒子层保持完整画面。
    */
@@ -780,8 +868,14 @@ class WebGLScene {
     this.ambient.update(dt, t);
     this.breathRipple();
     this.updateFx(t);
-    if (isLocal()) this.drawGraphLocal(t, dt);
-    else this.drawGraph3D(t, dt);
+    if (isLocal()) {
+      this.shapeDust.visible = false;
+      this.drawGraphLocal(t, dt);
+    } else {
+      this.shapeDust.visible = true;
+      this.updateShapeDust(t);
+      this.drawGraph3D(t, dt);
+    }
     this.app.renderer.render(this.app.stage);
   }
 
