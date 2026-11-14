@@ -3,8 +3,8 @@ import { Application, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { TAU, clamp, mod } from '@starmap/core';
 import { cam, ui, view } from '../state.js';
 import { MAX_SCALE, worldToScreen } from '../camera.js';
-import { OUTER_R, projectPoint, sceneVisuals, sceneEdges, innerSelectionSet } from '../hierarchy.js';
-import { shapePoint } from '../shapes.js';
+import { outerRadius, projectPoint, sceneVisuals, sceneEdges, innerSelectionSet } from '../hierarchy.js';
+import { shapePoint, shapeSkeleton } from '../shapes.js';
 import { getFocus, projectFocusNode } from '../focus.js';
 import { appearanceConfig, edgeDefaultRgb, edgeIsMastered, edgeMasteredRgb, masteryRgb, scaledAppearance } from '../mastery.js';
 import { GLBackdrop } from './gl-backdrop.js';
@@ -158,6 +158,14 @@ class WebGLScene {
     this.dustFrom = null;
     this.dustShape = null;
     this.dustStart = 0;
+
+    // 骨架折线：比星尘更清晰的轮廓线，节点沿它生长，形状不会糊成一团。
+    this.skeleton = new Graphics();
+    this.skeleton.eventMode = 'none';
+    this.skeleton.blendMode = 'add';
+    this.graphRoot.addChildAt(this.skeleton, 0);
+    this.skeletonShape = null;
+    this.skeletonLines = null;
 
     this.edgeGlow = new Graphics();
     this.edgeGlow.blendMode = 'add';
@@ -764,20 +772,55 @@ class WebGLScene {
   }
 
   /**
+   * 骨架折线：把形状的主轮廓画成细细的星线。
+   * 星尘负责氛围，折线负责形状识别；节点就长在这些线上。
+   */
+  updateSkeleton(t) {
+    const g = this.skeleton;
+    if (ui.level !== 'sphere' || !ui.shape || ui.shape === 'sphere') {
+      g.visible = false;
+      return;
+    }
+    g.visible = true;
+    if (this.skeletonShape !== ui.shape) {
+      this.skeletonLines = shapeSkeleton(ui.shape, 100);
+      this.skeletonShape = ui.shape;
+    }
+    g.clear();
+    const R = outerRadius();
+    const rot = ui.sphereRot;
+    const breath = ui.idleBreath || 1;
+    const gain = Math.min(1, modeGlow());
+    for (const entry of this.skeletonLines) {
+      const pts = Array.isArray(entry) ? entry : entry.pts;
+      const weight = Array.isArray(entry) ? 1 : entry.alpha ?? 1;
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        const q = projectPoint({ x: p.x * R * breath, y: p.y * R * breath, z: p.z * R }, rot, R);
+        const s = worldToScreen(q.x, q.y);
+        if (i === 0) g.moveTo(s.x, s.y);
+        else g.lineTo(s.x, s.y);
+      }
+      g.stroke({ width: 1.25, color: 0x9fc4ff, alpha: 0.34 * gain * weight });
+    }
+  }
+
+  /**
    * 形状骨架星尘：按当前形状采样一小批星点，让整体轮廓始终可见。
    * 切换形状时从旧位置平滑飞到新位置，投影方式与节点完全一致。
    */
   updateShapeDust(t) {
     const shape = ui.shape || 'sphere';
+    const R = outerRadius();
     if (shape !== this.dustShape || !this.dustTarget) {
       this.dustFrom = this.dustShape ? new Float32Array(this.dustWorld) : null;
       this.dustTarget = new Float32Array(DUST_COUNT * 3);
       for (let i = 0; i < DUST_COUNT; i++) {
         const p = shapePoint(shape, i, DUST_COUNT);
         const k = i * 3;
-        this.dustTarget[k] = p.x * OUTER_R;
-        this.dustTarget[k + 1] = p.y * OUTER_R;
-        this.dustTarget[k + 2] = p.z * OUTER_R;
+        this.dustTarget[k] = p.x * R;
+        this.dustTarget[k + 1] = p.y * R;
+        this.dustTarget[k + 2] = p.z * R;
       }
       this.dustShape = shape;
       this.dustStart = t;
@@ -811,7 +854,7 @@ class WebGLScene {
       this.dustWorld[k + 1] = y;
       this.dustWorld[k + 2] = z;
 
-      const q = projectPoint({ x, y, z }, rot, OUTER_R);
+      const q = projectPoint({ x, y, z }, rot, R);
       const s = worldToScreen(q.x, q.y);
       const sprite = this.dustSprites[i];
       sprite.position.set(s.x, s.y);
@@ -870,9 +913,11 @@ class WebGLScene {
     this.updateFx(t);
     if (isLocal()) {
       this.shapeDust.visible = false;
+      this.skeleton.visible = false;
       this.drawGraphLocal(t, dt);
     } else {
       this.shapeDust.visible = true;
+      this.updateSkeleton(t);
       this.updateShapeDust(t);
       this.drawGraph3D(t, dt);
     }

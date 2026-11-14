@@ -199,8 +199,11 @@ export function center3DScene(animate = true, radius = 300) {
   const reserve = panelReserve();
   const availW = Math.max(260, view.w - reserve);
   const base = clamp(Math.min(availW / 780, view.h / 820), 0.46, 1.32);
-  // 膨胀后的球体半径更大，相机自动退远；标准球保持原比例。
-  const scale = radius > 300 ? clamp((base * 300) / radius, 0.36, 1.32) : base;
+  // 非球形骨架半径更大，用更大的视半径换算，再轻微推近，让形状铺满视野。
+  const shaped = !!ui.shape && ui.shape !== 'sphere';
+  const viewR = shaped ? 392 : 300;
+  let scale = radius > 300 ? clamp((base * viewR) / radius, 0.36, 1.32) : base;
+  if (shaped) scale = clamp(scale * 1.05, 0.4, 1.9);
   const cx = reserve / (2 * scale);
   const cy = (view.h * 0.02) / scale;
   animateTo(cx, cy, scale, animate);

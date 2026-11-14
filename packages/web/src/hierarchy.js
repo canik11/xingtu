@@ -5,13 +5,20 @@ import { cam, ui } from './state.js';
 import { data } from './store.js';
 import { worldToScreen } from './camera.js';
 import { getOutline, chaptersOf, pointsOf } from './outline.js';
-import { shapePoint, shapeCloudDir } from './shapes.js';
+import { shapePoint, shapeCloudDir, shapePath, shapeTangent } from './shapes.js';
 
 const OUTER_R = 300;
+/** 非球形时把整棵树铺到更大的骨架半径上，形状不会缩在屏幕中央。 */
+const SHAPE_OUTER = 392;
 const INNER_R = 250;
 const FOCAL = 920;
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
 const UP = { x: 0, y: 1, z: 0 };
+
+/** 当前形状对应的星海外半径：球形保持原球面，其他形状用更大的骨架。 */
+export function outerRadius() {
+  return ui.shape === 'sphere' ? OUTER_R : SHAPE_OUTER;
+}
 
 /** 当前层级：sphere | local | inner。 */
 export function getLevel() {
@@ -118,10 +125,84 @@ export function projectPoint(p, rot, radius) {
   };
 }
 
+let layoutCache = null;
+
+/**
+ * 非球形：整棵树沿 shapePath 骨架生长。
+ * 每门课程占路径的一段，课程点在段中心，章节向两侧展开，知识点再细分。
+ * 这样节点越多越沿骨架铺开，而不是挤在中心糊成一团。
+ */
+function shapeLayout() {
+  const outline = getOutline();
+  if (
+    layoutCache &&
+    layoutCache.outline === outline &&
+    layoutCache.shape === ui.shape &&
+    layoutCache.scope === ui.sphereScope
+  ) {
+    return layoutCache.map;
+  }
+  const map = new Map();
+  const courses = outline.courses;
+  const n = Math.max(1, courses.length);
+  const shape = ui.shape;
+
+  const place = (id, t, spread) => {
+    const p = shapePath(shape, t);
+    const tan = shapeTangent(shape, t);
+    const dir = randDir(id, 'shape-cloud');
+    // 去掉切向分量，只在骨架的法平面里抖动，让节点贴着路径但不排成一条死线。
+    const dot = dir.x * tan.x + dir.y * tan.y + dir.z * tan.z;
+    const ox = dir.x - tan.x * dot;
+    const oy = dir.y - tan.y * dot;
+    const oz = dir.z - tan.z * dot;
+    const ol = Math.hypot(ox, oy, oz) || 1;
+    map.set(id, {
+      x: (p.x + (ox / ol) * spread) * SHAPE_OUTER,
+      y: (p.y + (oy / ol) * spread) * SHAPE_OUTER,
+      z: (p.z + (oz / ol) * spread) * SHAPE_OUTER
+    });
+  };
+
+  courses.forEach((course, ci) => {
+    const baseT = (ci + 0.5) / n;
+    const span = (1 / n) * 0.9;
+    const chapters = chaptersOf(course.id);
+    place(course.id, baseT, 0.012);
+    chapters.forEach((chapter, cj) => {
+      const ct = baseT + ((cj + 0.5) / Math.max(1, chapters.length) - 0.5) * span * 0.8;
+      place(chapter.id, ct, 0.04);
+      if (ui.sphereScope < 3) return;
+      const points = pointsOf(chapter.id);
+      points.forEach((point, pi) => {
+        // 层级 3 只显示直属于章节的知识点；第 4 档“全部”才继续展开更深层。
+        if (ui.sphereScope < 4 && (point.depth || 0) > 0) return;
+        const pt =
+          ct +
+          ((pi + 0.5) / Math.max(1, points.length) - 0.5) *
+            (span / Math.max(1, chapters.length)) *
+            0.7;
+        place(point.id, pt, 0.07);
+      });
+    });
+  });
+
+  layoutCache = { outline, shape, scope: ui.sphereScope, map };
+  return map;
+}
+
 /** 外层每个课程节点的球面坐标（半径 OUTER_R）。 */
 function courseBases() {
   const list = getOutline().courses;
   const puff = ui.spherePuff;
+  if (ui.shape !== 'sphere') {
+    const layout = shapeLayout();
+    return list.map((course) => {
+      const p = layout.get(course.id) || { x: 0, y: 0, z: 0 };
+      const drag = sphereOffset(course.id);
+      return { course, x: p.x + drag.x, y: p.y + drag.y, z: p.z + drag.z };
+    });
+  }
   return list.map((course, i) => {
     const unit = shapePoint(ui.shape, i, list.length);
     const base = { x: unit.x * OUTER_R, y: unit.y * OUTER_R, z: unit.z * OUTER_R };
@@ -144,6 +225,25 @@ function chapterBases() {
   const out = [];
   const bases = courseBases();
   const puff = ui.spherePuff;
+  if (ui.shape !== 'sphere') {
+    const layout = shapeLayout();
+    bases.forEach((base) => {
+      chaptersOf(base.course.id).forEach((chapter) => {
+        const p = layout.get(chapter.id);
+        if (!p) return;
+        const own = puffOffset(chapter.id, p, 76);
+        const drag = sphereOffset(chapter.id);
+        out.push({
+          chapter,
+          course: base.course,
+          x: p.x + own.x * puff * 0.36 + drag.x,
+          y: p.y + own.y * puff * 0.36 + drag.y,
+          z: p.z + own.z * puff * 0.36 + drag.z
+        });
+      });
+    });
+    return out;
+  }
   bases.forEach((base) => {
     const chapters = chaptersOf(base.course.id);
     if (!chapters.length) return;
@@ -168,6 +268,29 @@ function chapterBases() {
 function pointBases() {
   const out = [];
   const puff = ui.spherePuff;
+  if (ui.shape !== 'sphere') {
+    const layout = shapeLayout();
+    chapterBases().forEach((chapter) => {
+      const points = pointsOf(chapter.chapter.id);
+      if (!points.length) return;
+      points.forEach((point) => {
+        if (ui.sphereScope < 4 && (point.depth || 0) > 0) return;
+        const p = layout.get(point.id);
+        if (!p) return;
+        const own = puffOffset(point.id, p, 30);
+        const drag = sphereOffset(point.id);
+        out.push({
+          point,
+          chapter: chapter.chapter,
+          course: chapter.course,
+          x: p.x + own.x * puff * 0.24 + drag.x,
+          y: p.y + own.y * puff * 0.24 + drag.y,
+          z: p.z + own.z * puff * 0.24 + drag.z
+        });
+      });
+    });
+    return out;
+  }
   chapterBases().forEach((chapter) => {
     const points = pointsOf(chapter.chapter.id);
     if (!points.length) return;
@@ -214,9 +337,12 @@ function morphWorld(id, p) {
 function outerVisuals() {
   const rot = ui.sphereRot;
   const breath = ui.idleBreath || 1;
+  const courseDepthR = ui.shape === 'sphere' ? OUTER_R : SHAPE_OUTER;
+  const chapterDepthR = ui.shape === 'sphere' ? OUTER_R + 70 : SHAPE_OUTER;
+  const pointDepthR = ui.shape === 'sphere' ? OUTER_R + 120 : SHAPE_OUTER;
   const courses = courseBases().map((p) => {
     const m = morphWorld(p.course.id, p);
-    const q = projectPoint(m, rot, OUTER_R);
+    const q = projectPoint(m, rot, courseDepthR);
     const n = p.course;
     return {
       id: n.id,
@@ -240,7 +366,7 @@ function outerVisuals() {
 
   const chapters = chapterBases().map((p) => {
     const m = morphWorld(p.chapter.id, p);
-    const q = projectPoint(m, rot, OUTER_R + 70);
+    const q = projectPoint(m, rot, chapterDepthR);
     return {
       id: p.chapter.id,
       node: p.chapter,
@@ -263,7 +389,7 @@ function outerVisuals() {
 
   const points = pointBases().map((p) => {
     const m = morphWorld(p.point.id, p);
-    const q = projectPoint(m, rot, OUTER_R + 120);
+    const q = projectPoint(m, rot, pointDepthR);
     return {
       id: p.point.id,
       node: p.point,

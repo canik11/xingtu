@@ -27,8 +27,8 @@ export function getLevel() {
   return ui.level;
 }
 
-/** 不同形状的基准取景半径：星系更宽、晶格更大、环带更紧凑。 */
-const SHAPE_RADIUS = { galaxy: 345, helix: 350, torus: 335, lattice: 385, rose: 345, wave: 355 };
+/** 不同形状的基准取景半径：非球形骨架更大，统一退到 430 左右。 */
+const SHAPE_RADIUS = { galaxy: 430, helix: 430, torus: 430, lattice: 440, rose: 430, wave: 430, fish: 440 };
 
 function sphereRadius() {
   const shaped = SHAPE_RADIUS[ui.shape];
