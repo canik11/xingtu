@@ -123,13 +123,13 @@ function connect(wsUrl) {
     const info = await evaluate(`JSON.stringify({nodes: window.__starmap.data.nodes.length, edges: window.__starmap.data.edges.length})`);
     console.log('INFO', info);
 
-    // 1) 星海双击 calc1：进入以它为中心的 2D
+    // 1) 星海双击 calc1：进入以它为中心的局部图
     const calc = await evaluate(`(() => { const v = window.__starmap.scene.find(v => v.id === 'calc1'); return v ? {x:v.sx,y:v.sy} : null; })()`);
     await click(calc.x, calc.y, 2);
     await sleep(1000);
     console.log('SELECT', await evaluate(`JSON.stringify({level: window.__starmap.level, sel: window.__starmap.selection, dockHidden: document.getElementById('dock').hidden, dockName: document.getElementById('dockName').textContent})`));
 
-    // 2) 2D 中打开课程侧栏
+    // 2) 局部图中打开课程侧栏
     await evaluate(`document.getElementById('dockOpen').click()`);
     await sleep(600);
     console.log(

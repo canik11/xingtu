@@ -1,11 +1,10 @@
-// 本机画质与视图偏好：只写入 localStorage，不随知识库导出。
-// 数值统一存实际倍率，界面按百分比展示；视图模式放在同一份偏好里。
+// 本机画质偏好：只写入 localStorage，不随知识库导出。
+// 数值统一存实际倍率，界面按百分比展示。
 import { clamp } from '@starmap/core';
 
 const STORE_KEY = 'starmap.quality.v1';
 
 export const DEFAULT_QUALITY = Object.freeze({
-  mode: '3d',
   three: Object.freeze({
     maxScale: 3.0,
     pixelBudget: 12,
@@ -14,13 +13,6 @@ export const DEFAULT_QUALITY = Object.freeze({
     glow: 1.0,
     sparkle: 1.0,
     ambient: 1.0
-  }),
-  two: Object.freeze({
-    dprCap: 2.0,
-    glow: 1.0,
-    stars: 1.0,
-    starSize: 1.0,
-    spread: 1.0
   })
 });
 
@@ -33,13 +25,6 @@ const RANGES = {
     glow: [0.2, 3.0],
     sparkle: [0.2, 3.0],
     ambient: [0.2, 3.0]
-  },
-  two: {
-    dprCap: [1, 3],
-    glow: [0.2, 3.0],
-    stars: [0.2, 3.0],
-    starSize: [0.3, 3.0],
-    spread: [0.6, 1.6]
   }
 };
 
@@ -53,23 +38,15 @@ function store() {
 
 function normalize(raw) {
   const three = { ...DEFAULT_QUALITY.three };
-  const two = { ...DEFAULT_QUALITY.two };
-  const pick = (group, defaults, target) => {
-    const source = raw && raw[group];
-    if (!source || typeof source !== 'object') return;
-    for (const key of Object.keys(defaults)) {
-      const range = RANGES[group][key];
+  const source = raw && raw.three;
+  if (source && typeof source === 'object') {
+    for (const key of Object.keys(DEFAULT_QUALITY.three)) {
+      const range = RANGES.three[key];
       const value = Number(source[key]);
-      if (Number.isFinite(value)) target[key] = clamp(value, range[0], range[1]);
+      if (Number.isFinite(value)) three[key] = clamp(value, range[0], range[1]);
     }
-  };
-  pick('three', DEFAULT_QUALITY.three, three);
-  pick('two', DEFAULT_QUALITY.two, two);
-  return {
-    mode: raw && raw.mode === '2d' ? '2d' : '3d',
-    three,
-    two
-  };
+  }
+  return { three };
 }
 
 const backend = store();
@@ -91,19 +68,6 @@ export function quality3d() {
   return state.three;
 }
 
-export function quality2d() {
-  return state.two;
-}
-
-/** 当前视图模式：'3d' | '2d'。 */
-export function viewMode() {
-  return state.mode;
-}
-
-export function is2D() {
-  return state.mode === '2d';
-}
-
 function persist() {
   if (!backend) return;
   try {
@@ -123,41 +87,26 @@ export function onQualityChange(fn) {
   return () => listeners.delete(fn);
 }
 
-/** 切换 3D / 2D 视图。 */
-export function setViewMode(mode) {
-  const next = mode === '2d' ? '2d' : '3d';
-  if (state.mode === next) return false;
-  state = { ...state, mode: next };
-  persist();
-  notify();
-  return true;
-}
-
 /**
- * 设置某一组画质参数。
- * @param {'three'|'two'} group
+ * 设置某一项画质参数。
  * @param {string} key
  * @param {number} value 实际倍率
  */
-export function setQuality(group, key, value) {
-  const ranges = RANGES[group];
-  if (!ranges || !ranges[key]) return;
+export function setQuality(key, value) {
+  const range = RANGES.three[key];
+  if (!range) return;
   const num = Number(value);
   if (!Number.isFinite(num)) return;
-  const next = clamp(num, ranges[key][0], ranges[key][1]);
-  if (state[group][key] === next) return;
-  state = { ...state, [group]: { ...state[group], [key]: next } };
+  const next = clamp(num, range[0], range[1]);
+  if (state.three[key] === next) return;
+  state = { ...state, three: { ...state.three, [key]: next } };
   persist();
   notify();
 }
 
-/** 恢复某一组（或全部）画质参数为默认值。 */
-export function resetQuality(group) {
-  if (group === 'three' || group === 'two') {
-    state = { ...state, [group]: { ...DEFAULT_QUALITY[group] } };
-  } else {
-    state = normalize({ mode: state.mode });
-  }
+/** 恢复全部画质参数为默认值。 */
+export function resetQuality() {
+  state = normalize(null);
   persist();
   notify();
 }

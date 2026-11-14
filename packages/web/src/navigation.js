@@ -1,19 +1,13 @@
-// 层级导航：星海（3D 球）→ 课程/章节（2D 标题图）→ 再下钻或进笔记。
+// 层级导航：星海（3D 球）→ 课程/章节（局部标题图）→ 再下钻或进笔记。
 // 面板 API 由 main.js 注入，避免与 ui/panel.js 形成循环依赖。
 import { esc, el } from './lib/dom.js';
 import { ui } from './state.js';
 import { index } from './store.js';
-import { center3DScene, fitFocusView, fitView, panelReserve } from './camera.js';
-import {
-  captureTransitionFrom3D,
-  clearTransition,
-  resetSphereShape,
-  sceneVisuals
-} from './hierarchy.js';
+import { center3DScene, fitFocusView, panelReserve } from './camera.js';
+import { captureTransitionFrom3D, clearTransition, resetSphereShape } from './hierarchy.js';
 import { buildFocus, clearManualPositions, fitFocus, getFocus } from './focus.js';
 import { getEntity, pathOf, courseOf, refreshOutline } from './outline.js';
 import { idleLabel, isStill, loadMotionPrefs, setIdleModes, setIdleSpeed, toggleIdleMode } from './motion.js';
-import { setViewMode } from './quality.js';
 import { updateStats } from './stats.js';
 
 let panelApi = {
@@ -38,53 +32,20 @@ function sphereRadius() {
   return ui.sphereScope >= 3 ? 350 : 300;
 }
 
-/** 按当前模式摆放星海相机：3D 居中球体，2D 适配整片平面星点。 */
+/** 把星海相机摆到球体中心。 */
 export function applySphereCamera(animate = true) {
   if (ui.level !== 'sphere') return;
-  if (ui.mode === '2d') {
-    const pts = [];
-    for (const v of sceneVisuals()) {
-      pts.push({ x: v.x, y: v.y });
-    }
-    fitView(pts, animate);
-    return;
-  }
   center3DScene(animate, sphereRadius());
-}
-
-/** 切换 3D 球体 / 2D 星图；供设置面板和外部调用。 */
-export function toggleViewMode() {
-  const next = ui.mode === '2d' ? '3d' : '2d';
-  setViewMode(next);
-  ui.mode = next;
-  if (ui.level === 'sphere') {
-    ui.selection = null;
-    resetSphereShape();
-    applySphereCamera(true);
-    syncNav();
-  } else if (ui.level === 'local' && ui.focusId) {
-    // 3D / 2D 的局部图是两套布局，切换时重建，不能把一套坐标直接借给另一套。
-    buildFocus(ui.focusId);
-    fitFocus(true);
-    syncNav();
-  }
-  return next;
 }
 
 function hintFor(level) {
   if (level === 'sphere') {
-    if (ui.mode === '2d') {
-      return '拖动平移 · 右键拖动平移 · 拖动节点移动 · 单击选中 · 双击展开 · 滚轮缩放';
-    }
     if (ui.sphereScope >= 3) {
       return '拖动空白旋转 · 右键拖动平移 · 拖动节点移动 · 单击选中 · 双击展开课程 / 章节';
     }
     return ui.sphereScope === 2
       ? '拖动空白旋转 · 右键拖动平移 · 拖动节点移动 · 单击选中 · 双击展开课程'
       : '拖动空白旋转 · 右键拖动平移 · 拖动节点移动 · 单击选中 · 双击展开';
-  }
-  if (ui.mode === '2d') {
-    return '拖动平移 · 右键拖动平移 · 拖动节点移动 · 滚轮缩放 · 双击打开笔记';
   }
   return '拖动空白旋转 · 右键拖动平移 · 拖动节点移动 · 滚轮缩放 · 双击下钻 / 打开笔记';
 }
@@ -223,7 +184,7 @@ export function enterSphere(animate = true) {
 }
 
 /**
- * 进入 2D 标题图（课程或章节）。
+ * 进入局部标题图（课程或章节）。
  * @param {string} id 课程 id / `h:<blockId>`
  * @param {{animate?:boolean, from3D?:boolean, openSidebar?:boolean}} [opts]
  */
@@ -251,7 +212,7 @@ export function enterLocal(id, opts = {}) {
   return true;
 }
 
-/** 从 2D 回到星海。 */
+/** 从局部图回到星海。 */
 export function backToSphere() {
   enterSphere(true);
 }
@@ -261,7 +222,7 @@ export function enterInner(id, opts = {}) {
   return enterLocal(id, { ...opts, from3D: ui.level === 'sphere' });
 }
 
-/** 在 2D 中选中一个标题。 */
+/** 在局部图中选中一个标题。 */
 export function selectHeading(id) {
   const entity = getEntity(id);
   if (!entity) return null;

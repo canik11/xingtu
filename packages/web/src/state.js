@@ -37,9 +37,6 @@ export const ui = {
   searchHits: [],
   suppressClick: false,
 
-  /** 星海视图模式：'3d'（球体）或 '2d'（平面星云）。局部标题图不受影响。 */
-  mode: '3d',
-
   /* 层级：sphere（外层 3D 球）→ local（单击后的局部 3D 关系图）→ inner（旧内部 3D）。 */
   level: 'sphere',
   focusId: null,
@@ -77,7 +74,7 @@ export const ui = {
   /** 距上一次心跳主拍的秒数，用于背景星尘波向外扩散。 */
   breathAge: 0,
 
-  /* 从 3D 平铺到 2D 的过渡：{ from: Map<id,{x,y}>, start, dur }。 */
+  /* 从星海进入局部图时的位置过渡：{ from: Map<id,{x,y}>, start, dur }。 */
   transition: null
 };
 

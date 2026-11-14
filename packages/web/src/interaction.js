@@ -8,15 +8,15 @@ import { toast } from './ui/feedback.js';
 import { openPanel, closePanel, selectNode, isPanelOpen } from './ui/panel.js';
 import { isAddOpen } from './ui/add-modal.js';
 import { nodeAt3D, rotateScene, rotateFocus, moveSphereNode } from './hierarchy.js';
-import { enterLocal, back, applySphereCamera } from './navigation.js';
+import { enterLocal, back } from './navigation.js';
 import { nodeAtFocus, edgeAtFocus, fitFocus, moveFocusNode } from './focus.js';
 
-/** 屏幕坐标命中当前的 2D 标题节点（兼容旧调试接口）。 */
+/** 屏幕坐标命中当前的局部图节点（兼容旧调试接口）。 */
 export function nodeAtScreen(x, y) {
   return nodeAtFocus(x, y);
 }
 
-/** 高亮当前悬停边（仅 2D 标题图）。 */
+/** 高亮当前悬停边（仅局部标题图）。 */
 function updateHoverEdge() {
   if (ui.level !== 'local') {
     ui.hoverEdge = null;
@@ -31,8 +31,8 @@ function hover3D(x, y) {
   return hit;
 }
 
-/** 2D 节点：双击课程打开笔记，章节继续下钻，知识点打开侧栏。 */
-function open2DNode(node) {
+/** 局部图节点：双击课程打开笔记，章节继续下钻，知识点打开侧栏。 */
+function openFocusNode(node) {
   const entity = node && node.entity;
   if (!entity) return;
   if (node.kind === 'external') {
@@ -58,10 +58,6 @@ export function bindInteraction() {
     const oldH = view.h;
     if (typeof window.__resizeStage === 'function') window.__resizeStage();
     if (ui.level !== 'local') {
-      if (ui.level === 'sphere' && ui.mode === '2d') {
-        applySphereCamera(false);
-        return;
-      }
       const radius = ui.level === 'inner' ? 250 : ui.spherePuffTarget > 0.5 ? 430 : 300;
       center3DScene(false, radius);
       return;
@@ -114,10 +110,8 @@ export function bindInteraction() {
     if (ui.level !== 'local') {
       const hit = nodeAt3D(e.clientX, e.clientY);
       if (hit) selectNode(hit.id);
-      // 2D 星云里空白拖动是平移（没有球面可转）；3D 保持旋转。
-      const mode = hit && ui.level === 'sphere'
-        ? 'node3d'
-        : (ui.level === 'sphere' && ui.mode === '2d' ? 'pan' : 'orbit');
+      // 球体空白拖动旋转；拖动节点移动。
+      const mode = hit && ui.level === 'sphere' ? 'node3d' : 'orbit';
       ui.dragNode = {
         mode,
         hit,
@@ -127,7 +121,6 @@ export function bindInteraction() {
         lastY: e.clientY,
         camX: cam.x,
         camY: cam.y,
-        primary: true,
         moved: false,
         id: e.pointerId
       };
@@ -143,8 +136,7 @@ export function bindInteraction() {
     const hit = nodeAtFocus(e.clientX, e.clientY);
     if (hit) selectNode(hit.id);
     ui.dragNode = {
-      // 2D 标题图没有可转的球面，空白拖动改为平移。
-      mode: hit ? 'node' : (ui.mode === '2d' ? 'pan' : 'rotate'),
+      mode: hit ? 'node' : 'rotate',
       hit,
       startX: e.clientX,
       startY: e.clientY,
@@ -152,7 +144,6 @@ export function bindInteraction() {
       lastY: e.clientY,
       camX: cam.x,
       camY: cam.y,
-      primary: true,
       moved: false,
       id: e.pointerId
     };
@@ -264,7 +255,6 @@ export function bindInteraction() {
       else if (!drag.moved && !drag.hit) clearSelection();
       return;
     }
-    if (drag.mode === 'pan' && drag.primary && !drag.moved) clearSelection();
     if (drag.mode === 'rotate' && !drag.moved && !drag.hit) clearSelection();
   };
 
@@ -292,7 +282,7 @@ export function bindInteraction() {
     }
     const hit = nodeAtFocus(e.clientX, e.clientY);
     if (hit) {
-      open2DNode(hit);
+      openFocusNode(hit);
     } else {
       const w = screenToWorld(e.clientX, e.clientY);
       openAddNode([w.x, w.y]);

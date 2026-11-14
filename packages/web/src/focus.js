@@ -10,7 +10,6 @@ import {
   chaptersOf,
   pathOf
 } from './outline.js';
-import { TAU, hashStr } from '@starmap/core';
 import { projectPoint } from './hierarchy.js';
 
 const CHAPTER_R = 195;
@@ -25,7 +24,7 @@ let focusGraph = null;
 const manualPositions = new Map();
 
 function positionKey(focusId, nodeId) {
-  return `${ui.mode}|${focusId}|${nodeId}`;
+  return `${focusId}|${nodeId}`;
 }
 
 /** 清除某个焦点图里用户手动拖动过的位置；不传则清除全部。 */
@@ -34,7 +33,7 @@ export function clearManualPositions(focusId) {
     manualPositions.clear();
     return;
   }
-  const prefix = `${ui.mode}|${focusId}|`;
+  const prefix = `${focusId}|`;
   for (const key of [...manualPositions.keys()]) {
     if (key.startsWith(prefix)) manualPositions.delete(key);
   }
@@ -97,11 +96,8 @@ function addPointNode(nodes, edges, edgeMap, parent, point, x, y, z, labelMax) {
   return node;
 }
 
-/** 世界坐标 -> 当前 focusRot 下的投影坐标；2D 模式直接用平面坐标。 */
+/** 世界坐标 -> 当前 focusRot 下的投影坐标。 */
 export function projectFocusNode(n) {
-  if (ui.mode === '2d') {
-    return { x: n.x || 0, y: n.y || 0, z: 0, depth: 0.7, persp: 1 };
-  }
   return projectPoint(
     { x: n.x || 0, y: n.y || 0, z: n.z || 0 },
     ui.focusRot,
@@ -115,27 +111,6 @@ export function projectFocusNode(n) {
  */
 export function moveFocusNode(node, dxScreen, dyScreen) {
   if (!node) return;
-  if (ui.mode === '2d') {
-    // 2D 图没有透视：直接按屏幕平移世界坐标。
-    const factor = Math.max(0.001, cam.scale || 1);
-    node.x = (node.x || 0) + dxScreen / factor;
-    node.y = (node.y || 0) + dyScreen / factor;
-    const dist = Math.hypot(node.x, node.y);
-    const limit = 560;
-    if (dist > limit) {
-      const k = limit / dist;
-      node.x *= k;
-      node.y *= k;
-    }
-    if (ui.focusId) {
-      manualPositions.set(positionKey(ui.focusId, node.id), {
-        x: node.x,
-        y: node.y,
-        z: 0
-      });
-    }
-    return;
-  }
   const p = projectFocusNode(node);
   const factor = Math.max(0.001, cam.scale * (p.persp || 1));
   const x1 = dxScreen / factor;
@@ -173,95 +148,6 @@ export function moveFocusNode(node, dxScreen, dyScreen) {
       z: node.z
     });
   }
-}
-
-function childrenOf(center, nodes, edges) {
-  const ids = new Set();
-  for (const e of edges) {
-    if (e.kind !== 'hierarchy') continue;
-    if (e.a === center.id) ids.add(e.b);
-    else if (e.b === center.id) ids.add(e.a);
-  }
-  const list = [];
-  for (const id of ids) {
-    const n = nodes.find((x) => x.id === id);
-    if (n) list.push(n);
-  }
-  return list;
-}
-
-const focusRand = (id, salt) => (hashStr(`${id}|${salt}`) % 1000000) / 1000000;
-
-/**
- * 2D 局部图：中心节点在原点，章节节点按黄金角排在外圈，
- * 各自的知识点散在它周围；关联节点放在最外圈。
- * 纯平面星点布局，不做球面投影，也不画云团。
- */
-function layoutFocus2D(center, nodes, edges) {
-  center.x = 0;
-  center.y = 0;
-  center.z = 0;
-  const centerR = center.kind === 'chapter' ? 150 : 90;
-
-  const children = childrenOf(center, nodes, edges);
-  const placed = [];
-  const loose = [];
-
-  children.forEach((child, i) => {
-    if (child.kind !== 'chapter') {
-      loose.push(child);
-      return;
-    }
-    const id = child.id;
-    const leaves = childrenOf(child, nodes, edges).filter((n) => n !== center);
-    const clusterR = Math.min(150, 88 + Math.sqrt(Math.max(1, leaves.length)) * 24);
-    const ang = i * 2.399963229728653 + (focusRand(id, 'star-angle') - 0.5) * 0.9;
-    const orbit = 420 + Math.sqrt(i + 0.5) * 190;
-    let cx = Math.cos(ang) * orbit;
-    let cy = Math.sin(ang) * orbit * 0.92;
-    for (const prev of placed) {
-      const dx = cx - prev.x;
-      const dy = cy - prev.y;
-      const d = Math.hypot(dx, dy);
-      const need = prev.r + clusterR * 0.75;
-      if (d < need && d > 0.001) {
-        const push = (need - d) / d;
-        cx += dx * push;
-        cy += dy * push;
-      }
-    }
-    placed.push({ x: cx, y: cy, r: clusterR });
-    child.x = cx;
-    child.y = cy;
-    child.z = 0;
-    leaves.forEach((leaf) => {
-      const a = focusRand(leaf.id, 'leaf-angle') * TAU;
-      const u = Math.pow(focusRand(leaf.id, 'leaf-dist'), 1.5);
-      const d = clusterR * (0.2 + u * 0.7);
-      leaf.x = cx + Math.cos(a) * d;
-      leaf.y = cy + Math.sin(a) * d;
-      leaf.z = 0;
-    });
-  });
-
-  // 没有下级的节点直接散在中心周围。
-  loose.forEach((n) => {
-    const a = focusRand(n.id, 'leaf-angle') * TAU;
-    const u = Math.pow(focusRand(n.id, 'leaf-dist'), 1.4);
-    const d = centerR * (0.3 + u * 0.7);
-    n.x = Math.cos(a) * d;
-    n.y = Math.sin(a) * d;
-    n.z = 0;
-  });
-
-  const externals = nodes.filter((n) => n.kind === 'external');
-  externals.forEach((n, i) => {
-    const ang = i * 2.399963229728653 + 0.6;
-    const r = (center.kind === 'chapter' ? 520 : 900) + Math.floor(i / 3) * 130;
-    n.x = Math.cos(ang) * r;
-    n.y = Math.sin(ang) * r * 0.9;
-    n.z = 0;
-  });
 }
 
 function projectedNodes(graph) {
@@ -420,8 +306,6 @@ export function buildFocus(focusId) {
     }
   }
 
-  if (ui.mode === '2d') layoutFocus2D(center, nodes, edges);
-
   for (const node of nodes) {
     const saved = manualPositions.get(positionKey(entity.id, node.id));
     if (saved) {
@@ -506,9 +390,7 @@ export function fitFocus(animate = true) {
   const graph = getFocus();
   if (!graph) return;
   const pts = projectedNodes(graph);
-  // 2D 局部图只让中心与章节云参与适配，外圈关联节点允许留在视口边缘，避免把星云压小。
-  const fitPts = ui.mode === '2d' ? pts.filter((n) => n.kind !== 'external') : pts;
-  fitFocusView(fitPts.length ? fitPts : pts, animate);
+  fitFocusView(pts, animate);
 }
 
 /** 从当前选择重画图（关联增删后调用）。 */

@@ -3,7 +3,7 @@
 // 参数与首版单文件保持一致，保证视觉完全复刻。
 import { randRange, TAU } from '@starmap/core';
 import { cam, view, flags } from '../state.js';
-import { quality2d } from '../quality.js';
+import { quality3d } from '../quality.js';
 
 const mod = (value, max) => ((value % max) + max) % max;
 
@@ -154,7 +154,7 @@ export function drawSpace(ctx, t, dt) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   const wrap = (v, max) => ((v % max) + max) % max;
-  const mq = quality2d();
+  const mq = quality3d();
   const moteBright = Math.max(0.2, Math.min(3, mq.glow || 1));
   const moteSize = Math.max(0.3, Math.min(3, mq.starSize || 1));
   const moteLimit = Math.max(1, Math.round(motes.length * Math.min(1, mq.stars || 1)));
@@ -210,7 +210,7 @@ function drawStars(ctx, now) {
   const W = view.w;
   const H = view.h;
   const t = now * 0.001;
-  const q = quality2d();
+  const q = quality3d();
   const sizeScale = Math.max(0.3, Math.min(3, q.starSize || 1));
   const bright = Math.max(0.2, Math.min(3, q.glow || 1));
   const limit = Math.max(1, Math.round(stars.length * Math.min(1, q.stars || 1)));

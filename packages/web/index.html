@@ -196,22 +196,11 @@
         <div class="modal-head">
           <div>
             <h2 id="appearanceTitle">外观设置</h2>
-            <p class="field-note">3D / 2D 画质、颜色与节点样式只保存在本机；颜色会随知识数据一起保存，也会写进导出的 JSON。</p>
+            <p class="field-note">画质、颜色与节点样式只保存在本机；颜色会随知识数据一起保存，也会写进导出的 JSON。</p>
           </div>
           <button class="x-btn" type="button" data-appearance-close aria-label="关闭">×</button>
         </div>
         <div class="appearance-body">
-          <section class="appearance-section">
-            <div class="appearance-section-head">
-              <h3>视图模式</h3>
-              <span class="field-note">切换后立即生效</span>
-            </div>
-            <div class="quality-mode" role="group" aria-label="视图模式">
-              <button type="button" class="quality-mode-btn" data-view-mode="3d">3D 星海</button>
-              <button type="button" class="quality-mode-btn" data-view-mode="2d">2D 星图</button>
-            </div>
-            <p class="field-note">2D 星图把节点平铺在平面上，拖动是平移；3D 星海是球体，拖动空白旋转。</p>
-          </section>
           <section class="appearance-section">
             <div class="appearance-section-head">
               <h3>星空背景</h3>
@@ -232,8 +221,7 @@
               <input class="appearance-slider" type="range" id="qualityGlow" min="20" max="300" step="1" value="100" />
               <output class="appearance-slider-value" id="qualityGlowValue" for="qualityGlow">100%</output>
             </label>
-            <p class="field-note">星点密度、星点大小与光晕亮度同时作用于 3D 星海和 2D 星图，两种模式共享这一组星空背景。</p>
-            <div class="appearance-subhead">3D 星海专属</div>
+            <p class="field-note">星点密度、星点大小与光晕亮度作用于整片星海背景。</p>
             <label class="appearance-slider-row" for="qualityMaxScale">
               <span class="appearance-label">渲染倍率</span>
               <input class="appearance-slider" type="range" id="qualityMaxScale" min="120" max="300" step="5" value="300" />
@@ -254,19 +242,7 @@
               <input class="appearance-slider" type="range" id="qualityAmbient" min="20" max="300" step="5" value="100" />
               <output class="appearance-slider-value" id="qualityAmbientValue" for="qualityAmbient">100%</output>
             </label>
-            <p class="field-note">倍率越高越清晰、越吃显卡；像素预算限制单帧总像素，低配设备可调小。星芒与环境粒子只影响 3D 星海。</p>
-            <div class="appearance-subhead">2D 星图专属</div>
-            <label class="appearance-slider-row" for="qualityDpr">
-              <span class="appearance-label">渲染倍率</span>
-              <input class="appearance-slider" type="range" id="qualityDpr" min="100" max="300" step="10" value="200" />
-              <output class="appearance-slider-value" id="qualityDprValue" for="qualityDpr">200%</output>
-            </label>
-            <label class="appearance-slider-row" for="qualitySpread">
-              <span class="appearance-label">星点间距</span>
-              <input class="appearance-slider" type="range" id="qualitySpread" min="60" max="160" step="5" value="100" />
-              <output class="appearance-slider-value" id="qualitySpreadValue" for="qualitySpread">100%</output>
-            </label>
-            <p class="field-note">间距调大，2D 星点铺得更开；渲染倍率决定 2D 画面的清晰度，越高越吃显卡。</p>
+            <p class="field-note">倍率越高越清晰、越吃显卡；像素预算限制单帧总像素，低配设备可调小。</p>
           </section>
           <section class="appearance-section">
             <div class="appearance-section-head">

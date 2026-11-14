@@ -104,11 +104,6 @@ export function cacheDom() {
   el.qualitySparkleValue = $id('qualitySparkleValue');
   el.qualityAmbient = $id('qualityAmbient');
   el.qualityAmbientValue = $id('qualityAmbientValue');
-  el.qualityDpr = $id('qualityDpr');
-  el.qualityDprValue = $id('qualityDprValue');
-  el.qualitySpread = $id('qualitySpread');
-  el.qualitySpreadValue = $id('qualitySpreadValue');
-  el.qualityModeButtons = document.querySelectorAll('[data-view-mode]');
   el.qualityResets = document.querySelectorAll('[data-quality-reset]');
   el.docLayer = $id('docLayer');
   el.docBody = $id('docBody');

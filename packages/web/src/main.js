@@ -14,7 +14,7 @@ import { startLoop } from './loop.js';
 import { bindInteraction } from './interaction.js';
 import { bindActions, updateStats, refreshCategoryDatalist, closeAddModal, deleteSelected } from './actions.js';
 import { bindPanel, updateDock, bindPanelChrome, openPanel, closePanel, selectNode } from './ui/panel.js';
-import { bindNavigation, syncNav, setPanelApi, enterSphere, applySphereCamera } from './navigation.js';
+import { bindNavigation, syncNav, setPanelApi, enterSphere } from './navigation.js';
 import { sceneVisuals, spherePuffState } from './hierarchy.js';
 import { projectFocusNode, buildFocus, fitFocus } from './focus.js';
 import { onQualityChange, quality, qualitySnapshot } from './quality.js';
@@ -36,8 +36,7 @@ function resizeCanvas() {
   const canvas = el.stage;
   const w = window.innerWidth;
   const h = window.innerHeight;
-  const q = quality();
-  const cap = q.mode === '2d' ? q.two.dprCap : 2;
+  const cap = 2;
   const dpr = Math.min(cap, Math.max(1, window.devicePixelRatio || 1));
   view.w = w;
   view.h = h;
@@ -60,7 +59,6 @@ async function boot() {
   flags.debug = /[?&]debug\b/.test(location.search);
   initBackend();
 
-  ui.mode = quality().mode;
   setMaxScale(quality().three.maxScale);
 
   resizeCanvas();
@@ -152,27 +150,13 @@ async function boot() {
   bindGlobalDoc();
   bindActions();
   bindNavigation();
-  let lastQualityMode = quality().mode;
   onQualityChange((q) => {
-    const modeChanged = q.mode !== lastQualityMode;
-    lastQualityMode = q.mode;
-    ui.mode = q.mode;
     setMaxScale(q.three.maxScale);
     resizeCanvas();
     if (glScene) {
       glScene.resize();
-      glScene.scene?.backdrop?.setDensity(q.mode === '2d' ? q.two.stars : q.three.stars);
-      glScene.scene?.ambient?.setDensity(q.mode === '2d' ? q.two.glow : q.three.ambient);
-    }
-    if (modeChanged && ui.level === 'sphere') {
-      applySphereCamera(true);
-      syncNav();
-    } else if (modeChanged && ui.level === 'local' && ui.focusId) {
-      // 3D 与 2D 的局部图是两套坐标，切换后必须按新布局重建。
-      ui.selection = null;
-      buildFocus(ui.focusId);
-      fitFocus(true);
-      syncNav();
+      glScene.scene?.backdrop?.setDensity(q.three.stars);
+      glScene.scene?.ambient?.setDensity(q.three.ambient);
     }
   });
   updateStats();

@@ -120,7 +120,7 @@ export function focusNode(node, reservePanel = true) {
   animateTo(node.x - (sx - W / 2) / scale, node.y - (sy - view.h / 2) / scale, scale, true);
 }
 
-/** 2D 层级入口：保持整图可读的缩放，把被点节点放到屏幕中心。 */
+/** 局部图入口：保持整图可读的缩放，把被点节点放到屏幕中心。 */
 export function focusLocalNode(node, animate = true) {
   if (!node) return;
   const W = view.w;
@@ -153,7 +153,7 @@ export function focusLocalNode(node, animate = true) {
   animateTo(node.x - (sx - W / 2) / scale, node.y - (sy - view.h / 2) / scale, scale, animate);
 }
 
-/** 2D 标题视图：按整张 focus 图适配，并给右侧面板留空间。 */
+/** 局部标题图：按整张 focus 图适配，并给右侧面板留空间。 */
 export function fitFocusView(nodes, animate = true) {
   const pts = (nodes || []).filter((n) => Number.isFinite(n.x) && Number.isFinite(n.y));
   if (!pts.length) return;

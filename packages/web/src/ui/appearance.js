@@ -1,7 +1,7 @@
-// 外观设置弹窗：3D/2D 画质参数、视图模式 + 全局默认色/掌握色与按课程覆盖。
+// 外观设置弹窗：画质参数 + 全局默认色/掌握色与按课程覆盖。
 import { el } from '../lib/dom.js';
 import { getOutline } from '../outline.js';
-import { quality, resetQuality, setQuality, setViewMode } from '../quality.js';
+import { quality, resetQuality, setQuality } from '../quality.js';
 import {
   appearanceConfig,
   appearanceColors,
@@ -118,43 +118,25 @@ function syncScaleUi() {
   }
 }
 
-/** 画质滑块：存储值是实际倍率，滑杆显示百分比（像素预算显示 MP）。
- *  groups 表示滑杆同时写入哪几组：星点密度/大小/光晕是 3D 与 2D 共用的背景参数。 */
+/** 画质滑块：存储值是实际倍率，滑杆显示百分比（像素预算显示 MP）。 */
 function qualityInputs() {
   return [
-    [['three'], 'maxScale', el.qualityMaxScale, el.qualityMaxScaleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    [['three'], 'pixelBudget', el.qualityPixelBudget, el.qualityPixelBudgetValue, 1, (v) => `${v} MP`],
-    [['three', 'two'], 'stars', el.qualityStars, el.qualityStarsValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    [['three', 'two'], 'starSize', el.qualityStarSize, el.qualityStarSizeValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    [['three', 'two'], 'glow', el.qualityGlow, el.qualityGlowValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    [['three'], 'sparkle', el.qualitySparkle, el.qualitySparkleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    [['three'], 'ambient', el.qualityAmbient, el.qualityAmbientValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    [['two'], 'dprCap', el.qualityDpr, el.qualityDprValue, 0.01, (v) => `${Math.round(v * 100)}%`],
-    [['two'], 'spread', el.qualitySpread, el.qualitySpreadValue, 0.01, (v) => `${Math.round(v * 100)}%`]
+    ['maxScale', el.qualityMaxScale, el.qualityMaxScaleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    ['pixelBudget', el.qualityPixelBudget, el.qualityPixelBudgetValue, 1, (v) => `${v} MP`],
+    ['stars', el.qualityStars, el.qualityStarsValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    ['starSize', el.qualityStarSize, el.qualityStarSizeValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    ['glow', el.qualityGlow, el.qualityGlowValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    ['sparkle', el.qualitySparkle, el.qualitySparkleValue, 0.01, (v) => `${Math.round(v * 100)}%`],
+    ['ambient', el.qualityAmbient, el.qualityAmbientValue, 0.01, (v) => `${Math.round(v * 100)}%`]
   ];
-}
-
-/** 3D 与 2D 共享的三个背景参数：老数据里两组可能不一致，打开面板时以 3D 组为准合并。 */
-function syncSharedQuality() {
-  const q = quality();
-  for (const key of ['stars', 'starSize', 'glow']) {
-    if (q.two[key] !== q.three[key]) setQuality('two', key, q.three[key]);
-  }
 }
 
 function syncQualityUi() {
   const q = quality();
-  const current = q.mode === '2d' ? 'two' : 'three';
-  for (const [groups, key, input, output, factor, format] of qualityInputs()) {
-    const group = groups.includes(current) ? current : groups[0];
-    const value = q[group][key];
+  for (const [key, input, output, factor, format] of qualityInputs()) {
+    const value = q.three[key];
     input.value = String(value / factor);
     output.textContent = format(value);
-  }
-  for (const btn of el.qualityModeButtons) {
-    const active = btn.dataset.viewMode === q.mode;
-    btn.classList.toggle('is-active', active);
-    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
   }
 }
 
@@ -253,7 +235,6 @@ function updateCourseRow(input) {
 }
 
 export function bindAppearance() {
-  syncSharedQuality();
   el.appearanceDefault.addEventListener('input', () => {
     setGlobalAppearance('defaultColor', el.appearanceDefault.value);
     syncColorUi();
@@ -284,24 +265,17 @@ export function bindAppearance() {
     });
   }
 
-  for (const [groups, key, input, output, factor, format] of qualityInputs()) {
+  for (const [key, input, output, factor, format] of qualityInputs()) {
     input.addEventListener('input', () => {
       const value = Number(input.value) * factor;
-      for (const group of groups) setQuality(group, key, value);
+      setQuality(key, value);
       output.textContent = format(value);
-    });
-  }
-
-  for (const btn of el.qualityModeButtons) {
-    btn.addEventListener('click', () => {
-      setViewMode(btn.dataset.viewMode);
-      syncQualityUi();
     });
   }
 
   for (const btn of el.qualityResets) {
     btn.addEventListener('click', () => {
-      resetQuality(btn.dataset.qualityReset);
+      resetQuality();
       syncQualityUi();
     });
   }

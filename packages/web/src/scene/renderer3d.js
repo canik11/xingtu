@@ -1,5 +1,5 @@
 // 3D 层级渲染：外层知识球 / 内部笔记球。
-// 沿用 2D 的白光、冷蓝辉光与深空底色，不引入新的视觉语言。
+// 沿用星海的白光、冷蓝辉光与深空底色，不引入新的视觉语言。
 import { TAU, clamp, hashStr, mod } from '@starmap/core';
 import { cam, ui, view } from '../state.js';
 import { worldToScreen } from '../camera.js';

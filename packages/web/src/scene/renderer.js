@@ -60,7 +60,7 @@ function nodeDim(n) {
   return d;
 }
 
-/** 2D 节点的绘制坐标：从 3D 摊平过来时做一次位置插值。 */
+/** 局部图节点的绘制坐标：从 3D 摊平过来时做一次位置插值。 */
 export function nodeDrawPos(n, t) {
   const tr = ui.transition;
   if (!tr) return n;

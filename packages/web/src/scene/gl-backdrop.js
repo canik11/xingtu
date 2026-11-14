@@ -179,7 +179,7 @@ export class GLBackdrop {
     const time = t * 0.001;
     const nt = t * 0.00002;
     const qAll = quality();
-    const q = qAll.mode === '2d' ? qAll.two : qAll.three;
+    const q = qAll.three;
     const sizeScale = clamp(q.starSize || 1, 0.3, 3);
     const bright = clamp(q.glow || 1, 0.2, 3);
     const sparkle = clamp(q.sparkle || q.glow || 1, 0.2, 3);

@@ -1,11 +1,10 @@
-// 多级星图：外层 3D 球 → 单击后的 2D 平铺 → 双击后的内部 3D 笔记树。
+// 多级星图：外层 3D 球 → 局部标题图 → 内部 3D 笔记树。
 // 只负责“几何与层级数据”，不碰 DOM / 相机；交互与面板由上层编排。
 import { TAU, clamp, hashStr } from '@starmap/core';
 import { cam, ui } from './state.js';
 import { data } from './store.js';
 import { worldToScreen } from './camera.js';
 import { getOutline, chaptersOf, pointsOf } from './outline.js';
-import { quality2d } from './quality.js';
 
 const OUTER_R = 300;
 const INNER_R = 250;
@@ -264,124 +263,6 @@ function outerVisuals() {
   return courses.concat(chapters, points);
 }
 
-/** 2D 平面星点布局：课程按黄金角铺开，章节与知识点围绕父节点散成星点。 */
-function outer2DVisuals() {
-  const spread = Math.max(0.6, Math.min(1.6, quality2d().spread || 1));
-  const out = [];
-  const bases = courseBases();
-
-  const chapterMap = new Map();
-  for (const p of chapterBases()) {
-    if (!chapterMap.has(p.course.id)) chapterMap.set(p.course.id, []);
-    chapterMap.get(p.course.id).push(p);
-  }
-  const pointMap = new Map();
-  for (const p of pointBases()) {
-    if (!pointMap.has(p.chapter.id)) pointMap.set(p.chapter.id, []);
-    pointMap.get(p.chapter.id).push(p);
-  }
-
-  const placed = [];
-  const count = Math.max(1, bases.length);
-  const step = Math.min(360, 1500 / count);
-  bases.forEach((base, index) => {
-    const n = base.course;
-    const deg = Math.min(n.deg || 0, 8);
-    // 课程星点：黄金角铺开 + 稳定随机，课程之间只留节点与标签的空间。
-    const ang = index * 2.399963229728653 + (rand01(n.id, 'star-angle') - 0.5) * 1.1;
-    const orbit = (210 + index * step + rand01(n.id, 'star-orbit') * 120) * spread;
-    let cx = Math.cos(ang) * orbit;
-    let cy = Math.sin(ang) * orbit * 0.78;
-    for (const prev of placed) {
-      const dx = cx - prev.x;
-      const dy = cy - prev.y;
-      const d = Math.hypot(dx, dy);
-      const need = (prev.r + 26) * spread;
-      if (d < need && d > 0.001) {
-        const push = (need - d) / d;
-        cx += dx * push;
-        cy += dy * push;
-      }
-    }
-    placed.push({ x: cx, y: cy, r: 26 });
-    out.push({
-      id: n.id,
-      node: n,
-      kind: 'top',
-      level: 1,
-      label: n.name,
-      x: cx,
-      y: cy,
-      z: 0,
-      wx: cx,
-      wy: cy,
-      wz: 0,
-      persp: 1,
-      depth: 0.86,
-      r: 4.6 + deg * 0.55
-    });
-    if (ui.sphereScope < 2) return;
-
-    for (const cp of chapterMap.get(n.id) || []) {
-      const a = rand01(cp.chapter.id, 'chapter-angle') * Math.PI * 2;
-      const u = Math.pow(rand01(cp.chapter.id, 'chapter-dist'), 1.8);
-      const dist = (30 + u * 70) * spread;
-      const sx = cx + Math.cos(a) * dist;
-      const sy = cy + Math.sin(a) * dist;
-      out.push({
-        id: cp.chapter.id,
-        node: cp.chapter,
-        courseNode: n,
-        kind: 'chapter',
-        level: 2,
-        label: cp.chapter.label,
-        x: sx,
-        y: sy,
-        z: 0,
-        wx: cp.x,
-        wy: cp.y,
-        wz: 0,
-        persp: 1,
-        depth: 0.7,
-        r: 3.7
-      });
-      if (ui.sphereScope < 3) continue;
-
-      for (const pp of pointMap.get(cp.chapter.id) || []) {
-        if (ui.sphereScope < 4 && (pp.point.depth || 0) > 0) continue;
-        const pa = rand01(pp.point.id, 'star-point') * Math.PI * 2;
-        const pr = (10 + Math.pow(rand01(pp.point.id, 'star-point-r'), 1.4) * 32) * spread;
-        out.push({
-          id: pp.point.id,
-          node: pp.point,
-          courseNode: n,
-          chapterNode: cp.chapter,
-          kind: 'point',
-          level: 3,
-          label: pp.point.label,
-          x: sx + Math.cos(pa) * pr,
-          y: sy + Math.sin(pa) * pr,
-          z: 0,
-          wx: pp.x,
-          wy: pp.y,
-          wz: 0,
-          persp: 1,
-          depth: 0.56,
-          r: 2.45
-        });
-      }
-    }
-  });
-
-  // 2D 同样支持拖动：偏移量复用球体那套，重置图形时一起清空。
-  for (const v of out) {
-    const drag = sphereOffset(v.id);
-    v.x += drag.x;
-    v.y += drag.y;
-  }
-  return out;
-}
-
 /** 内部 3D 视觉节点。 */
 function innerVisuals() {
   const graph = ui.innerGraph;
@@ -410,7 +291,7 @@ function innerVisuals() {
 export function sceneVisuals() {
   if (ui.level === 'inner') return innerVisuals();
   if (ui.level === 'sphere') {
-    return ui.mode === '2d' ? outer2DVisuals() : outerVisuals();
+    return outerVisuals();
   }
   return [];
 }
@@ -509,15 +390,6 @@ export function rotateFocus(dx, dy) {
  */
 export function moveSphereNode(visual, dxScreen, dyScreen) {
   if (!visual) return;
-  if (ui.mode === '2d') {
-    // 2D 星云里拖动节点：直接改屏幕平面内的偏移，不做球面反解。
-    const factor = Math.max(0.01, cam.scale || 1);
-    const cur = sphereOffset(visual.id);
-    const nx = clamp(cur.x + dxScreen / factor, -1600, 1600);
-    const ny = clamp(cur.y + dyScreen / factor, -1600, 1600);
-    ui.sphereOffsets.set(visual.id, { x: nx, y: ny, z: 0 });
-    return;
-  }
   const factor = Math.max(0.001, cam.scale * (visual.persp || 1));
   const x1 = dxScreen / factor;
   const y1 = dyScreen / factor;
@@ -635,7 +507,7 @@ export function tick(dt) {
 
   if (ui.orbitDrag || ui.level === 'local') return;
   if (ui.level === 'sphere') {
-    if (ui.idleModes.rotate && ui.mode !== '2d') {
+    if (ui.idleModes.rotate) {
       ui.sphereRot.y += dt * 0.000042 * ui.idleSpeed;
       ui.sphereRot.x += Math.sin(performance.now() * 0.00006) * dt * 0.0000045 * ui.idleSpeed;
     }
@@ -644,7 +516,7 @@ export function tick(dt) {
   }
 }
 
-/** 记录进入 2D 前的 3D 世界坐标，供渲染层做“摊平”插值。 */
+/** 记录进入局部图前的 3D 世界坐标，供回退渲染层做位置插值。 */
 export function captureTransitionFrom3D() {
   const map = new Map();
   for (const v of sceneVisuals()) map.set(v.id, { x: v.x, y: v.y });

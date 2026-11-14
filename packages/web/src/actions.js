@@ -489,7 +489,7 @@ export async function applyDocImport(items) {
 
 /* ------------------------- 绑定 ------------------------- */
 
-/** 缩放按钮：2D 用相机缩放，3D 用球心缩放。 */
+/** 缩放按钮：局部图用相机缩放，星海用球心缩放。 */
 function zoomBy(factor) {
   if (ui.level === 'local') zoomCenter(factor);
   else zoom3DCenter(factor);

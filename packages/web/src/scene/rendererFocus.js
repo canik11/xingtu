@@ -139,7 +139,7 @@ function drawEdges(ctx, t, graph) {
   }
   ctx.restore();
 
-  // 关系标签：只画当前选中或悬停的边，避免 2D 图被文字淹没。
+  // 关系标签：只画当前选中或悬停的边，避免局部图被文字淹没。
   const labelEdge = hoverEdge || (ui.selection ? graph.edges.find((e) => e.a === ui.selection || e.b === ui.selection) : null);
   if (labelEdge && labelEdge.label) {
     const pa = screenPos(labelEdge.pa);
