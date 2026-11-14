@@ -163,6 +163,7 @@ test('appearance 节点/脉冲比例可持久化并限幅', () => {
   const data = createDefaultData();
   data.appearance.nodeBrightness = 0.7;
   data.appearance.nodeSize = 1.25;
+  data.appearance.nodeStarSize = 1.4;
   data.appearance.pulseBrightness = 1.5;
   data.appearance.pulseSize = 0.8;
   const out = serializeData(data, null);
@@ -170,10 +171,11 @@ test('appearance 节点/脉冲比例可持久化并限幅', () => {
     {
       nodeBrightness: out.appearance.nodeBrightness,
       nodeSize: out.appearance.nodeSize,
+      nodeStarSize: out.appearance.nodeStarSize,
       pulseBrightness: out.appearance.pulseBrightness,
       pulseSize: out.appearance.pulseSize
     },
-    { nodeBrightness: 0.7, nodeSize: 1.25, pulseBrightness: 1.5, pulseSize: 0.8 }
+    { nodeBrightness: 0.7, nodeSize: 1.25, nodeStarSize: 1.4, pulseBrightness: 1.5, pulseSize: 0.8 }
   );
   out.appearance.nodeBrightness = 9;
   out.appearance.nodeSize = 0.1;
@@ -201,10 +203,11 @@ test('外观滑杆基准升级：旧绝对倍率换算成相对值', () => {
     {
       nodeBrightness: out.appearance.nodeBrightness,
       nodeSize: out.appearance.nodeSize,
+      nodeStarSize: out.appearance.nodeStarSize,
       pulseBrightness: out.appearance.pulseBrightness,
       pulseSize: out.appearance.pulseSize
     },
-    { nodeBrightness: 1, nodeSize: 1, pulseBrightness: 1, pulseSize: 1 }
+    { nodeBrightness: 1, nodeSize: 1, nodeStarSize: 1, pulseBrightness: 1, pulseSize: 1 }
   );
 });
 

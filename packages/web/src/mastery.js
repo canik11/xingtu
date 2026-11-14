@@ -9,6 +9,7 @@ export const DEFAULT_APPEARANCE = Object.freeze({
   masteredColor: '#ffa200',
   nodeBrightness: 1,
   nodeSize: 1,
+  nodeStarSize: 1,
   edgeBrightness: 1,
   pulseBrightness: 1,
   pulseSize: 1,
@@ -20,7 +21,7 @@ const DEFAULT_MASTERED = [255, 162, 0];
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const SCALE_MIN = 0.4;
 const SCALE_MAX = 1.8;
-const SCALE_KINDS = new Set(['nodeBrightness', 'nodeSize', 'edgeBrightness', 'pulseBrightness', 'pulseSize']);
+const SCALE_KINDS = new Set(['nodeBrightness', 'nodeSize', 'nodeStarSize', 'edgeBrightness', 'pulseBrightness', 'pulseSize']);
 
 export function normalizeHexColor(value, fallback) {
   return typeof value === 'string' && HEX_COLOR.test(value.trim())
@@ -56,6 +57,7 @@ export function appearanceConfig() {
     masteredColor: normalizeHexColor(source.masteredColor, DEFAULT_APPEARANCE.masteredColor),
     nodeBrightness: normalizeScale(source.nodeBrightness, DEFAULT_APPEARANCE.nodeBrightness),
     nodeSize: normalizeScale(source.nodeSize, DEFAULT_APPEARANCE.nodeSize),
+    nodeStarSize: normalizeScale(source.nodeStarSize, DEFAULT_APPEARANCE.nodeStarSize),
     edgeBrightness: normalizeScale(source.edgeBrightness, DEFAULT_APPEARANCE.edgeBrightness),
     pulseBrightness: normalizeScale(source.pulseBrightness, DEFAULT_APPEARANCE.pulseBrightness),
     pulseSize: normalizeScale(source.pulseSize, DEFAULT_APPEARANCE.pulseSize),
@@ -100,6 +102,8 @@ export function scaledAppearance() {
     ...source,
     nodeBrightness: source.nodeBrightness * BASE_SCALE.nodeBrightness,
     nodeSize: source.nodeSize * BASE_SCALE.nodeSize,
+    // 星芒是新增参数：100% 就是沿用旧的固定倍率，老用户观感不变。
+    nodeStarSize: source.nodeStarSize,
     edgeBrightness: source.edgeBrightness * BASE_SCALE.edgeBrightness,
     pulseBrightness: source.pulseBrightness * BASE_SCALE.pulseBrightness,
     pulseSize: source.pulseSize * BASE_SCALE.pulseSize
@@ -162,6 +166,7 @@ export function resetAppearance() {
     masteredColor: DEFAULT_APPEARANCE.masteredColor,
     nodeBrightness: DEFAULT_APPEARANCE.nodeBrightness,
     nodeSize: DEFAULT_APPEARANCE.nodeSize,
+    nodeStarSize: DEFAULT_APPEARANCE.nodeStarSize,
     edgeBrightness: DEFAULT_APPEARANCE.edgeBrightness,
     pulseBrightness: DEFAULT_APPEARANCE.pulseBrightness,
     pulseSize: DEFAULT_APPEARANCE.pulseSize,

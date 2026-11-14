@@ -246,7 +246,7 @@ class WebGLScene {
     this.usedLabels.clear();
   }
 
-  drawNode(id, x, y, rad, depth, dim, active, hovered, rgb, born, isPoint = false, lowDetail = false, t = 0, gain = 1, haloScale = 1) {
+  drawNode(id, x, y, rad, depth, dim, active, hovered, rgb, born, isPoint = false, lowDetail = false, t = 0, gain = 1, haloScale = 1, starScale = 1) {
     const rec = this.ensureNode(id);
     this.usedNodes.add(id);
     let hash = 0;
@@ -281,7 +281,9 @@ class WebGLScene {
     rec.flare.visible = flareAlpha > 0.012 && rad > 0.45;
     if (rec.flare.visible) {
       const beat = (ui.idlePulse || 0) * 0.42;
-      const size = rad * (isPoint ? 5.4 : 6.4) * (isPoint && lowDetail ? 0.68 : 1) * (0.94 + 0.06 * twinkle) * (1 + beat * 0.16);
+      // starScale 只改十字星芒的外接尺寸，节点核心与光晕不受影响。
+      const size =
+        rad * (isPoint ? 5.4 : 6.4) * (isPoint && lowDetail ? 0.68 : 1) * (0.94 + 0.06 * twinkle) * (1 + beat * 0.16) * starScale;
       rec.flare.position.set(x, y);
       rec.flare.width = size;
       rec.flare.height = size;
@@ -472,7 +474,7 @@ class WebGLScene {
         dim *= set && set.has(v.id) ? 0.72 : 0.16;
       }
       const rgb = masteryRgb(v.node);
-      this.drawNode(v.id, p.x, p.y, rad, v.depth, dim, isActive, isHovered, rgb, 1, v.kind === 'point', lowDetail, t, style.nodeBrightness);
+      this.drawNode(v.id, p.x, p.y, rad, v.depth, dim, isActive, isHovered, rgb, 1, v.kind === 'point', lowDetail, t, style.nodeBrightness, 1, style.nodeStarSize);
       labelNodes.push({ v, p, rad, dim, selected: isActive || isHovered });
       if (isActive) this.drawRings(p.x, p.y, rad, rgb, true, t);
     }
@@ -602,7 +604,7 @@ class WebGLScene {
         dim *= adjacency.has(n.id) ? 0.72 * (0.38 + depth * 0.62) : 0.16 * (0.38 + depth * 0.62);
       }
       const rgb = masteryRgb(n.entity);
-      this.drawNode(n.id, p.x, p.y, rad, depth, dim, selected, n.id === hover, rgb, 1, n.kind === 'point', false, t, style.nodeBrightness, compact ? 0.7 : 1);
+      this.drawNode(n.id, p.x, p.y, rad, depth, dim, selected, n.id === hover, rgb, 1, n.kind === 'point', false, t, style.nodeBrightness, compact ? 0.7 : 1, style.nodeStarSize);
       this.drawLocalLabel(graph, n, p, rad, depth, dim, selected, external, placed, t);
       if (n.id === ui.selection) this.drawRings(p.x, p.y, rad, rgb, true, t, compact);
     }

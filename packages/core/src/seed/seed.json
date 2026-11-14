@@ -407,6 +407,7 @@
     "masteredColor": "#ffa200",
     "nodeBrightness": 1,
     "nodeSize": 1,
+    "nodeStarSize": 1,
     "pulseBrightness": 1,
     "pulseSize": 1,
     "courses": {}

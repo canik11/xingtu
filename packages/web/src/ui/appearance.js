@@ -103,6 +103,7 @@ function scaleInputs() {
   return [
     [el.appearanceNodeBrightness, el.appearanceNodeBrightnessValue, 'nodeBrightness'],
     [el.appearanceNodeSize, el.appearanceNodeSizeValue, 'nodeSize'],
+    [el.appearanceNodeStarSize, el.appearanceNodeStarSizeValue, 'nodeStarSize'],
     [el.appearanceEdgeBrightness, el.appearanceEdgeBrightnessValue, 'edgeBrightness'],
     [el.appearancePulseBrightness, el.appearancePulseBrightnessValue, 'pulseBrightness'],
     [el.appearancePulseSize, el.appearancePulseSizeValue, 'pulseSize']

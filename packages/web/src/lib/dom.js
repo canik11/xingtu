@@ -73,6 +73,8 @@ export function cacheDom() {
   el.appearanceNodeBrightnessValue = $id('appearanceNodeBrightnessValue');
   el.appearanceNodeSize = $id('appearanceNodeSize');
   el.appearanceNodeSizeValue = $id('appearanceNodeSizeValue');
+  el.appearanceNodeStarSize = $id('appearanceNodeStarSize');
+  el.appearanceNodeStarSizeValue = $id('appearanceNodeStarSizeValue');
   el.appearanceEdgeBrightness = $id('appearanceEdgeBrightness');
   el.appearanceEdgeBrightnessValue = $id('appearanceEdgeBrightnessValue');
   el.appearancePulseBrightness = $id('appearancePulseBrightness');
