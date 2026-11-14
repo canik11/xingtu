@@ -27,6 +27,7 @@ export function cacheDom() {
   el.statNodes = $id('statNodes');
   el.statEdges = $id('statEdges');
   el.btnAdd = $id('btnAdd');
+  el.btnShow = $id('btnShow');
   el.searchBox = $id('searchBox');
   el.searchInput = $id('searchInput');
   el.searchClear = $id('searchClear');
