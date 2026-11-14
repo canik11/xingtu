@@ -106,6 +106,22 @@ export function projectFocusNode(n) {
 }
 
 /**
+ * 记录局部图节点当前的屏幕坐标，回到星海时让球体节点从这里飞入。
+ * 只用于 WebGL 的屏幕位置插值，不影响焦点的投影逻辑。
+ */
+export function captureFocusScreenMap() {
+  const graph = ui.focusGraph;
+  if (!graph) return null;
+  const map = new Map();
+  for (const n of graph.nodes) {
+    const p = projectFocusNode(n);
+    const s = worldToScreen(p.x, p.y);
+    map.set(n.id, { x: s.x, y: s.y });
+  }
+  return map;
+}
+
+/**
  * 让节点跟随鼠标在屏幕平面内移动；反解 focusRot，得到世界坐标增量。
  * 这样无论球体转到哪个角度，节点都会跟着指针走。
  */

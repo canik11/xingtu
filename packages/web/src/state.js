@@ -45,6 +45,10 @@ export const ui = {
   innerGraph: null,
   /** 3D 星海显示范围：1 = 课程；2 = 课程 + 章节；3 = 前三级；4 = 全部层级（含更深子知识点）。 */
   sphereScope: 1,
+  /** 星海形状（球 / 星系 / 双螺旋 …），见 shapes.js。 */
+  shape: 'sphere',
+  /** 切换形状时节点从旧位置飞向新位置：{ from: Map<id,{x,y,z}>, start, dur }。 */
+  shapeMorph: null,
   /** 3D 球体的随机膨胀：0 = 标准球，1 = 完全展开；target 用于补间。 */
   spherePuff: 0,
   spherePuffTarget: 0,
@@ -75,7 +79,9 @@ export const ui = {
   breathAge: 0,
 
   /* 从星海进入局部图时的位置过渡：{ from: Map<id,{x,y}>, start, dur }。 */
-  transition: null
+  transition: null,
+  /* 场景转场（遮罩圈 / 缩放）：{ kind, origin:{x,y}, start, dur }，见 scene/transition.js。 */
+  sceneFx: null
 };
 
 /** 帧时钟。 */

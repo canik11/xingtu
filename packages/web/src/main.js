@@ -14,9 +14,11 @@ import { startLoop } from './loop.js';
 import { bindInteraction } from './interaction.js';
 import { bindActions, updateStats, refreshCategoryDatalist, closeAddModal, deleteSelected } from './actions.js';
 import { bindPanel, updateDock, bindPanelChrome, openPanel, closePanel, selectNode } from './ui/panel.js';
-import { bindNavigation, syncNav, setPanelApi, enterSphere } from './navigation.js';
+import { bindNavigation, syncNav, setPanelApi, enterSphere, applyShapeForUser } from './navigation.js';
 import { sceneVisuals, spherePuffState } from './hierarchy.js';
 import { projectFocusNode, buildFocus, fitFocus } from './focus.js';
+import { startIntroTransition } from './scene/transition.js';
+import { mountIntro, playIntro, destroyIntro } from './ui/intro.js';
 import { onQualityChange, quality, qualitySnapshot } from './quality.js';
 import { getOutline, getEntity, refreshOutline } from './outline.js';
 import { appearanceConfig, edgeIsMastered, toggleMastery } from './mastery.js';
@@ -343,6 +345,15 @@ async function boot() {
       toScreen(x, y) {
         return { x: (x - cam.x) * cam.scale + view.w / 2, y: (y - cam.y) * cam.scale + view.h / 2 };
       },
+      get shape() {
+        return { id: ui.shape, morphing: !!ui.shapeMorph, sceneFx: ui.sceneFx && ui.sceneFx.kind };
+      },
+      get gl() {
+        return glScene && glScene.scene;
+      },
+      setShape(id) {
+        return applyShapeForUser(id);
+      },
       select(id) {
         selectNode(id);
         openPanel(id);
@@ -356,6 +367,11 @@ async function boot() {
 
   clock.last = performance.now();
   startLoop(ctx, glScene);
+  // 首帧已经排进 rAF，再点燃开场爆炸；reduced-motion 时直接淡出黑幕。
+  playIntro({
+    reduced: flags.reducedMotion,
+    onBlast: () => startIntroTransition(1500)
+  });
 }
 
 /** 全局错误兜底：显示红条，避免“白屏无提示”。 */
@@ -365,8 +381,10 @@ function setFatalHandler() {
 }
 
 function start() {
+  mountIntro();
   boot().catch((error) => {
     console.error('[starmap] 启动失败', error);
+    destroyIntro();
     showFatal((error && error.message) || '应用启动失败');
   });
 }

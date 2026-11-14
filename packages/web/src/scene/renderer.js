@@ -9,6 +9,7 @@ import { drawSpace, drawVignette, drawGrain } from './space.js';
 import { drawAmbient } from './ambient.js';
 import { draw3D } from './renderer3d.js';
 import { drawFocus } from './rendererFocus.js';
+import { transitionAt, endTransition } from './transition.js';
 import { getLevel } from '../hierarchy.js';
 
 const FONT =
@@ -80,6 +81,11 @@ export function nodeDrawPos(n, t) {
 
 /** 主绘制函数。 */
 export function draw(ctx, t, dt) {
+  // WebGL 路径由 gl-scene.updateFx 清理；Canvas 2D 回退时在这里收尾。
+  if (ui.sceneFx) {
+    const fx = transitionAt(t);
+    if (!fx || fx.done) endTransition();
+  }
   ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';

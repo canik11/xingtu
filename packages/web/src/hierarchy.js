@@ -5,6 +5,7 @@ import { cam, ui } from './state.js';
 import { data } from './store.js';
 import { worldToScreen } from './camera.js';
 import { getOutline, chaptersOf, pointsOf } from './outline.js';
+import { shapePoint, shapeCloudDir } from './shapes.js';
 
 const OUTER_R = 300;
 const INNER_R = 250;
@@ -122,7 +123,7 @@ function courseBases() {
   const list = getOutline().courses;
   const puff = ui.spherePuff;
   return list.map((course, i) => {
-    const unit = fibonacci(i, list.length, 0.4);
+    const unit = shapePoint(ui.shape, i, list.length);
     const base = { x: unit.x * OUTER_R, y: unit.y * OUTER_R, z: unit.z * OUTER_R };
     const off = puffOffset(course.id, base, OUTER_R);
     const drag = sphereOffset(course.id);
@@ -147,7 +148,7 @@ function chapterBases() {
     const chapters = chaptersOf(base.course.id);
     if (!chapters.length) return;
     chapters.forEach((chapter) => {
-      const dir = randDir(chapter.id, 'chapter-pos');
+      const dir = shapeCloudDir(ui.shape, randDir(chapter.id, 'chapter-pos'));
       const radius = 36 + rand01(chapter.id, 'chapter-r') * 46;
       const own = puffOffset(chapter.id, base, 76);
       const drag = sphereOffset(chapter.id);
@@ -173,7 +174,7 @@ function pointBases() {
     points.forEach((point, i) => {
       // 层级 3 只显示直属于章节的知识点；第 4 档“全部”才继续展开更深层。
       if (ui.sphereScope < 4 && (point.depth || 0) > 0) return;
-      const dir = randDir(point.id, `point-pos-${i}`);
+      const dir = shapeCloudDir(ui.shape, randDir(point.id, `point-pos-${i}`));
       const radius = 14 + rand01(point.id, 'point-r') * 24;
       const own = puffOffset(point.id, chapter, 30);
       const drag = sphereOffset(point.id);
@@ -190,12 +191,32 @@ function pointBases() {
   return out;
 }
 
+/**
+ * 切换形状时，节点世界坐标从旧形状平滑飞向新形状。
+ * 用 performance.now() 读取进度，保证同一帧内多次调用结果一致。
+ */
+function morphWorld(id, p) {
+  const m = ui.shapeMorph;
+  if (!m) return p;
+  const from = m.from.get(id);
+  if (!from) return p;
+  const raw = clamp((performance.now() - m.start) / m.dur, 0, 1);
+  if (raw >= 1) return p;
+  const e = 1 - Math.pow(1 - raw, 3);
+  return {
+    x: from.x + (p.x - from.x) * e,
+    y: from.y + (p.y - from.y) * e,
+    z: from.z + (p.z - from.z) * e
+  };
+}
+
 /** 外层 3D 视觉节点（一级课程，必要时加二级章节）。 */
 function outerVisuals() {
   const rot = ui.sphereRot;
   const breath = ui.idleBreath || 1;
   const courses = courseBases().map((p) => {
-    const q = projectPoint(p, rot, OUTER_R);
+    const m = morphWorld(p.course.id, p);
+    const q = projectPoint(m, rot, OUTER_R);
     const n = p.course;
     return {
       id: n.id,
@@ -206,9 +227,9 @@ function outerVisuals() {
       x: q.x * breath,
       y: q.y * breath,
       z: q.z,
-      wx: p.x,
-      wy: p.y,
-      wz: p.z,
+      wx: m.x,
+      wy: m.y,
+      wz: m.z,
       persp: q.persp,
       depth: q.depth,
       r: 4.6 + Math.min(n.deg || 0, 7) * 0.55
@@ -218,7 +239,8 @@ function outerVisuals() {
   if (ui.sphereScope < 2) return courses;
 
   const chapters = chapterBases().map((p) => {
-    const q = projectPoint(p, rot, OUTER_R + 70);
+    const m = morphWorld(p.chapter.id, p);
+    const q = projectPoint(m, rot, OUTER_R + 70);
     return {
       id: p.chapter.id,
       node: p.chapter,
@@ -229,9 +251,9 @@ function outerVisuals() {
       x: q.x * breath,
       y: q.y * breath,
       z: q.z,
-      wx: p.x,
-      wy: p.y,
-      wz: p.z,
+      wx: m.x,
+      wy: m.y,
+      wz: m.z,
       persp: q.persp,
       depth: q.depth,
       r: 3.7
@@ -240,7 +262,8 @@ function outerVisuals() {
   if (ui.sphereScope < 3) return courses.concat(chapters);
 
   const points = pointBases().map((p) => {
-    const q = projectPoint(p, rot, OUTER_R + 120);
+    const m = morphWorld(p.point.id, p);
+    const q = projectPoint(m, rot, OUTER_R + 120);
     return {
       id: p.point.id,
       node: p.point,
@@ -252,9 +275,9 @@ function outerVisuals() {
       x: q.x * breath,
       y: q.y * breath,
       z: q.z,
-      wx: p.x,
-      wy: p.y,
-      wz: p.z,
+      wx: m.x,
+      wy: m.y,
+      wz: m.z,
       persp: q.persp,
       depth: q.depth,
       r: 2.45
@@ -453,8 +476,28 @@ export function spherePuffState() {
   };
 }
 
+/**
+ * 切换星海形状：记录当前世界坐标，下一帧起用 900ms 从旧形状飞到新形状。
+ * 返回是否真的发生了切换。
+ */
+export function applyShape(shape) {
+  if (!shape || shape === ui.shape) return false;
+  const from = new Map();
+  for (const v of sceneVisuals()) {
+    from.set(v.id, { x: v.wx ?? v.x, y: v.wy ?? v.y, z: v.wz ?? v.z });
+  }
+  ui.shape = shape;
+  if (from.size) {
+    ui.shapeMorph = { from, start: performance.now(), dur: 900 };
+  }
+  return true;
+}
+
 /** 每帧自动缓慢自转 / 呼吸（拖拽时暂停旋转）并推进膨胀补间。 */
 export function tick(dt) {
+  if (ui.shapeMorph && performance.now() - ui.shapeMorph.start >= ui.shapeMorph.dur) {
+    ui.shapeMorph = null;
+  }
   // 「膨胀」静默效果：每个循环缓慢涨大再缩回，到谷底换一套随机方向。
   if (ui.level === 'sphere' && ui.idleModes.puff) {
     ui.idlePhase += dt * 0.00055 * ui.idleSpeed;
@@ -516,12 +559,17 @@ export function tick(dt) {
   }
 }
 
-/** 记录进入局部图前的 3D 世界坐标，供回退渲染层做位置插值。 */
+/** 记录进入局部图前的 3D 世界坐标与屏幕坐标，供回退渲染层 / WebGL 做位置插值。 */
 export function captureTransitionFrom3D() {
-  const map = new Map();
-  for (const v of sceneVisuals()) map.set(v.id, { x: v.x, y: v.y });
-  if (!map.size) return null;
-  return { from: map, start: performance.now(), dur: 720 };
+  const from = new Map();
+  const screenFrom = new Map();
+  for (const v of sceneVisuals()) {
+    from.set(v.id, { x: v.x, y: v.y });
+    const s = worldToScreen(v.x, v.y);
+    screenFrom.set(v.id, { x: s.x, y: s.y });
+  }
+  if (!from.size) return null;
+  return { from, screenFrom, start: performance.now(), dur: 720 };
 }
 
 export function clearTransition() {

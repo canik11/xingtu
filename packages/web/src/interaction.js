@@ -1,5 +1,5 @@
 // 画布交互：3D 球体旋转 / 单击选中 / 双击进入局部 3D，节点下钻与缩放。
-import { screenToWorld, zoomAt, center3DScene } from './camera.js';
+import { screenToWorld, zoomAt, center3DScene, worldToScreen } from './camera.js';
 import { el } from './lib/dom.js';
 import { cam, ui, view } from './state.js';
 import { openAddNode, closeAddModal, isMenuOpen, closeMenu, deleteSelected } from './actions.js';
@@ -9,7 +9,7 @@ import { openPanel, closePanel, selectNode, isPanelOpen } from './ui/panel.js';
 import { isAddOpen } from './ui/add-modal.js';
 import { nodeAt3D, rotateScene, rotateFocus, moveSphereNode } from './hierarchy.js';
 import { enterLocal, back } from './navigation.js';
-import { nodeAtFocus, edgeAtFocus, fitFocus, moveFocusNode } from './focus.js';
+import { nodeAtFocus, edgeAtFocus, fitFocus, moveFocusNode, projectFocusNode } from './focus.js';
 
 /** 屏幕坐标命中当前的局部图节点（兼容旧调试接口）。 */
 export function nodeAtScreen(x, y) {
@@ -35,15 +35,18 @@ function hover3D(x, y) {
 function openFocusNode(node) {
   const entity = node && node.entity;
   if (!entity) return;
+  // 转场从被点节点处展开，而不是屏幕中心。
+  const fp = node.kind === 'external' ? null : worldToScreen(projectFocusNode(node).x, projectFocusNode(node).y);
+  const origin = fp ? { x: fp.x, y: fp.y } : undefined;
   if (node.kind === 'external') {
     // 外部节点属于另一门课程/章节：直接切到它的局部图。
-    enterLocal(entity.id, { from3D: false });
+    enterLocal(entity.id, { from3D: false, origin });
     return;
   }
   if (entity.level === 1) {
     openPanel(entity.id);
   } else if (entity.level === 2) {
-    enterLocal(entity.id, { from3D: false, openSidebar: true });
+    enterLocal(entity.id, { from3D: false, openSidebar: true, origin });
   } else {
     openPanel(entity.id);
   }
@@ -277,7 +280,11 @@ export function bindInteraction() {
     if (ui.level !== 'local') {
       const hit = nodeAt3D(e.clientX, e.clientY);
       if (!hit) return;
-      enterLocal(hit.id, { from3D: true, openSidebar: hit.kind === 'chapter' });
+      enterLocal(hit.id, {
+        from3D: true,
+        openSidebar: hit.kind === 'chapter',
+        origin: { x: e.clientX, y: e.clientY }
+      });
       return;
     }
     const hit = nodeAtFocus(e.clientX, e.clientY);

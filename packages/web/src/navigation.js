@@ -1,11 +1,13 @@
 // 层级导航：星海（3D 球）→ 课程/章节（局部标题图）→ 再下钻或进笔记。
 // 面板 API 由 main.js 注入，避免与 ui/panel.js 形成循环依赖。
 import { esc, el } from './lib/dom.js';
-import { ui } from './state.js';
+import { ui, view } from './state.js';
 import { index } from './store.js';
 import { center3DScene, fitFocusView, panelReserve } from './camera.js';
-import { captureTransitionFrom3D, clearTransition, resetSphereShape } from './hierarchy.js';
-import { buildFocus, clearManualPositions, fitFocus, getFocus } from './focus.js';
+import { applyShape, captureTransitionFrom3D, clearTransition, resetSphereShape } from './hierarchy.js';
+import { saveShape } from './shapes.js';
+import { startTransition } from './scene/transition.js';
+import { buildFocus, captureFocusScreenMap, clearManualPositions, fitFocus, getFocus } from './focus.js';
 import { getEntity, pathOf, courseOf, refreshOutline } from './outline.js';
 import { idleLabel, isStill, loadMotionPrefs, setIdleModes, setIdleSpeed, toggleIdleMode } from './motion.js';
 import { updateStats } from './stats.js';
@@ -25,11 +27,21 @@ export function getLevel() {
   return ui.level;
 }
 
+/** 不同形状的基准取景半径：星系更宽、晶格更大、环带更紧凑。 */
+const SHAPE_RADIUS = { galaxy: 345, helix: 350, torus: 335, lattice: 385, rose: 345, wave: 355 };
+
 function sphereRadius() {
+  const shaped = SHAPE_RADIUS[ui.shape];
+  if (shaped) return ui.idleModes.puff || ui.spherePuffTarget > 0.5 ? shaped + 40 : shaped;
   if (ui.idleModes.puff) return 365;
   if (ui.spherePuffTarget > 0.5) return 430;
   if (ui.sphereScope >= 4) return 400;
   return ui.sphereScope >= 3 ? 350 : 300;
+}
+
+/** 场景转场起点：面板之外的可视区域中心。 */
+function sceneOrigin() {
+  return { x: Math.max(140, (view.w - panelReserve()) / 2), y: view.h * 0.47 };
 }
 
 /** 把星海相机摆到球体中心。 */
@@ -166,6 +178,8 @@ function closeSidebar() {
 
 /** 回到星海。 */
 export function enterSphere(animate = true) {
+  const origin = sceneOrigin();
+  const screenFrom = captureFocusScreenMap();
   closeSidebar();
   ui.level = 'sphere';
   ui.focusId = null;
@@ -176,8 +190,8 @@ export function enterSphere(animate = true) {
   ui.selection = null;
   ui.hover = null;
   ui.hoverEdge = null;
-  ui.transition = null;
   clearTransition();
+  if (animate) startTransition({ kind: 'sphere', origin, screenFrom, dur: 900 });
   panelApi.selectNode(null);
   applySphereCamera(animate);
   syncNav();
@@ -186,14 +200,15 @@ export function enterSphere(animate = true) {
 /**
  * 进入局部标题图（课程或章节）。
  * @param {string} id 课程 id / `h:<blockId>`
- * @param {{animate?:boolean, from3D?:boolean, openSidebar?:boolean}} [opts]
+ * @param {{animate?:boolean, from3D?:boolean, openSidebar?:boolean, origin?:{x:number,y:number}}} [opts]
  */
 export function enterLocal(id, opts = {}) {
   refreshOutline();
   const entity = getEntity(id);
   if (!entity) return false;
   const from3D = (opts.from3D !== false && ui.level === 'sphere') || ui.level === 'sphere';
-  const transition = from3D && entity.level === 1 ? captureTransitionFrom3D() : null;
+  const bridge = from3D && entity.level === 1 ? captureTransitionFrom3D() : null;
+  const origin = opts.origin || sceneOrigin();
   closeSidebar();
   ui.level = 'local';
   ui.focusId = id;
@@ -203,7 +218,8 @@ export function enterLocal(id, opts = {}) {
   ui.selection = id;
   ui.hover = null;
   ui.hoverEdge = null;
-  ui.transition = transition;
+  if (opts.animate !== false) startTransition({ kind: 'local', origin, dur: 640 });
+  ui.transition = bridge;
   buildFocus(id);
   fitFocus(opts.animate !== false);
   panelApi.selectNode(id);
@@ -284,6 +300,15 @@ export function onPanelGeometryChanged() {
   syncNav();
 }
 
+/** 外观设置里切换星海形状：节点 morph、相机重新取景、导航文案同步。 */
+export function applyShapeForUser(shape) {
+  if (!applyShape(shape)) return false;
+  saveShape(shape);
+  if (ui.level === 'sphere') applySphereCamera(true);
+  syncNav();
+  return true;
+}
+
 /** 绑定导航条事件；返回卸载函数（目前单页，不需要）。 */
 export function bindNavigation() {
   loadMotionPrefs();
@@ -329,6 +354,11 @@ export function bindNavigation() {
   }
   if (el.spreadBtn) {
     el.spreadBtn.addEventListener('click', () => {
+      // 「重置图形」同时恢复默认球形，避免用户找不到回到球形的方法。
+      if (ui.shape !== 'sphere') {
+        applyShape('sphere');
+        saveShape('sphere');
+      }
       setIdleModes({ rotate: true, breathe: false, puff: false });
       resetSphereShape();
       closeMotionPanel();

@@ -8,6 +8,7 @@ import { getFocus, projectFocusNode } from '../focus.js';
 import { appearanceConfig, edgeDefaultRgb, edgeIsMastered, edgeMasteredRgb, masteryRgb, scaledAppearance } from '../mastery.js';
 import { GLBackdrop } from './gl-backdrop.js';
 import { GLAmbient } from './gl-ambient.js';
+import { transitionAt, transitionPoint, coverRadius, endTransition } from './transition.js';
 import { quality } from '../quality.js';
 import {
   coreTexture,
@@ -122,19 +123,27 @@ class WebGLScene {
     this.root.addChild(this.ambient.root);
     this.breathMark = -1;
 
+    // 知识图单独包一层：转场时只对图做遮罩/缩放/淡入，星空与粒子保持完整。
+    this.graphRoot = new Container();
+    this.graphRoot.eventMode = 'none';
+    this.root.addChild(this.graphRoot);
+    this.graphMask = new Graphics();
+    this.graphMask.visible = false;
+    this.root.addChild(this.graphMask);
+
     this.edgeGlow = new Graphics();
     this.edgeGlow.blendMode = 'add';
     this.edgeMain = new Graphics();
     this.edgeMain.blendMode = 'add';
-    this.root.addChild(this.edgeGlow, this.edgeMain);
+    this.graphRoot.addChild(this.edgeGlow, this.edgeMain);
 
     this.nodeGlowLayer = new Container();
     this.nodeCoreLayer = new Container();
     this.nodeFlareLayer = new Container();
-    this.root.addChild(this.nodeGlowLayer, this.nodeFlareLayer, this.nodeCoreLayer);
+    this.graphRoot.addChild(this.nodeGlowLayer, this.nodeFlareLayer, this.nodeCoreLayer);
 
     this.edgePulseLayer = new Container();
-    this.root.addChild(this.edgePulseLayer);
+    this.graphRoot.addChild(this.edgePulseLayer);
     this.edgePulses = [];
     for (let i = 0; i < 6; i++) {
       const spike = new Sprite(glowTexture());
@@ -149,7 +158,7 @@ class WebGLScene {
     }
 
     this.selectionLayer = new Container();
-    this.root.addChild(this.selectionLayer);
+    this.graphRoot.addChild(this.selectionLayer);
     this.ringA = new Sprite(ringTexture());
     this.ringA.anchor.set(0.5);
     this.ringA.blendMode = 'add';
@@ -167,7 +176,7 @@ class WebGLScene {
 
     this.labelLayer = new Container();
     this.labelLayer.eventMode = 'none';
-    this.root.addChild(this.labelLayer);
+    this.graphRoot.addChild(this.labelLayer);
     this.labels = new Map();
 
     this.root.addChild(this.backdrop.overlay);
@@ -386,7 +395,10 @@ class WebGLScene {
     const edges = sceneEdges(visuals);
     const ordered = visuals.slice().sort((a, b) => a.depth - b.depth);
     const positions = new Map();
-    for (const v of visuals) positions.set(v.id, worldToScreen(v.x, v.y));
+    for (const v of visuals) {
+      const s = worldToScreen(v.x, v.y);
+      positions.set(v.id, transitionPoint(v.id, s.x, s.y, t) || s);
+    }
     const active = selectedId();
     const hover = hoveredId();
     const style = scaledAppearance();
@@ -510,7 +522,8 @@ class WebGLScene {
     const depths = new Map();
     for (const n of graph.nodes) {
       const p = projectFocusNode(n);
-      positions.set(n.id, worldToScreen(p.x, p.y));
+      const s = worldToScreen(p.x, p.y);
+      positions.set(n.id, transitionPoint(n.id, s.x, s.y, t) || s);
       depths.set(n.id, p.depth);
     }
     const rads = new Map();
@@ -722,10 +735,51 @@ class WebGLScene {
     this.ambient.spawnPulseRing(center.x, center.y, ringSize(r0 * 1.02), ringSize(r0 * 1.48), 1200, 0.16, 0xd4e7ff);
   }
 
+  /**
+   * 场景转场：球形遮罩从 origin 展开 + 整图轻微推近/淡入。
+   * 只作用于 graphRoot，星空背景与粒子层保持完整画面。
+   */
+  updateFx(t) {
+    const fx = transitionAt(t);
+    if (!fx || fx.done) {
+      if (fx && fx.done) endTransition();
+      if (this.graphRoot.mask) {
+        this.graphRoot.mask = null;
+        this.graphMask.visible = false;
+      }
+      this.graphRoot.alpha = 1;
+      this.graphRoot.scale.set(1);
+      this.graphRoot.position.set(0, 0);
+      this.graphRoot.pivot.set(0, 0);
+      return;
+    }
+    const { origin, eased, raw, kind } = fx;
+    const expand = kind === 'intro' || kind === 'local';
+    if (expand) {
+      const radius = Math.max(0, coverRadius(origin) * eased);
+      this.graphMask.clear();
+      if (radius > 0.5) {
+        this.graphMask.circle(origin.x, origin.y, radius).fill({ color: 0xffffff });
+        this.graphMask.visible = true;
+        this.graphRoot.mask = this.graphMask;
+      }
+    } else if (this.graphRoot.mask) {
+      this.graphRoot.mask = null;
+      this.graphMask.visible = false;
+    }
+    // 以转场原点为支点：图从点击处轻轻推近，而不是整屏平移。
+    const s = kind === 'intro' ? 0.9 + eased * 0.1 : 0.94 + eased * 0.06;
+    this.graphRoot.pivot.set(origin.x, origin.y);
+    this.graphRoot.position.set(origin.x, origin.y);
+    this.graphRoot.scale.set(s);
+    this.graphRoot.alpha = clamp(raw * 4.5, 0, 1);
+  }
+
   render(t, dt) {
     this.backdrop.update(t, dt);
     this.ambient.update(dt, t);
     this.breathRipple();
+    this.updateFx(t);
     if (isLocal()) this.drawGraphLocal(t, dt);
     else this.drawGraph3D(t, dt);
     this.app.renderer.render(this.app.stage);

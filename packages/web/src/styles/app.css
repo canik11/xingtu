@@ -722,6 +722,56 @@ body.appearance-dragging {
   font-size: 9.5px;
   letter-spacing: .04em;
 }
+
+/* 星海形状：点阵图标 + 名称的卡片式单选。 */
+.appearance-shapes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.appearance-shape {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px 7px;
+  border: 1px solid rgba(150, 190, 255, .13);
+  border-radius: 10px;
+  background: rgba(10, 19, 35, .42);
+  color: #b9cde2;
+  cursor: pointer;
+  transition: border-color .18s, background .18s, color .18s, box-shadow .18s;
+}
+.appearance-shape:hover {
+  border-color: rgba(160, 205, 255, .38);
+  color: #dcecff;
+}
+.appearance-shape[aria-pressed="true"] {
+  border-color: rgba(160, 205, 255, .55);
+  background: rgba(60, 105, 175, .22);
+  color: #eaf5ff;
+  box-shadow: 0 0 14px rgba(120, 175, 255, .18), inset 0 0 12px rgba(120, 175, 255, .08);
+}
+.appearance-shape-icon {
+  display: block;
+  width: 38px;
+  height: 38px;
+  color: inherit;
+}
+.appearance-shape-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.appearance-shape-name {
+  font-size: 11.5px;
+  letter-spacing: .02em;
+}
+@media (max-width: 600px) {
+  .appearance-shapes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 @media (max-width: 600px) {
   .appearance-course {
     grid-template-columns: minmax(80px, 1fr) auto auto;
