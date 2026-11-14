@@ -143,6 +143,29 @@ function streakTexture() {
   streakCache.source.scaleMode = 'linear';
   return streakCache;
 }
+let waterCache = null;
+function waterRingTexture() {
+  if (waterCache) return waterCache;
+  const size = 512;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grd.addColorStop(0, 'rgba(255,255,255,0)');
+  grd.addColorStop(0.6, 'rgba(255,255,255,0)');
+  grd.addColorStop(0.72, 'rgba(196,226,255,0.09)');
+  grd.addColorStop(0.855, 'rgba(255,255,255,0.32)');
+  grd.addColorStop(0.905, 'rgba(255,255,255,0.95)');
+  grd.addColorStop(0.943, 'rgba(198,228,255,0.26)');
+  grd.addColorStop(0.975, 'rgba(255,255,255,0.05)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, size, size);
+  waterCache = Texture.from(c);
+  waterCache.source.scaleMode = 'linear';
+  return waterCache;
+}
 const TEX = {
   glow: glowTexture(),
   core: coreTexture(),
@@ -154,6 +177,7 @@ const TEX = {
   vignette: vignetteTexture(),
   grain: grainTexture(),
   streak: streakTexture(),
+  water: waterRingTexture(),
   ring: pulseRingTexture()
 };
 const K_GLOW = 1 / TEX.glow.width;
@@ -501,7 +525,7 @@ function buildLayers(stage, W, H) {
   ripGlow.blendMode = 'add';
   ripGlow.tint = 0xcfe4ff;
   ripGlow.visible = false;
-  const ripRing = new Sprite(TEX.ring);
+  const ripRing = new Sprite(TEX.water);
   ripRing.anchor.set(0.5);
   ripRing.blendMode = 'add';
   ripRing.tint = 0xd8e9ff;
@@ -928,13 +952,13 @@ function updateBoard(t) {
   // 涟漪
   if (ripOn) {
     layers.ripGlow.visible = true;
-    layers.ripGlow.width = ripFront * 1.7;
-    layers.ripGlow.height = ripFront * 1.7;
-    layers.ripGlow.alpha = 0.15 * ripFade;
+    layers.ripGlow.width = ripFront * 2.6;
+    layers.ripGlow.height = ripFront * 2.6;
+    layers.ripGlow.alpha = 0.1 * ripFade;
     layers.ripRing.visible = true;
-    layers.ripRing.width = ripFront * 2.08;
-    layers.ripRing.height = ripFront * 2.08;
-    layers.ripRing.alpha = 0.5 * ripFade;
+    layers.ripRing.width = ripFront * 2.21;
+    layers.ripRing.height = ripFront * 2.21;
+    layers.ripRing.alpha = 0.62 * ripFade;
     layers.ripGfx.clear();
     const r2 = ripFront - 96;
     if (r2 > 8) {
@@ -1273,10 +1297,14 @@ function update(t, dt) {
   }
 }
 
+function timeAt(s) {
+  return s.frozen ? s.frozenT : (performance.now() - s.t0) / 1000 + s.offset;
+}
+
 function frame(now) {
   const s = state;
   if (!s) return;
-  const t = s.frozen ? s.frozenT : (now - s.t0) / 1000 + s.offset;
+  const t = timeAt(s);
   const dt = Math.min(0.12, Math.max(0, t - s.lastT));
   s.lastT = t;
   update(t, dt);
@@ -1399,8 +1427,12 @@ export async function startShow() {
 function quit() {
   const s = state;
   if (!s || s.quitting) return;
+  const now = timeAt(s);
+  // 调试里 seek() 会冻结时间，退出时要把时钟接回去，否则淡出永远不会结束。
+  s.frozen = false;
+  s.offset = now - (performance.now() - s.t0) / 1000;
+  s.lastT = now;
   s.quitting = true;
-  const now = (performance.now() - s.t0) / 1000 + s.offset;
   s.quitStart = now;
   s.quitAt = now + 0.66;
 }
