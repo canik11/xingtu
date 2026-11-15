@@ -35,10 +35,10 @@ function screenRadius(node) {
   return Math.max(2.2, nodeRadius(node) * cam.scale);
 }
 
-/** 入场动画缓动后的缩放比（born 后 650ms 内渐变）。 */
+/** 入场动画缓动后的缩放比（born 后 975ms 内渐变）。 */
 function bornScale(node, t) {
   if (!node.born) return 1;
-  const age = clamp((t - node.born) / 650, 0, 1);
+  const age = clamp((t - node.born) / 975, 0, 1);
   return 1 - Math.pow(1 - age, 3);
 }
 

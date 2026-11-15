@@ -3,7 +3,7 @@
 import { clamp } from '@starmap/core';
 import { ui, view } from '../state.js';
 
-export const TRANSITION_DUR = 760;
+export const TRANSITION_DUR = 1140;
 
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 

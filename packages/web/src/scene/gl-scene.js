@@ -26,7 +26,7 @@ const LABEL_SCALE = 0.85;
 
 /** 形状骨架星尘的数量与变形时长（毫秒）。 */
 const DUST_COUNT = 720;
-const DUST_DUR = 900;
+const DUST_DUR = 1350;
 
 const rgbHex = (rgb) => (rgb[0] << 16) | (rgb[1] << 8) | rgb[2];
 const mixRgb = (a, b, t) => [

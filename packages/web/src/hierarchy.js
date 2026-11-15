@@ -601,7 +601,7 @@ export function spherePuffState() {
 }
 
 /**
- * 切换星海形状：记录当前世界坐标，下一帧起用 900ms 从旧形状飞到新形状。
+ * 切换星海形状：记录当前世界坐标，下一帧起用 1350ms 从旧形状飞到新形状。
  * 返回是否真的发生了切换。
  */
 export function applyShape(shape) {
@@ -612,7 +612,7 @@ export function applyShape(shape) {
   }
   ui.shape = shape;
   if (from.size) {
-    ui.shapeMorph = { from, start: performance.now(), dur: 900 };
+    ui.shapeMorph = { from, start: performance.now(), dur: 1350 };
   }
   return true;
 }
@@ -637,7 +637,7 @@ export function tick(dt) {
     ui.spherePuffTarget = 0.03 + wave * ui.spherePuffDepth;
   }
   if (ui.spherePuffSeedMix < 1) {
-    ui.spherePuffSeedMix = Math.min(1, ui.spherePuffSeedMix + dt / 650);
+    ui.spherePuffSeedMix = Math.min(1, ui.spherePuffSeedMix + dt / 975);
   }
 
   if (ui.level === 'sphere' && Math.abs(ui.spherePuff - ui.spherePuffTarget) > 0.0001) {
@@ -693,7 +693,7 @@ export function captureTransitionFrom3D() {
     screenFrom.set(v.id, { x: s.x, y: s.y });
   }
   if (!from.size) return null;
-  return { from, screenFrom, start: performance.now(), dur: 720 };
+  return { from, screenFrom, start: performance.now(), dur: 1080 };
 }
 
 export function clearTransition() {

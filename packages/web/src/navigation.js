@@ -178,7 +178,7 @@ function closeSidebar() {
 function captureLocalBridge() {
   const from = captureFocusScreenMap();
   if (!from || !from.size) return null;
-  return { from, screenFrom: from, start: performance.now(), dur: 720 };
+  return { from, screenFrom: from, start: performance.now(), dur: 1080 };
 }
 
 /** 回到星海。 */
@@ -196,7 +196,7 @@ export function enterSphere(animate = true) {
   ui.hover = null;
   ui.hoverEdge = null;
   clearTransition();
-  if (animate) startTransition({ kind: 'sphere', origin, screenFrom, dur: 900 });
+  if (animate) startTransition({ kind: 'sphere', origin, screenFrom, dur: 1350 });
   panelApi.selectNode(null);
   applySphereCamera(animate);
   syncNav();
@@ -228,7 +228,7 @@ export function enterLocal(id, opts = {}) {
   ui.selection = id;
   ui.hover = null;
   ui.hoverEdge = null;
-  if (opts.animate !== false) startTransition({ kind: 'local', origin, dur: 640 });
+  if (opts.animate !== false) startTransition({ kind: 'local', origin, dur: 960 });
   ui.transition = opts.animate === false ? null : bridge;
   buildFocus(id);
   fitFocus(opts.animate !== false);

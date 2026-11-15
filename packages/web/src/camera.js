@@ -222,7 +222,8 @@ export function zoom3DCenter(factor) {
  * @returns {boolean} 是否已稳定（可用于触发保存）
  */
 export function stepCamera(dt) {
-  const k = 1 - Math.pow(0.0002, dt / 1000);
+  // 时间常数约为旧值的 1.5 倍，整体相机转场更从容。
+  const k = 1 - Math.pow(0.0034, dt / 1000);
   const dx = cam.tx - cam.x;
   const dy = cam.ty - cam.y;
   const ds = cam.tscale - cam.scale;
