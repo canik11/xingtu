@@ -41,52 +41,60 @@ function uiOn() {
 
 /* ------------------------------ 开场 ------------------------------ */
 
-/** 奇点蓄力：低频缓慢收拢 + 极轻的高频蓄能。 */
+/** 奇点蓄力：远处的一颗星轻轻亮起来，气流慢慢聚拢。 */
 export function introCharge(dur = 0.42) {
   if (!uiOn()) return;
-  sub({ freq: 28, endFreq: 43, dur: dur + 0.06, peak: 0.05, attack: dur * 0.55, send: 0.08 });
+  // 两声很远的钟，弱起渐强：高音先到，五度的回声随后。
+  bell(N.D5, { dur: 1.8, peak: 0.055, attack: dur * 0.7, send: 0.7, bright: 1.0, spread: 0.35 });
+  bell(N.A5, { dur: 1.5, peak: 0.03, attack: dur * 0.75, delay: 0.05, send: 0.65, bright: 1.1 });
+  // 气流：一点点抬高、变亮，像是在把光吸过来。
   noise({
-    dur,
-    peak: 0.016,
-    attack: dur * 0.8,
+    dur: dur + 0.35,
+    peak: 0.03,
+    attack: dur * 0.9,
     type: 'bandpass',
-    f0: 180,
-    f1: 1100,
-    q: 1.6,
-    send: 0.2
+    f0: 260,
+    f1: 1600,
+    q: 0.8,
+    send: 0.55
   });
-  tone({ freq: N.A6, dur, peak: 0.004, attack: dur * 0.85, send: 0.55 });
+  // 低频潜流托底，但不抢走钟声。
+  sub({ freq: 46, endFreq: 64, dur: dur + 0.3, peak: 0.07, attack: dur * 0.85, send: 0.15 });
 }
 
-/** 大爆炸：次低频冲击 + 低频扫频 + 破空噪声 + 星尘。 */
+/** 大爆炸：三声钟依次展开 + 气浪散开 + 星尘，代替原来的低频轰鸣。 */
 export function introBlast() {
   if (!uiOn()) return;
-  sub({ freq: 92, endFreq: 27, dur: 1.5, peak: 0.36, attack: 0.004, send: 0.2 });
-  sub({ freq: 55, endFreq: 32, dur: 2.6, peak: 0.1, attack: 0.03, send: 0.3 });
-  noise({
-    dur: 1.15,
-    peak: 0.2,
-    attack: 0.002,
-    type: 'lowpass',
-    f0: 6400,
-    f1: 90,
-    q: 0.7,
-    send: 0.4
+  // D4 / A4 / D5 三声钟，错开几十毫秒，听起来像一次「绽放」。
+  [N.D4, N.A4, N.D5].forEach((freq, i) => {
+    bell(freq, {
+      dur: 2.8,
+      peak: 0.1,
+      attack: 0.005,
+      delay: i * 0.05,
+      send: 0.85,
+      bright: 1.15,
+      spread: 0.65
+    });
   });
+  // 气浪：从很高扫到很低，铺满整个爆炸的宽度。
   noise({
-    dur: 0.16,
-    peak: 0.12,
-    attack: 0.001,
-    type: 'highpass',
-    f0: 2400,
-    f1: 9200,
-    q: 0.8,
-    send: 0.3
+    dur: 1.6,
+    peak: 0.085,
+    attack: 0.01,
+    type: 'bandpass',
+    f0: 5600,
+    f1: 240,
+    q: 0.75,
+    send: 0.75
   });
-  tone({ freq: 210, endFreq: 58, type: 'triangle', dur: 0.55, peak: 0.07, attack: 0.003, send: 0.3 });
-  sparkle({ count: 10, base: 1500, spread: 3800, dur: 1.9, peak: 0.015, delay: 0.12, send: 0.75 });
-  // 爆炸后约 0.9 秒，星海「睁眼」的一记很轻的脉搏。
-  sub({ freq: 44, dur: 0.9, peak: 0.045, attack: 0.16, delay: 0.9, send: 0.4 });
+  // 低频只做托底，音量克制。
+  sub({ freq: 96, endFreq: 40, dur: 1.1, peak: 0.12, attack: 0.005, send: 0.25 });
+  sub({ freq: 52, endFreq: 30, dur: 2.4, peak: 0.06, attack: 0.05, delay: 0.05, send: 0.3 });
+  // 星尘：爆炸后向四周散开的高音。
+  sparkle({ count: 26, base: N.D6, spread: 2400, dur: 1.4, peak: 0.02, delay: 0.03, send: 0.8 });
+  // 远处落下的尾音。
+  bell(N.D2, { dur: 3.2, peak: 0.05, attack: 0.03, delay: 0.55, send: 0.8, bright: 0.35 });
 }
 
 /** 没能赶上自动播放时的柔和替代：星海苏醒。 */
@@ -397,26 +405,49 @@ export function vanish() {
   }
 }
 
-/** 黑洞吞噬：张开时的低频下坠 + 吸积盘气声 + 被吞掉的一记闷响。 */
+/** 黑洞吞噬：张开时的低频下坠 + 吸积盘气声 + 碎片，0.84s 时一记闷响吞掉节点。 */
 export function blackhole() {
   if (!uiOn()) return;
 
-  // 张开：低频一路沉下去，气声从高处被吸进来。
-  sub({ freq: 118, endFreq: 26, dur: 1.02, peak: 0.1, attack: 0.018, send: 0.22 });
-  whoosh({ from: 4200, to: 150, dur: 0.9, peak: 0.042, attack: 0.05, q: 1.6, send: 0.4 });
+  // 张开：低频一路沉下去，气流从高处被卷进来。
+  sub({ freq: 122, endFreq: 22, dur: 1.55, peak: 0.17, attack: 0.02, send: 0.25 });
+  whoosh({ from: 5600, to: 110, dur: 1.5, peak: 0.095, attack: 0.06, q: 1.7, send: 0.5 });
 
-  // 吸积盘：几个碎片被卷进去，音高越来越低、声像左右交替。
-  const shards = [N.A5, N.Fs5, N.E5, N.D5];
-  shards.forEach((freq, i) => {
-    tick(freq, { peak: 0.016, pan: i % 2 ? 0.55 : -0.55, send: 0.3, delay: 0.06 + i * 0.1, dur: 0.09 });
+  // 吸积盘：碎片被卷进去，音高越来越低、声像左右交替。
+  const shards = [
+    { f: N.A5, t: 0.16, p: -0.6 },
+    { f: N.Fs5, t: 0.32, p: 0.55 },
+    { f: N.E5, t: 0.48, p: -0.4 },
+    { f: N.D5, t: 0.64, p: 0.42 },
+    { f: N.A4, t: 0.78, p: -0.22 }
+  ];
+  shards.forEach((s) => {
+    tick(s.f, { peak: 0.034, pan: s.p, send: 0.35, delay: s.t, dur: 0.12 });
   });
 
-  // 吞没（约 0.39s，与动画 42% 对齐）：一记闷响 + 闭合的气流。
-  sub({ freq: 72, endFreq: N.D2 * 0.6, dur: 0.5, peak: 0.09, attack: 0.004, send: 0.18, delay: 0.38 });
-  noise({ dur: 0.26, peak: 0.03, attack: 0.003, type: 'lowpass', f0: 900, f1: 90, q: 1.1, send: 0.35, delay: 0.4 });
+  // 盘面旋转的低语：左右来回的气声，让「转」听起来有实体。
+  for (let i = 0; i < 4; i++) {
+    noise({
+      dur: 0.5,
+      peak: 0.02,
+      attack: 0.16,
+      type: 'bandpass',
+      f0: 900 + i * 260,
+      f1: 480 + i * 120,
+      q: 1.4,
+      pan: i % 2 ? 0.5 : -0.5,
+      send: 0.4,
+      delay: 0.2 + i * 0.2
+    });
+  }
 
-  // 收尾：一点余韵，证明它真的不见了。
-  bell(N.D3 * 0.62, { dur: 1.5, peak: 0.02, attack: 0.01, send: 0.55, delay: 0.58, bright: 0.4 });
+  // 吞没（约 0.84s，与动画 56% 对齐）：一记闷响 + 闭合的气流。
+  sub({ freq: 78, endFreq: 21, dur: 0.7, peak: 0.19, attack: 0.004, send: 0.2, delay: 0.84 });
+  noise({ dur: 0.34, peak: 0.07, attack: 0.003, type: 'lowpass', f0: 1100, f1: 80, q: 1.0, send: 0.45, delay: 0.86 });
+
+  // 收尾：低沉余韵 + 几颗逃出来的星尘。
+  bell(N.D2, { dur: 2.2, peak: 0.045, attack: 0.012, send: 0.6, delay: 1.02, bright: 0.3 });
+  sparkle({ count: 4, base: N.A4, spread: 600, dur: 0.7, peak: 0.008, delay: 1.05, send: 0.6 });
 }
 
 /** 保存修改：两声很轻的确认。 */

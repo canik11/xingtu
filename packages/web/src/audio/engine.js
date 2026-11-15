@@ -2,7 +2,7 @@
 // 这样音效可以直接内嵌进离线单文件 HTML，体积几乎为零。
 // 注意：浏览器的自动播放策略要求先有用户手势，unlock 由 cues.js 负责触发。
 
-const MAX_VOICES = 32;
+const MAX_VOICES = 40;
 
 let ctx = null;
 let master = null;

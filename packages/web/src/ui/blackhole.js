@@ -57,7 +57,7 @@ function draw(t) {
   const open = smoothstep(0, 0.16, t);
   const close = smoothstep(0.64, 0.95, t);
   const fade = open * (1 - close);
-  const coreR = Math.max(0, 10 + 62 * smoothstep(0, 0.34, t) - 74 * smoothstep(0.6, 0.96, t));
+  const coreR = Math.max(0, 10 + 74 * smoothstep(0, 0.42, t) - 86 * smoothstep(0.72, 0.99, t));
 
   // 把节点周围压暗，让吞噬感更明确。
   const shade = ctx.createRadialGradient(cx, cy, 0, cx, cy, 380);
@@ -74,7 +74,7 @@ function draw(t) {
 
   // 螺旋内落的星尘，每颗带一小段拖尾。
   for (const seed of seeds) {
-    const p = (t * 1.55 + seed.offset) % 1;
+    const p = (t * 1.08 + seed.offset) % 1;
     const rr = Math.pow(1 - p, 1.7) * (190 + seed.spread * 210) * (1 - close * 0.55) + coreR * 0.5;
     const ang = seed.ang + p * 3.4 + t * 2.6;
     const px = cx + Math.cos(ang) * rr;
@@ -97,7 +97,7 @@ function draw(t) {
   }
 
   // 吸积盘：四层错开的椭圆弧，越靠内转得越快。
-  const spin = t * 5.4 + state.spin;
+  const spin = t * 3.7 + state.spin;
   for (let i = 0; i < 4; i++) {
     const rr = coreR * (1.26 + i * 0.34) + 4;
     const alpha = (0.6 - i * 0.12) * fade;
@@ -147,8 +147,8 @@ function draw(t) {
   }
 
   // 收尾：中心一点闪光 + 一圈向外散开的余波。
-  if (t > 0.78) {
-    const ft = (t - 0.78) / 0.22;
+  if (t > 0.86) {
+    const ft = (t - 0.86) / 0.14;
     ctx.fillStyle = `rgba(236,246,255,${(1 - ft) * 0.85})`;
     ctx.beginPath();
     ctx.arc(cx, cy, 3.4 * (1 - ft) + 0.6, 0, TAU);
@@ -164,7 +164,7 @@ function draw(t) {
 function frame(now) {
   if (!state || !ctx) return;
   const t = Math.min(1, (now - state.start) / state.dur);
-  if (!state.swallowed && t >= 0.42) {
+  if (!state.swallowed && t >= 0.56) {
     state.swallowed = true;
     try {
       if (state.onSwallow) state.onSwallow();
@@ -193,19 +193,19 @@ function finish(notify) {
  * onSwallow 在黑洞张开到最大时触发（此刻把节点从数据里删掉，消失被视界遮住）；
  * onDone 在动画完全结束后触发（再更新统计、提示）。
  */
-export function playBlackhole({ x, y, onSwallow, onDone, dur = 920 } = {}) {
+export function playBlackhole({ x, y, onSwallow, onDone, dur = 1500 } = {}) {
   ensureLayer();
   if (state) finish(false);
   state = {
     x: Number(x) || w / 2,
     y: Number(y) || h / 2,
     start: performance.now(),
-    dur: Math.max(520, dur),
+    dur: Math.max(900, dur),
     onSwallow,
     onDone,
     swallowed: false,
     spin: Math.random() * TAU,
-    seeds: Array.from({ length: 34 }, () => ({
+    seeds: Array.from({ length: 46 }, () => ({
       ang: Math.random() * TAU,
       offset: Math.random(),
       spread: Math.random(),
