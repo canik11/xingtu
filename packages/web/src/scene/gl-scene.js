@@ -853,7 +853,10 @@ class WebGLScene {
     const gain = modeGlow();
     const rot = ui.sphereRot;
     // 球形保持原来的干净球面，只留一层很淡的星尘；其他形状才把骨架点亮。
-    const shapeDim = shape === 'sphere' ? 0.45 : 1;
+    const shapeDim = shape === 'sphere' ? 0.45 : 0.62;
+    // 点云在球心附近投影最密，容易糊成一团白光：靠中心的位置压暗一些。
+    const center = worldToScreen(0, 0);
+    const coreRef = Math.max(60, Math.min(view.w, view.h) * 0.3);
     for (let i = 0; i < DUST_COUNT; i++) {
       const k = i * 3;
       const tx = this.dustTarget[k] * breath;
@@ -879,7 +882,8 @@ class WebGLScene {
       const sprite = this.dustSprites[i];
       sprite.position.set(s.x, s.y);
       const twinkle = 0.72 + 0.28 * Math.sin(t * 0.0011 + i * 1.7);
-      sprite.alpha = Math.min(0.8, (0.16 + q.depth * 0.36) * twinkle) * gain * shapeDim;
+      const coreFade = clamp(Math.hypot(s.x - center.x, s.y - center.y) / coreRef, 0.16, 1);
+      sprite.alpha = Math.min(0.8, (0.16 + q.depth * 0.36) * twinkle) * gain * shapeDim * coreFade;
       const scale = (0.055 + q.depth * 0.075) * (0.8 + (q.persp - 1) * 0.3);
       sprite.scale.set(scale);
     }

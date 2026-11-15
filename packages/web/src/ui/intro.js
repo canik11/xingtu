@@ -159,7 +159,16 @@ function fire() {
   // 爆炸瞬间让 CSS 黑幕退场，改由 canvas 的 curtain 控制：
   // curtain 淡出时，下面的 WebGL 星图会从爆炸中心一点点显露出来。
   if (layer) layer.style.background = 'transparent';
-  if (onBlastCb) onBlastCb();
+  if (onBlastCb) {
+    const cb = onBlastCb;
+    onBlastCb = null;
+    try {
+      cb();
+    } catch (err) {
+      // 回调里的异常不能阻断收尾，否则开场层会永久盖在星海上。
+      console.error('[intro] blast callback failed', err);
+    }
+  }
 }
 
 function finish() {
@@ -200,30 +209,39 @@ function unbindSkip() {
 
 function frame(now) {
   if (!ctx) return;
-  const dt = Math.min(48, Math.max(0, now - last));
-  last = now;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  const cx = w / 2;
-  const cy = h / 2;
+  try {
+    const dt = Math.min(48, Math.max(0, now - last));
+    last = now;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2;
+    const cy = h / 2;
 
-  if (phase !== 'blast') {
-    drawCurtain(1);
-    drawSingularity(now);
-  } else {
-    const age = now - blastAt;
-    if (age < 0) {
+    if (phase !== 'blast') {
       drawCurtain(1);
       drawSingularity(now);
     } else {
-      fire();
-      const curtain = 1 - smoothstep(120, 1200, age);
-      drawCurtain(curtain);
-      // 爆炸动画收在 1.5s 内，之后不再往画布上画任何东西：
-      // 避免残留的中心光点在星海露出后还停在画面中央。
-      if (age < 1500) drawBlast(now, age, cx, cy);
-      if (age > 1600) finish();
+      const age = now - blastAt;
+      if (age < 0) {
+        drawCurtain(1);
+        drawSingularity(now);
+      } else {
+        fire();
+        const curtain = 1 - smoothstep(120, 1200, age);
+        drawCurtain(curtain);
+        // 爆炸动画收在 1.5s 内，之后不再往画布上画任何东西：
+        // 避免残留的中心光点在星海露出后还停在画面中央。
+        if (age < 1500) drawBlast(now, age, cx, cy);
+        if (age > 1600) finish();
+      }
     }
+  } catch (err) {
+    // 某一帧画崩了也要把黑幕收掉，不能让开场层永久挡在星海前面。
+    console.error('[intro] frame failed', err);
+    try {
+      finish();
+    } catch {}
+    return;
   }
   if (!finished) raf = requestAnimationFrame(frame);
 }
@@ -303,17 +321,16 @@ export function hideIntroPrompt() {
 
 /** boot 失败或调试跳过时直接移除，不留黑屏。 */
 export function destroyIntro() {
-  if (!layer) {
-    finished = true;
-    return;
-  }
   finished = true;
   cancelAnimationFrame(raf);
   unbindSkip();
   window.removeEventListener('resize', resize);
-  layer.remove();
+  // 不只依赖闭包里的 layer：动画中途被收尾时 layer 可能已被置空，
+  // 但节点还在 DOM 里，这里直接从文档里清掉，避免残留一层粒子画面。
+  const node = layer || document.getElementById('introLayer');
   layer = null;
   canvas = null;
   ctx = null;
   prompt = null;
+  if (node) node.remove();
 }

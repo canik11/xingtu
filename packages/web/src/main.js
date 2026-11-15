@@ -398,6 +398,9 @@ function startIntroWithSound() {
       onBlast: () => {
         introSoundBlast();
         startIntroTransition(1500);
+        // 保底：就算开场 canvas 的动画停在中途，过渡结束后也把遮罩撤掉，
+        // 免得粒子残影一直盖在星海上。
+        setTimeout(destroyIntro, 1900);
       }
     });
   };
