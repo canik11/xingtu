@@ -227,12 +227,10 @@ function frame(now) {
         drawSingularity(now);
       } else {
         fire();
-        const curtain = 1 - smoothstep(120, 1200, age);
+        const curtain = 1 - smoothstep(0, 400, age);
         drawCurtain(curtain);
-        // 爆炸动画收在 1.5s 内，之后不再往画布上画任何东西：
-        // 避免残留的中心光点在星海露出后还停在画面中央。
-        if (age < 1500) drawBlast(now, age, cx, cy);
-        if (age > 1600) finish();
+        // 不再画爆炸粒子/冲击环：点击后就是黑幕快速淡出，星海直接显出来。
+        if (age > 520) finish();
       }
     }
   } catch (err) {
@@ -292,8 +290,8 @@ export function playIntro({ onBlast, reduced = false } = {}) {
   }
   if (phase === 'idle') {
     phase = 'blast';
-    // 留一小段奇点呼吸，让爆炸有“蓄力”而不是突然出现。
-    blastAt = performance.now() + 420;
+    // 点击后只留极短的蓄力，随即用黑幕淡出直接进入星海。
+    blastAt = performance.now() + 120;
   }
   window.addEventListener('pointerdown', skip, true);
   window.addEventListener('keydown', skip, true);
