@@ -407,13 +407,11 @@ function startIntroWithSound() {
     return;
   }
 
-  // 音频没解锁也要照常开场：最多等 1.5s 让用户点一下（顺便解锁声音），
-  // 超时就直接静音开场，绝不把用户卡在黑幕上。
+  // 停在黑幕上等第一次点击/按键（顺便解锁声音），不自动进入；
+  // 用户随时可以点，boot 期间的点击由 armIntroAudioUnlock 先接管。
   showIntroPrompt();
-  const timer = setTimeout(beginIntro, 1500);
   const onGesture = () => {
     if (started) return;
-    clearTimeout(timer);
     unlockAudio().catch(() => false);
     beginIntro();
   };
