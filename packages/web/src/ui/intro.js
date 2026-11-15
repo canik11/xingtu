@@ -20,7 +20,7 @@ let prompt = null;
 let particles = [];
 let burstReady = false;
 
-const PALETTE = ['255,255,255', '206,229,255', '255,224,184', '160,194,255'];
+const PALETTE = ['255,255,255', '236,244,255', '214,230,255', '255,250,244'];
 
 function smoothstep(a, b, x) {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
@@ -103,7 +103,7 @@ function spawnBurst() {
   const cx = w / 2;
   const cy = h / 2;
   particles = [];
-  for (let i = 0; i < 340; i++) {
+  for (let i = 0; i < 520; i++) {
     const a = Math.random() * TAU;
     // 速度 0.85~3.15 px/ms：爆开够快，中心不会被慢粒子堆成一团白点。
     const speed = 0.85 + Math.pow(Math.random(), 1.5) * 2.3;
@@ -115,101 +115,200 @@ function spawnBurst() {
       vx: Math.cos(a) * speed * flatten,
       vy: Math.sin(a) * speed * 0.9,
       life: 0,
-      max: 620 + Math.random() * 700,
+      max: 900 + Math.random() * 1100,
       size: 0.7 + Math.pow(Math.random(), 2) * 2.1,
       rgb: PALETTE[Math.random() < 0.58 ? 1 : Math.random() < 0.5 ? 0 : Math.random() < 0.62 ? 3 : 2]
     });
   }
 }
 
-/** 爆心亮核：最热的一瞬是白的，随后迅速转金，0.62 秒内衰减干净。 */
+/* ------------------------ 花哨但单色的爆炸 ------------------------ */
+// 全身只用白与冷白：靠光核、放射光丝、星芒、多重光环、星尘、闪烁点堆细节。
+
+const WHITE = '255,255,255';
+const COOL = '226,238,255';
+
+/** 爆心亮核：纯白，0.6 秒内衰减干净。 */
 function drawCore(age) {
-  if (age > 620) return;
-  const k = 1 - Math.min(1, age / 620);
-  const a = Math.pow(k, 1.6) * 0.98;
+  if (age > 700) return;
+  const k = 1 - Math.min(1, age / 700);
+  const a = Math.pow(k, 1.5);
   if (a <= 0.01) return;
-  // 白热（255,252,244）→ 金（255,178,110）。
-  const warm = Math.min(1, age / 420);
-  const cr = 255;
-  const cg = Math.round(252 - 74 * warm);
-  const cb = Math.round(244 - 134 * warm);
   const cx = w / 2;
   const cy = h / 2;
-  const r = 64 + (1 - k) * 260;
+  const r = 90 + (1 - k) * 380;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  g.addColorStop(0, `rgba(${cr},${cg},${cb},${a})`);
-  g.addColorStop(0.22, `rgba(${cr},${cg},${cb},${a * 0.55})`);
-  g.addColorStop(0.62, `rgba(236,236,255,${a * 0.15})`);
-  g.addColorStop(1, 'rgba(120,170,255,0)');
+  g.addColorStop(0, `rgba(255,255,255,${a})`);
+  g.addColorStop(0.16, `rgba(255,255,255,${a * 0.82})`);
+  g.addColorStop(0.42, `rgba(232,242,255,${a * 0.32})`);
+  g.addColorStop(0.75, `rgba(200,220,255,${a * 0.08})`);
+  g.addColorStop(1, 'rgba(190,215,255,0)');
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, TAU);
   ctx.fill();
 }
 
-/* ------------------------- 超新星：多层气壳 ------------------------- */
-
-// 三层气壳：内层白热转金、中层金转橙红、外层蓝白转深蓝，依次撑开。
-const SHELLS = [
-  { delay: 20, dur: 1400, r0: 14, k: 0.5, w: 30, hot: [255, 248, 236], cool: [255, 176, 72] },
-  { delay: 130, dur: 1700, r0: 4, k: 0.78, w: 40, hot: [255, 206, 132], cool: [255, 116, 72] },
-  { delay: 260, dur: 2100, r0: 0, k: 1.05, w: 54, hot: [214, 232, 255], cool: [96, 140, 250] }
-];
-
-/** 气壳：半径随 age 向外撑开、越走越薄，颜色从热到冷。 */
-function drawShells(age, maxR) {
+/** 放射光丝：44 条细光线从爆心射出，随时间拉长、变淡并缓慢旋转。 */
+function drawRays(age) {
+  const t = Math.min(1, age / 1500);
+  if (t >= 1) return;
+  const alpha = Math.pow(1 - t, 1.3) * 0.5;
+  if (alpha <= 0.01) return;
   const cx = w / 2;
   const cy = h / 2;
-  for (const s of SHELLS) {
-    const t = (age - s.delay) / s.dur;
-    if (t <= 0 || t >= 1) continue;
-    const ease = 1 - Math.pow(1 - t, 3);
-    const r = s.r0 + ease * (maxR * s.k);
-    const width = s.w * (1 - t * 0.62) + 6;
-    const alpha = Math.pow(1 - t, 1.4) * 0.78;
-    if (alpha <= 0.01) continue;
-    const cr = Math.round(s.hot[0] + (s.cool[0] - s.hot[0]) * t);
-    const cg = Math.round(s.hot[1] + (s.cool[1] - s.hot[1]) * t);
-    const cb = Math.round(s.hot[2] + (s.cool[2] - s.hot[2]) * t);
-    const g = ctx.createRadialGradient(cx, cy, Math.max(0, r - width), cx, cy, r + width);
-    g.addColorStop(0, `rgba(${cr},${cg},${cb},0)`);
-    g.addColorStop(0.42, `rgba(${cr},${cg},${cb},${alpha * 0.55})`);
-    g.addColorStop(0.62, `rgba(${cr},${cg},${cb},${alpha})`);
-    g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+  const spin = age * 0.000045;
+  const reach = Math.max(w, h);
+  for (let i = 0; i < 88; i++) {
+    const a = (i / 88) * TAU + spin;
+    const vary = 0.55 + ((i * 37) % 100) / 160;
+    const inner = 46 + (i % 6) * 14;
+    const outer = inner + reach * 0.74 * Math.pow(t, 0.55) * vary;
+    const g = ctx.createLinearGradient(
+      cx + Math.cos(a) * inner,
+      cy + Math.sin(a) * inner,
+      cx + Math.cos(a) * outer,
+      cy + Math.sin(a) * outer
+    );
+    g.addColorStop(0, `rgba(${WHITE},${alpha * 0.9})`);
+    g.addColorStop(0.35, `rgba(${WHITE},${alpha * 0.45})`);
+    g.addColorStop(1, `rgba(${WHITE},0)`);
+    ctx.strokeStyle = g;
+    ctx.lineWidth = i % 3 === 0 ? 1.6 : 0.8;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+    ctx.stroke();
+  }
+}
+
+/** 星芒：8 道长芒与 8 道错开 22.5° 的短芒，纯白细三角。 */
+function drawStarBurst(age) {
+  const t = Math.min(1, age / 1200);
+  if (t >= 1) return;
+  const alpha = Math.pow(1 - t, 1.6) * 0.9;
+  if (alpha <= 0.01) return;
+  const cx = w / 2;
+  const cy = h / 2;
+  const reach = Math.max(w, h) * 0.72;
+  const len = 200 + reach * Math.pow(t, 0.5);
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * TAU - Math.PI / 2;
+    const long = i % 2 === 0;
+    const sl = long ? len : len * 0.42;
+    const spread = long ? 0.012 : 0.008;
+    const g = ctx.createLinearGradient(cx, cy, cx + Math.cos(a) * sl, cy + Math.sin(a) * sl);
+    g.addColorStop(0, `rgba(${WHITE},${alpha})`);
+    g.addColorStop(0.7, `rgba(${WHITE},${alpha * 0.22})`);
+    g.addColorStop(1, `rgba(${WHITE},0)`);
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(cx, cy, r + width, 0, TAU);
+    ctx.moveTo(cx + Math.cos(a - spread) * 12, cy + Math.sin(a - spread) * 12);
+    ctx.lineTo(cx + Math.cos(a + spread) * 12, cy + Math.sin(a + spread) * 12);
+    ctx.lineTo(cx + Math.cos(a) * sl, cy + Math.sin(a) * sl);
+    ctx.closePath();
     ctx.fill();
   }
 }
 
-/** 三圈冲击波：白、金、蓝三种温度，依次从爆心扩到屏幕外。 */
-const SHOCK_RGB = ['226,240,255', '255,206,150', '152,182,255'];
-
-function drawShock(age) {
+/** 十字光带：爆炸瞬间横竖两道宽光，0.8 秒内扫开并淡出。 */
+function drawBeams(age) {
+  const t = Math.min(1, age / 800);
+  if (t >= 1) return;
+  const alpha = Math.pow(1 - t, 2) * 0.5;
+  if (alpha <= 0.01) return;
   const cx = w / 2;
   const cy = h / 2;
-  const max = Math.max(w, h);
-  for (let i = 0; i < 3; i++) {
-    const t = (age - i * 80) / (780 + i * 260);
-    if (t < 0 || t > 1) continue;
-    const r = 34 + Math.pow(t, 0.5) * (max * 0.72);
-    const alpha = (1 - t) * (0.34 - i * 0.08);
-    if (alpha <= 0.008) continue;
-    const rgb = SHOCK_RGB[i];
-    const glow = ctx.createRadialGradient(cx, cy, r * 0.84, cx, cy, r);
-    glow.addColorStop(0, `rgba(${rgb},0)`);
-    glow.addColorStop(0.72, `rgba(${rgb},${alpha * 0.5})`);
-    glow.addColorStop(1, `rgba(${rgb},0)`);
-    ctx.fillStyle = glow;
+  const reach = Math.max(w, h) * 0.75 * Math.pow(t, 0.55);
+  const width = 14 + 60 * t;
+  const band = (horizontal) => {
+    const g = horizontal
+      ? ctx.createLinearGradient(cx - reach, cy, cx + reach, cy)
+      : ctx.createLinearGradient(cx, cy - reach, cx, cy + reach);
+    g.addColorStop(0, `rgba(${WHITE},0)`);
+    g.addColorStop(0.42, `rgba(${WHITE},${alpha * 0.5})`);
+    g.addColorStop(0.5, `rgba(${WHITE},${alpha})`);
+    g.addColorStop(0.58, `rgba(${WHITE},${alpha * 0.5})`);
+    g.addColorStop(1, `rgba(${WHITE},0)`);
+    ctx.fillStyle = g;
+    if (horizontal) ctx.fillRect(cx - reach, cy - width / 2, reach * 2, width);
+    else ctx.fillRect(cx - width / 2, cy - reach, width, reach * 2);
+  };
+  band(true);
+  band(false);
+}
+
+// 十道同心光环：不同延迟、速度、粗细与亮度，一层叠一层地涌出去。
+const RINGS = [
+  { delay: 0, dur: 800, w: 3.2, a: 0.95, k: 0.5 },
+  { delay: 50, dur: 950, w: 1.4, a: 0.8, k: 0.62 },
+  { delay: 110, dur: 1100, w: 2.2, a: 0.72, k: 0.72 },
+  { delay: 180, dur: 1250, w: 4.2, a: 0.6, k: 0.82 },
+  { delay: 270, dur: 1400, w: 1.2, a: 0.54, k: 0.92 },
+  { delay: 380, dur: 1550, w: 5.4, a: 0.46, k: 1.02 },
+  { delay: 520, dur: 1700, w: 1.6, a: 0.4, k: 1.12 },
+  { delay: 680, dur: 1850, w: 3.6, a: 0.34, k: 1.22 },
+  { delay: 880, dur: 2050, w: 1.1, a: 0.28, k: 1.32 },
+  { delay: 1100, dur: 2300, w: 2.6, a: 0.22, k: 1.42 }
+];
+
+function drawRings(age, maxR) {
+  const cx = w / 2;
+  const cy = h / 2;
+  for (const s of RINGS) {
+    const t = (age - s.delay) / s.dur;
+    if (t <= 0 || t >= 1) continue;
+    const ease = 1 - Math.pow(1 - t, 3);
+    const r = 30 + ease * maxR * s.k;
+    const width = s.w * (1 - t * 0.5) + 0.6;
+    const alpha = Math.pow(1 - t, 1.4) * s.a;
+    if (alpha <= 0.01) continue;
+    const g = ctx.createRadialGradient(cx, cy, Math.max(0, r - width * 3), cx, cy, r + width * 3);
+    g.addColorStop(0, `rgba(${WHITE},0)`);
+    g.addColorStop(0.46, `rgba(${WHITE},${alpha * 0.35})`);
+    g.addColorStop(0.6, `rgba(${WHITE},${alpha})`);
+    g.addColorStop(1, `rgba(${COOL},0)`);
+    ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, TAU);
+    ctx.arc(cx, cy, r + width * 3, 0, TAU);
     ctx.fill();
-    ctx.strokeStyle = `rgba(${rgb},${alpha})`;
-    ctx.lineWidth = 1.8 * (1 - t) + 0.4;
+  }
+}
+
+/* --------------------------- 闪光点：缓慢明灭 --------------------------- */
+
+let sparks = [];
+
+function spawnSparks() {
+  if (sparks.length) return;
+  sparks = [];
+  for (let i = 0; i < 90; i++) {
+    const a = Math.random() * TAU;
+    const r = 60 + Math.pow(Math.random(), 0.6) * 520;
+    sparks.push({
+      x: Math.cos(a) * r,
+      y: Math.sin(a) * r * 0.9,
+      size: 0.8 + Math.random() * 1.8,
+      phase: Math.random() * TAU,
+      speed: 0.012 + Math.random() * 0.02
+    });
+  }
+}
+
+function drawSparks(age) {
+  if (age < 220 || !sparks.length) return;
+  const fade = 1 - smoothstep(2100, 2600, age);
+  if (fade <= 0) return;
+  const cx = w / 2;
+  const cy = h / 2;
+  for (const s of sparks) {
+    const tw = 0.35 + 0.65 * Math.abs(Math.sin(age * s.speed + s.phase));
+    const a = tw * fade * 0.85;
+    if (a <= 0.02) continue;
+    ctx.fillStyle = `rgba(${WHITE},${a})`;
     ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, TAU);
-    ctx.stroke();
+    ctx.arc(cx + s.x, cy + s.y, s.size, 0, TAU);
+    ctx.fill();
   }
 }
 
@@ -233,7 +332,7 @@ function spawnEmbers() {
       age: 0,
       life: 1800 + Math.random() * 1400,
       size: 1.2 + Math.random() * 2.2,
-      rgb: Math.random() < 0.45 ? '255,186,118' : Math.random() < 0.6 ? '255,128,86' : '214,96,92'
+      rgb: Math.random() < 0.6 ? '236,244,255' : '198,216,246'
     });
   }
 }
@@ -241,7 +340,7 @@ function spawnEmbers() {
 /** 余烬：飞散得比星尘慢，边飘边冷，2.3~2.9 秒之间整体淡尽。 */
 function drawEmbers(dt, age) {
   if (age < 380 || !embers.length) return;
-  const fade = 1 - smoothstep(2600, 3200, age);
+  const fade = 1 - smoothstep(2200, 2600, age);
   if (fade <= 0) return;
   for (const e of embers) {
     if (e.age >= e.life) continue;
@@ -263,7 +362,7 @@ function drawEmbers(dt, age) {
 
 /** 推进并绘制飞散的星尘；1.08~1.48 秒之间整体淡尽。 */
 function drawParticles(dt, age) {
-  const fade = 1 - smoothstep(1080, 1480, age);
+  const fade = 1 - smoothstep(1600, 2100, age);
   if (fade <= 0) return;
   for (const p of particles) {
     p.life += dt;
@@ -367,6 +466,7 @@ function frame(now) {
         fire();
         spawnBurst();
         spawnEmbers();
+        spawnSparks();
         // 黑幕先整体压着，再被爆心从中心推开，最后随爆炸余波退场。
         const veil = 1 - smoothstep(180, 760, age);
         drawCurtain(veil);
@@ -376,13 +476,16 @@ function frame(now) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         drawCore(age);
-        drawShells(age, maxR);
-        drawShock(age);
+        drawRays(age);
+        drawStarBurst(age);
+        drawBeams(age);
+        drawRings(age, maxR);
         drawParticles(dt, age);
         drawEmbers(dt, age);
+        drawSparks(age);
         ctx.restore();
-        // 余烬在 3.2 秒前淡尽、3.4 秒收场：星海露出后不留任何光点。
-        if (age > 3400) finish();
+        // 最外侧光环与闪光点在 2.6 秒前淡尽、2.7 秒收场：星海露出后不留任何光点。
+        if (age > 2800) finish();
       }
     }
   } catch (err) {

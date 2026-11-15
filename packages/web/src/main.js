@@ -388,7 +388,7 @@ async function boot() {
  */
 function startIntroWithSound() {
   let started = false;
-  const beginIntro = () => {
+  const beginIntro = (origin) => {
     if (started) return;
     started = true;
     hideIntroPrompt();
@@ -397,6 +397,7 @@ function startIntroWithSound() {
     introSoundCharge();
     playIntro({
       reduced: flags.reducedMotion,
+      origin,
       onBlast: () => {
         introSoundBlast();
         startIntroTransition(1500);
@@ -407,18 +408,18 @@ function startIntroWithSound() {
     });
   };
 
-  if (audioReady()) {
-    beginIntro();
-    return;
-  }
-
-  // 停在黑幕上等第一次点击/按键（顺便解锁声音），不自动进入；
-  // 用户随时可以点，boot 期间的点击由 armIntroAudioUnlock 先接管。
+  // 不管声音是否已就绪，开场都必须等用户点击：等待页就是「被吸入奇点」的那一刻。
+  // 桌面版（WebView2 带 autoplay 参数）在 initSound 里已经自动解锁并铺好等待底噪；
+  // 网页版在这里第一次点击时才解锁，爆炸音会紧接着放出来。
   showIntroPrompt();
-  const onGesture = () => {
+  const onGesture = (e) => {
     if (started) return;
+    const origin = {
+      x: Number.isFinite(e.clientX) ? e.clientX : view.w / 2,
+      y: Number.isFinite(e.clientY) ? e.clientY : view.h / 2
+    };
     unlockAudio().catch(() => false);
-    beginIntro();
+    beginIntro(origin);
   };
   window.addEventListener('pointerdown', onGesture, { capture: true, once: true });
   window.addEventListener('keydown', onGesture, { capture: true, once: true });

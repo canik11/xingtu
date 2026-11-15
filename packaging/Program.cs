@@ -275,7 +275,12 @@ namespace KnowledgeStarmap
         {
             try
             {
-                CoreWebView2Environment env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+                // 允许页面在无手势时自动播放：等待页的星海底噪一打开就能响。
+                CoreWebView2EnvironmentOptions envOptions = new CoreWebView2EnvironmentOptions
+                {
+                    AdditionalBrowserArguments = "--autoplay-policy=no-user-gesture-required"
+                };
+                CoreWebView2Environment env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, envOptions);
                 await webView.EnsureCoreWebView2Async(env);
                 webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
                 await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(FullscreenBridgeScript);

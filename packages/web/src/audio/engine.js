@@ -124,7 +124,13 @@ export async function unlockAudio() {
   if (!ctx) build();
   if (!ctx) return false;
   try {
-    if (ctx.state === 'suspended') await ctx.resume();
+    if (ctx.state === 'suspended') {
+      // 没有用户手势时 resume() 的 Promise 可能一直不 resolve：最多等 900ms。
+      await Promise.race([
+        ctx.resume().catch(() => {}),
+        new Promise((resolve) => setTimeout(resolve, 900))
+      ]);
+    }
   } catch (err) {
     /* 某些环境不允许恢复：保持静音即可。 */
   }

@@ -154,3 +154,83 @@ export function setAmbientLevel(level) {
 export function ambientState() {
   return { running, shape: currentShape, level: currentLevel, pad: !!pad };
 }
+/* ---------------------- 等待页的循环背景音 ---------------------- */
+
+let waitBus = null;
+
+/**
+ * 点击进入之前铺在等待页下的一层循环音：四个低音持续振荡 + 各自的慢呼吸。
+ * 用持续振荡器而不是采样循环，天然首尾无缝，不会听到接缝。
+ */
+export function startWaitAmbience() {
+  if (waitBus || !audioReady()) return null;
+  const ctx = audioContext();
+  if (!ctx) return null;
+  const now = ctx.currentTime;
+  const out = ctx.createGain();
+  out.gain.value = 0.0001;
+  const nodes = [out, ...connectMix(out, { pan: 0, send: 0.55 })];
+  const voices = [];
+  const spec = [
+    { f: 55.0, type: 'sine', level: 0.045, lfo: 0.041, depth: 0.012, pan: 0 },
+    { f: 73.42, type: 'sine', level: 0.036, lfo: 0.052, depth: 0.01, pan: -0.22 },
+    { f: 110.0, type: 'triangle', level: 0.022, lfo: 0.071, depth: 0.007, pan: 0.24 },
+    { f: 146.83, type: 'sine', level: 0.012, lfo: 0.093, depth: 0.005, pan: -0.1 }
+  ];
+  for (const s of spec) {
+    const osc = ctx.createOscillator();
+    osc.type = s.type;
+    osc.frequency.value = s.f;
+    osc.detune.value = (Math.random() - 0.5) * 6;
+    const gain = ctx.createGain();
+    gain.gain.value = s.level;
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = s.lfo;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = s.depth;
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain.gain);
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = s.pan;
+    osc.connect(gain);
+    gain.connect(pan);
+    pan.connect(out);
+    osc.start();
+    lfo.start();
+    voices.push(osc, lfo, gain, lfoGain, pan);
+  }
+  out.gain.setTargetAtTime(0.9, now + 0.04, 1.6);
+  waitBus = { ctx, out, nodes, voices };
+  return waitBus;
+}
+
+/** 收起等待页背景音：淡出后释放。 */
+export function stopWaitAmbience(fade = 0.7) {
+  if (!waitBus) return;
+  const bus = waitBus;
+  waitBus = null;
+  const now = bus.ctx.currentTime;
+  bus.out.gain.cancelScheduledValues(now);
+  bus.out.gain.setValueAtTime(Math.max(0.0001, bus.out.gain.value), now);
+  bus.out.gain.setTargetAtTime(0.0001, now, Math.max(0.05, fade / 3));
+  setTimeout(() => {
+    for (const node of [...bus.voices, ...bus.nodes]) {
+      try {
+        if (typeof node.stop === 'function') node.stop();
+      } catch (err) {
+        /* 已停止 */
+      }
+      try {
+        node.disconnect();
+      } catch (err) {
+        /* 已断开 */
+      }
+    }
+  }, Math.round(fade * 1000) + 120);
+}
+
+/** 供调试：等待页背景音是否在响。 */
+export function waitAmbienceRunning() {
+  return !!waitBus;
+}

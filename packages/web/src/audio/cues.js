@@ -2,7 +2,7 @@
 // 其他模块只管在关键动作处调用 sfx.*，这里负责「什么时候能出声」。
 import { audioReady, setMasterVolume, unlockAudio } from './engine.js';
 import { isSoundOn, onSoundChange, soundPrefs, toggleSoundPref } from './prefs.js';
-import { ambientState, startAmbient, stopAmbient } from './ambient.js';
+import { ambientState, startAmbient, stopAmbient, startWaitAmbience, stopWaitAmbience } from './ambient.js';
 import * as sfx from './sfx.js';
 import { ui } from '../state.js';
 import { el, isTypingTarget } from '../lib/dom.js';
@@ -33,6 +33,8 @@ async function attemptUnlock() {
   unbindGestures();
   applyPrefs(soundPrefs());
   syncAmbient();
+  // 还没点进星海：把等待页的循环底噪铺上（持续振荡器，首尾天然无缝）。
+  if (!introStarted) startWaitAmbience();
   // 用户在爆炸之后才第一次交互：开场音已经错过，用一声苏醒音补偿。
   if (introStarted && introDone && !introAwakened) {
     introAwakened = true;
@@ -83,6 +85,8 @@ function syncAmbient() {
  * 若音频尚未解锁，后续音效会被引擎静默丢弃，不会报错。
  */
 export function introSoundStart() {
+  // 进入爆炸前把等待页底噪收掉，别让它盖住爆炸。
+  stopWaitAmbience(0.55);
   introStarted = true;
   introBlasted = false;
   introDone = false;
@@ -192,6 +196,9 @@ export function initSound() {
   const prefs = soundPrefs();
   setMasterVolume(prefs.enabled ? prefs.volume : 0);
   bindGestures();
+  // 桌面版（WebView2 带 autoplay 参数）可能允许自动播放：静默试一次，
+  // 成功就把等待页底噪铺上；网页版会失败，等第一次点击再解锁。
+  attemptUnlock();
   bindShortcuts();
   bindDelegates();
   watchOverlays();
