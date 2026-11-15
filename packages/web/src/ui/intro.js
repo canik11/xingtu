@@ -44,6 +44,22 @@ function drawCurtain(alpha) {
   ctx.fillRect(0, 0, w, h);
 }
 
+/** 黑幕被爆心从中心推开：铺满黑之后，用 destination-out 挖一个柔边圆洞。 */
+function openCurtain(cx, cy, radius) {
+  if (radius <= 0) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  const g = ctx.createRadialGradient(cx, cy, radius * 0.55, cx, cy, radius);
+  g.addColorStop(0, 'rgba(0,0,0,1)');
+  g.addColorStop(0.72, 'rgba(0,0,0,0.86)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawSingularity(now) {
   const cx = w / 2;
   const cy = h / 2;
@@ -80,56 +96,87 @@ function drawSingularity(now) {
   ctx.restore();
 }
 
+/** 一次爆炸的星尘：从爆心外一圈起步，快速四散，寿命不超过 1.35 秒。 */
 function spawnBurst() {
   if (burstReady) return;
   burstReady = true;
   const cx = w / 2;
   const cy = h / 2;
-  const count = 430;
   particles = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < 340; i++) {
     const a = Math.random() * TAU;
-    const speed = 0.28 + Math.pow(Math.random(), 1.4) * 1.5;
-    // 一点扁平的盘状偏好，让爆发像星盘张开而不是均匀球壳。
-    const flatten = 0.55 + Math.random() * 0.65;
-    // 从中心外一圈起步，避免慢速粒子在正中间堆成一团白点。
-    const r0 = 30 + Math.random() * 46;
+    // 速度 0.85~3.15 px/ms：爆开够快，中心不会被慢粒子堆成一团白点。
+    const speed = 0.85 + Math.pow(Math.random(), 1.5) * 2.3;
+    const flatten = 0.58 + Math.random() * 0.62;
+    const r0 = 26 + Math.random() * 40;
     particles.push({
       x: cx + Math.cos(a) * r0,
       y: cy + Math.sin(a) * r0 * 0.9,
       vx: Math.cos(a) * speed * flatten,
       vy: Math.sin(a) * speed * 0.9,
       life: 0,
-      max: 560 + Math.random() * 640,
-      size: 0.7 + Math.pow(Math.random(), 2) * 2.2,
-      rgb: PALETTE[Math.random() < 0.62 ? 1 : Math.random() < 0.5 ? 0 : Math.random() < 0.6 ? 3 : 2]
+      max: 620 + Math.random() * 700,
+      size: 0.7 + Math.pow(Math.random(), 2) * 2.1,
+      rgb: PALETTE[Math.random() < 0.58 ? 1 : Math.random() < 0.5 ? 0 : Math.random() < 0.62 ? 3 : 2]
     });
   }
 }
 
-function drawBlast(now, age, cx, cy, fade = 1) {
-  spawnBurst();
-  const dt = Math.min(48, Math.max(0, now - last));
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
+/** 爆心亮核：前 0.46 秒从最亮衰减到零，中心不留白光。 */
+function drawCore(age) {
+  if (age > 460) return;
+  const k = 1 - Math.min(1, age / 460);
+  const a = k * k * 0.95;
+  if (a <= 0.01) return;
+  const cx = w / 2;
+  const cy = h / 2;
+  const r = 70 + (1 - k) * 210;
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0, `rgba(255,255,255,${a})`);
+  g.addColorStop(0.24, `rgba(230,242,255,${a * 0.6})`);
+  g.addColorStop(0.62, `rgba(150,196,255,${a * 0.16})`);
+  g.addColorStop(1, 'rgba(120,170,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, TAU);
+  ctx.fill();
+}
 
-  // 冲击波：三圈由快到慢散开（只留极细的淡环，不再有中心爆闪）。
+/** 三圈冲击波：从爆心扩到屏幕外，边缘带一点柔光。 */
+function drawShock(age) {
+  const cx = w / 2;
+  const cy = h / 2;
+  const max = Math.max(w, h);
   for (let i = 0; i < 3; i++) {
-    const t = (age - i * 90) / (860 + i * 240);
+    const t = (age - i * 80) / (780 + i * 260);
     if (t < 0 || t > 1) continue;
-    const r = 60 + Math.pow(t, 0.52) * (Math.max(w, h) * 0.62);
-    ctx.strokeStyle = `rgba(202,226,255,${(1 - t) * 0.14 * fade})`;
-    ctx.lineWidth = 1.6 * (1 - t) + 0.4;
+    const r = 34 + Math.pow(t, 0.5) * (max * 0.72);
+    const alpha = (1 - t) * (0.38 - i * 0.1);
+    if (alpha <= 0.008) continue;
+    const glow = ctx.createRadialGradient(cx, cy, r * 0.84, cx, cy, r);
+    glow.addColorStop(0, 'rgba(186,216,255,0)');
+    glow.addColorStop(0.72, `rgba(202,226,255,${alpha * 0.5})`);
+    glow.addColorStop(1, 'rgba(206,230,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(216,234,255,${alpha})`;
+    ctx.lineWidth = 1.8 * (1 - t) + 0.4;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, TAU);
     ctx.stroke();
   }
+}
 
-  // 爆散粒子：短尾迹 + 光点。过渡收尾时整体淡出，不留残余。
+/** 推进并绘制飞散的星尘；1.08~1.48 秒之间整体淡尽。 */
+function drawParticles(dt, age) {
+  const fade = 1 - smoothstep(1080, 1480, age);
+  if (fade <= 0) return;
   for (const p of particles) {
     p.life += dt;
     if (p.life > p.max) continue;
-    const damp = Math.pow(0.9952, dt / 16.67);
+    const damp = Math.pow(0.995, dt / 16.67);
     p.vx *= damp;
     p.vy *= damp;
     const px = p.x;
@@ -137,20 +184,19 @@ function drawBlast(now, age, cx, cy, fade = 1) {
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     const k = 1 - p.life / p.max;
-    const alpha = Math.min(1, k * 1.7) * 0.85 * fade;
-    ctx.strokeStyle = `rgba(${p.rgb},${alpha * 0.5})`;
-    ctx.lineWidth = p.size * 0.85;
+    const alpha = Math.min(1, k * 1.8) * 0.9 * fade;
+    if (alpha <= 0.012) continue;
+    ctx.strokeStyle = `rgba(${p.rgb},${alpha * 0.42})`;
+    ctx.lineWidth = p.size * 0.8;
     ctx.beginPath();
-    ctx.moveTo(px - p.vx * 5.5, py - p.vy * 5.5);
+    ctx.moveTo(px - p.vx * 4.6, py - p.vy * 4.6);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
     ctx.fillStyle = `rgba(${p.rgb},${alpha})`;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * (0.55 + k * 0.7), 0, TAU);
+    ctx.arc(p.x, p.y, p.size * (0.55 + k * 0.65), 0, TAU);
     ctx.fill();
   }
-
-  ctx.restore();
 }
 
 function fire() {
@@ -227,13 +273,21 @@ function frame(now) {
         drawSingularity(now);
       } else {
         fire();
-        const curtain = 1 - smoothstep(0, 400, age);
-        drawCurtain(curtain);
-        // 保留爆炸粒子与冲击环，但让它们随过渡一起淡尽：
-        // 星海完全露出后，画布上不再留下任何残留光点。
-        const fade = 1 - smoothstep(620, 960, age);
-        if (age < 980) drawBlast(now, age, cx, cy, fade);
-        if (age > 1020) finish();
+        spawnBurst();
+        // 黑幕先整体压着，再被爆心从中心推开，最后随爆炸余波退场。
+        const veil = 1 - smoothstep(240, 900, age);
+        drawCurtain(veil);
+        const maxR = Math.hypot(cx, cy);
+        const open = Math.min(1, age / 900);
+        if (open > 0) openCurtain(cx, cy, maxR * Math.pow(open, 1.2) + 4);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        drawCore(age);
+        drawShock(age);
+        drawParticles(dt, age);
+        ctx.restore();
+        // 所有元素在 1.48 秒前淡尽，1.62 秒收场，星海露出后不留任何中心光点。
+        if (age > 1620) finish();
       }
     }
   } catch (err) {
@@ -293,8 +347,8 @@ export function playIntro({ onBlast, reduced = false } = {}) {
   }
   if (phase === 'idle') {
     phase = 'blast';
-    // 点击后只留极短的蓄力，随即用黑幕淡出直接进入星海。
-    blastAt = performance.now() + 120;
+    // 点击后先让奇点收紧 180ms 蓄力，再炸开。
+    blastAt = performance.now() + 180;
   }
   window.addEventListener('pointerdown', skip, true);
   window.addEventListener('keydown', skip, true);
@@ -311,13 +365,13 @@ export function showIntroPrompt() {
   prompt.classList.add('show');
 }
 
-/** 收起提示，等淡出完再移除。 */
+/** 收起提示：点击后爆炸立刻开始，提示不能还留在画面上，直接移除。 */
 export function hideIntroPrompt() {
   if (!prompt) return;
   const node = prompt;
   prompt = null;
   node.classList.remove('show');
-  setTimeout(() => node.remove(), 620);
+  node.remove();
 }
 
 /** boot 失败或调试跳过时直接移除，不留黑屏。 */

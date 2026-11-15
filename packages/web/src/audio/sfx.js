@@ -41,60 +41,59 @@ function uiOn() {
 
 /* ------------------------------ 开场 ------------------------------ */
 
-/** 奇点蓄力：远处的一颗星轻轻亮起来，气流慢慢聚拢。 */
+/** 奇点蓄力：星核在黑暗里收紧，气流被吸向中心（很短，只为给爆炸一个引信）。 */
 export function introCharge(dur = 0.42) {
   if (!uiOn()) return;
-  // 两声很远的钟，弱起渐强：高音先到，五度的回声随后。
-  bell(N.D5, { dur: 1.8, peak: 0.055, attack: dur * 0.7, send: 0.7, bright: 1.0, spread: 0.35 });
-  bell(N.A5, { dur: 1.5, peak: 0.03, attack: dur * 0.75, delay: 0.05, send: 0.65, bright: 1.1 });
-  // 气流：一点点抬高、变亮，像是在把光吸过来。
+  // 高频气流被吸过来：从宽到窄，像一根越拧越紧的弦。
   noise({
-    dur: dur + 0.35,
+    dur: dur + 0.1,
     peak: 0.03,
-    attack: dur * 0.9,
+    attack: dur * 0.85,
     type: 'bandpass',
-    f0: 260,
-    f1: 1600,
-    q: 0.8,
+    f0: 4800,
+    f1: 1080,
+    q: 0.9,
     send: 0.55
   });
-  // 低频潜流托底，但不抢走钟声。
-  sub({ freq: 46, endFreq: 64, dur: dur + 0.3, peak: 0.07, attack: dur * 0.85, send: 0.15 });
+  // 一小段上滑音，把注意力拉到中心。
+  tone({ freq: N.A4, endFreq: N.E5, type: 'triangle', dur: dur, peak: 0.028, attack: dur * 0.8, send: 0.5 });
+  // 低频潜流托底。
+  sub({ freq: 42, endFreq: 58, dur: dur + 0.3, peak: 0.06, attack: dur * 0.9, send: 0.15 });
 }
 
-/** 大爆炸：三声钟依次展开 + 气浪散开 + 星尘，代替原来的低频轰鸣。 */
+/** 宇宙爆炸：低频轰鸣 + 扫过的气浪 + 三声钟的余韵 + 四散的星尘。 */
 export function introBlast() {
   if (!uiOn()) return;
-  // D4 / A4 / D5 三声钟，错开几十毫秒，听起来像一次「绽放」。
-  [N.D4, N.A4, N.D5].forEach((freq, i) => {
-    bell(freq, {
-      dur: 2.8,
-      peak: 0.1,
-      attack: 0.005,
-      delay: i * 0.05,
-      send: 0.85,
-      bright: 1.15,
-      spread: 0.65
-    });
-  });
+  // 主轰鸣：从高往低砸下去，是整个爆炸的骨架。
+  sub({ freq: 96, endFreq: 24, dur: 1.4, peak: 0.24, attack: 0.004, send: 0.25 });
   // 气浪：从很高扫到很低，铺满整个爆炸的宽度。
   noise({
-    dur: 1.6,
-    peak: 0.085,
-    attack: 0.01,
+    dur: 1.2,
+    peak: 0.13,
+    attack: 0.008,
     type: 'bandpass',
-    f0: 5600,
-    f1: 240,
-    q: 0.75,
+    f0: 7200,
+    f1: 160,
+    q: 0.9,
     send: 0.75
   });
-  // 低频只做托底，音量克制。
-  sub({ freq: 96, endFreq: 40, dur: 1.1, peak: 0.12, attack: 0.005, send: 0.25 });
-  sub({ freq: 52, endFreq: 30, dur: 2.4, peak: 0.06, attack: 0.05, delay: 0.05, send: 0.3 });
+  whoosh({ from: 6800, to: 180, dur: 1.1, peak: 0.06, attack: 0.006, send: 0.65, q: 1.2 });
+  // 三声钟的余韵，错开几十毫秒，像爆炸后从光里浮出来的声音。
+  [N.D3, N.A3, N.D4].forEach((freq, i) => {
+    bell(freq, {
+      dur: 3.2,
+      peak: 0.085,
+      attack: 0.004,
+      delay: i * 0.025,
+      send: 0.8,
+      bright: 1.0,
+      spread: 0.7
+    });
+  });
   // 星尘：爆炸后向四周散开的高音。
-  sparkle({ count: 26, base: N.D6, spread: 2400, dur: 1.4, peak: 0.02, delay: 0.03, send: 0.8 });
-  // 远处落下的尾音。
-  bell(N.D2, { dur: 3.2, peak: 0.05, attack: 0.03, delay: 0.55, send: 0.8, bright: 0.35 });
+  sparkle({ count: 24, base: N.D6, spread: 2600, dur: 0.9, peak: 0.026, delay: 0.04, send: 0.7 });
+  // 余震：爆炸过后低沉的一层回响。
+  sub({ freq: 48, endFreq: 22, dur: 1.6, peak: 0.07, attack: 0.02, delay: 0.42, send: 0.2 });
 }
 
 /** 没能赶上自动播放时的柔和替代：星海苏醒。 */
