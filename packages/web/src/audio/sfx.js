@@ -84,39 +84,25 @@ export function introCharge(dur = 0.42) {
   sub({ freq: 42, endFreq: 58, dur: dur + 0.3, peak: 0.06, attack: dur * 0.9, send: 0.15 });
 }
 
-/** 宇宙爆炸：低频轰鸣 + 扫过的气浪 + 三声钟的余韵 + 四散的星尘。 */
+/** 超新星：三层气壳错开炸开，最后沉进余烬冷却的低鸣里。 */
 export function introBlast() {
   if (!uiOn()) return;
-  // 主轰鸣：从高往低砸下去，是整个爆炸的骨架。
-  sub({ freq: 96, endFreq: 24, dur: 1.4, peak: 0.24, attack: 0.004, send: 0.25 });
-  // 气浪：从很高扫到很低，铺满整个爆炸的宽度。
-  noise({
-    dur: 1.2,
-    peak: 0.13,
-    attack: 0.008,
-    type: 'bandpass',
-    f0: 7200,
-    f1: 160,
-    q: 0.9,
-    send: 0.75
-  });
-  whoosh({ from: 6800, to: 180, dur: 1.1, peak: 0.06, attack: 0.006, send: 0.65, q: 1.2 });
-  // 三声钟的余韵，错开几十毫秒，像爆炸后从光里浮出来的声音。
+  // 第一层（白热）：主轰鸣 + 从高处扫下的气浪。
+  sub({ freq: 96, endFreq: 24, dur: 1.5, peak: 0.24, attack: 0.004, send: 0.25 });
+  noise({ dur: 1.3, peak: 0.12, attack: 0.008, type: 'bandpass', f0: 7600, f1: 180, q: 0.9, send: 0.72 });
+  whoosh({ from: 6800, to: 180, dur: 1.1, peak: 0.055, attack: 0.006, send: 0.6, q: 1.2 });
+  // 第二层（金）：0.32 秒后跟上，亮一点、近一点。
+  sub({ freq: 70, endFreq: 22, dur: 1.2, peak: 0.13, attack: 0.01, delay: 0.32, send: 0.22 });
+  noise({ dur: 1.1, peak: 0.06, attack: 0.02, type: 'bandpass', f0: 3600, f1: 220, q: 1.1, delay: 0.3, send: 0.6 });
+  // 第三层（蓝）：0.72 秒后，更冷、更远。
+  sub({ freq: 52, endFreq: 18, dur: 1.6, peak: 0.08, attack: 0.03, delay: 0.72, send: 0.2 });
+  // 钟声余韵：三声从光里浮出来。
   [N.D3, N.A3, N.D4].forEach((freq, i) => {
-    bell(freq, {
-      dur: 3.2,
-      peak: 0.085,
-      attack: 0.004,
-      delay: i * 0.025,
-      send: 0.8,
-      bright: 1.0,
-      spread: 0.7
-    });
+    bell(freq, { dur: 3.2, peak: 0.08, attack: 0.004, delay: i * 0.025, send: 0.8, bright: 1.0, spread: 0.7 });
   });
-  // 星尘：爆炸后向四周散开的高音。
-  sparkle({ count: 24, base: N.D6, spread: 2600, dur: 0.9, peak: 0.026, delay: 0.04, send: 0.7 });
-  // 余震：爆炸过后低沉的一层回响。
-  sub({ freq: 48, endFreq: 22, dur: 1.6, peak: 0.07, attack: 0.02, delay: 0.42, send: 0.2 });
+  // 冷却：1.1 秒后一层慢慢降温的低鸣，接上余烬的视觉。
+  sub({ freq: 40, endFreq: 26, dur: 2.2, peak: 0.05, attack: 0.9, delay: 1.1, send: 0.18 });
+  sparkle({ count: 16, base: N.D5, spread: 2800, dur: 1.6, peak: 0.016, delay: 1.2, send: 0.7 });
 }
 
 /** 没能赶上自动播放时的柔和替代：星海苏醒。 */

@@ -1,4 +1,4 @@
-// 开场动效：奇点呼吸 → 大爆炸 → 星空与星海从中心展开。
+﻿// 开场动效：奇点呼吸 → 大爆炸 → 星空与星海从中心展开。
 // 纯 DOM canvas 覆盖层，WebGL 场景在爆炸瞬间由 scene/transition.js 接管遮罩。
 import { TAU } from '@starmap/core';
 
@@ -122,19 +122,24 @@ function spawnBurst() {
   }
 }
 
-/** 爆心亮核：前 0.46 秒从最亮衰减到零，中心不留白光。 */
+/** 爆心亮核：最热的一瞬是白的，随后迅速转金，0.62 秒内衰减干净。 */
 function drawCore(age) {
-  if (age > 460) return;
-  const k = 1 - Math.min(1, age / 460);
-  const a = k * k * 0.95;
+  if (age > 620) return;
+  const k = 1 - Math.min(1, age / 620);
+  const a = Math.pow(k, 1.6) * 0.98;
   if (a <= 0.01) return;
+  // 白热（255,252,244）→ 金（255,178,110）。
+  const warm = Math.min(1, age / 420);
+  const cr = 255;
+  const cg = Math.round(252 - 74 * warm);
+  const cb = Math.round(244 - 134 * warm);
   const cx = w / 2;
   const cy = h / 2;
-  const r = 70 + (1 - k) * 210;
+  const r = 64 + (1 - k) * 260;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  g.addColorStop(0, `rgba(255,255,255,${a})`);
-  g.addColorStop(0.24, `rgba(230,242,255,${a * 0.6})`);
-  g.addColorStop(0.62, `rgba(150,196,255,${a * 0.16})`);
+  g.addColorStop(0, `rgba(${cr},${cg},${cb},${a})`);
+  g.addColorStop(0.22, `rgba(${cr},${cg},${cb},${a * 0.55})`);
+  g.addColorStop(0.62, `rgba(236,236,255,${a * 0.15})`);
   g.addColorStop(1, 'rgba(120,170,255,0)');
   ctx.fillStyle = g;
   ctx.beginPath();
@@ -142,7 +147,45 @@ function drawCore(age) {
   ctx.fill();
 }
 
-/** 三圈冲击波：从爆心扩到屏幕外，边缘带一点柔光。 */
+/* ------------------------- 超新星：多层气壳 ------------------------- */
+
+// 三层气壳：内层白热转金、中层金转橙红、外层蓝白转深蓝，依次撑开。
+const SHELLS = [
+  { delay: 20, dur: 1400, r0: 14, k: 0.5, w: 30, hot: [255, 248, 236], cool: [255, 176, 72] },
+  { delay: 130, dur: 1700, r0: 4, k: 0.78, w: 40, hot: [255, 206, 132], cool: [255, 116, 72] },
+  { delay: 260, dur: 2100, r0: 0, k: 1.05, w: 54, hot: [214, 232, 255], cool: [96, 140, 250] }
+];
+
+/** 气壳：半径随 age 向外撑开、越走越薄，颜色从热到冷。 */
+function drawShells(age, maxR) {
+  const cx = w / 2;
+  const cy = h / 2;
+  for (const s of SHELLS) {
+    const t = (age - s.delay) / s.dur;
+    if (t <= 0 || t >= 1) continue;
+    const ease = 1 - Math.pow(1 - t, 3);
+    const r = s.r0 + ease * (maxR * s.k);
+    const width = s.w * (1 - t * 0.62) + 6;
+    const alpha = Math.pow(1 - t, 1.4) * 0.78;
+    if (alpha <= 0.01) continue;
+    const cr = Math.round(s.hot[0] + (s.cool[0] - s.hot[0]) * t);
+    const cg = Math.round(s.hot[1] + (s.cool[1] - s.hot[1]) * t);
+    const cb = Math.round(s.hot[2] + (s.cool[2] - s.hot[2]) * t);
+    const g = ctx.createRadialGradient(cx, cy, Math.max(0, r - width), cx, cy, r + width);
+    g.addColorStop(0, `rgba(${cr},${cg},${cb},0)`);
+    g.addColorStop(0.42, `rgba(${cr},${cg},${cb},${alpha * 0.55})`);
+    g.addColorStop(0.62, `rgba(${cr},${cg},${cb},${alpha})`);
+    g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + width, 0, TAU);
+    ctx.fill();
+  }
+}
+
+/** 三圈冲击波：白、金、蓝三种温度，依次从爆心扩到屏幕外。 */
+const SHOCK_RGB = ['226,240,255', '255,206,150', '152,182,255'];
+
 function drawShock(age) {
   const cx = w / 2;
   const cy = h / 2;
@@ -151,21 +194,70 @@ function drawShock(age) {
     const t = (age - i * 80) / (780 + i * 260);
     if (t < 0 || t > 1) continue;
     const r = 34 + Math.pow(t, 0.5) * (max * 0.72);
-    const alpha = (1 - t) * (0.38 - i * 0.1);
+    const alpha = (1 - t) * (0.34 - i * 0.08);
     if (alpha <= 0.008) continue;
+    const rgb = SHOCK_RGB[i];
     const glow = ctx.createRadialGradient(cx, cy, r * 0.84, cx, cy, r);
-    glow.addColorStop(0, 'rgba(186,216,255,0)');
-    glow.addColorStop(0.72, `rgba(202,226,255,${alpha * 0.5})`);
-    glow.addColorStop(1, 'rgba(206,230,255,0)');
+    glow.addColorStop(0, `rgba(${rgb},0)`);
+    glow.addColorStop(0.72, `rgba(${rgb},${alpha * 0.5})`);
+    glow.addColorStop(1, `rgba(${rgb},0)`);
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, TAU);
     ctx.fill();
-    ctx.strokeStyle = `rgba(216,234,255,${alpha})`;
+    ctx.strokeStyle = `rgba(${rgb},${alpha})`;
     ctx.lineWidth = 1.8 * (1 - t) + 0.4;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, TAU);
     ctx.stroke();
+  }
+}
+
+/* --------------------------- 余烬：缓慢冷却 --------------------------- */
+
+let embers = [];
+
+function spawnEmbers() {
+  if (embers.length) return;
+  const cx = w / 2;
+  const cy = h / 2;
+  embers = [];
+  for (let i = 0; i < 72; i++) {
+    const a = Math.random() * TAU;
+    const speed = 0.05 + Math.random() * 0.22;
+    embers.push({
+      x: cx + Math.cos(a) * (20 + Math.random() * 60),
+      y: cy + Math.sin(a) * (20 + Math.random() * 60) * 0.9,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed * 0.9,
+      age: 0,
+      life: 1800 + Math.random() * 1400,
+      size: 1.2 + Math.random() * 2.2,
+      rgb: Math.random() < 0.45 ? '255,186,118' : Math.random() < 0.6 ? '255,128,86' : '214,96,92'
+    });
+  }
+}
+
+/** 余烬：飞散得比星尘慢，边飘边冷，2.3~2.9 秒之间整体淡尽。 */
+function drawEmbers(dt, age) {
+  if (age < 380 || !embers.length) return;
+  const fade = 1 - smoothstep(2600, 3200, age);
+  if (fade <= 0) return;
+  for (const e of embers) {
+    if (e.age >= e.life) continue;
+    e.age += dt;
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+    const damp = Math.pow(0.998, dt / 16.67);
+    e.vx *= damp;
+    e.vy = e.vy * damp - 0.000012 * dt;
+    const k = 1 - e.age / e.life;
+    const a = Math.pow(k, 1.2) * 0.95 * fade;
+    if (a <= 0.012) continue;
+    ctx.fillStyle = `rgba(${e.rgb},${a})`;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.size * (0.5 + 0.5 * k), 0, TAU);
+    ctx.fill();
   }
 }
 
@@ -274,20 +366,23 @@ function frame(now) {
       } else {
         fire();
         spawnBurst();
+        spawnEmbers();
         // 黑幕先整体压着，再被爆心从中心推开，最后随爆炸余波退场。
-        const veil = 1 - smoothstep(240, 900, age);
+        const veil = 1 - smoothstep(180, 760, age);
         drawCurtain(veil);
         const maxR = Math.hypot(cx, cy);
         const open = Math.min(1, age / 900);
-        if (open > 0) openCurtain(cx, cy, maxR * Math.pow(open, 1.2) + 4);
+        if (open > 0 && open < 1) openCurtain(cx, cy, maxR * Math.pow(open, 1.2) + 4);
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         drawCore(age);
+        drawShells(age, maxR);
         drawShock(age);
         drawParticles(dt, age);
+        drawEmbers(dt, age);
         ctx.restore();
-        // 所有元素在 1.48 秒前淡尽，1.62 秒收场，星海露出后不留任何中心光点。
-        if (age > 1620) finish();
+        // 余烬在 3.2 秒前淡尽、3.4 秒收场：星海露出后不留任何光点。
+        if (age > 3400) finish();
       }
     }
   } catch (err) {
