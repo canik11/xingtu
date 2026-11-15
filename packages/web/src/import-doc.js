@@ -110,6 +110,25 @@ function cleanTableRow(line) {
 }
 
 /**
+ * 幕布之类的工具会把标题导出成"孤立的短行 + 下面一串列表"，没有 # 号。
+ * 这类行如果按正文处理，整篇文档就会摊平成同一层，导入后看不出上下级。
+ * 判定刻意收紧：短、不带句子标点、下一行是列表/表格，才当作二级标题。
+ */
+function isPseudoHeading(lines, index) {
+  const text = String(lines[index] || '').trim();
+  if (!text || text.length > 30) return false;
+  if (/^[#>*`|]/.test(text)) return false;
+  if (/^[-*+•]\s/.test(text) || /^\d+[.)、]\s/.test(text)) return false;
+  if (/[。！？；，、,.!?;:：）】》”’)]$/.test(text)) return false;
+  for (let i = index + 1; i < lines.length; i++) {
+    const next = String(lines[i] || '').trim();
+    if (!next) continue;
+    return /^([-*+•]\s|\d+[.)、]\s|\|)/.test(next);
+  }
+  return false;
+}
+
+/**
  * 解析 Markdown。标题会形成层级；正文段落挂在最近的标题下。
  * @param {{name:string, size:number, lastModified:number}} file
  * @param {string} text
@@ -124,6 +143,7 @@ export function parseMarkdown(file, text) {
   let sawHeading = false;
   let skippedTitle = false;
   let paragraph = [];
+  let listStack = [];
   let inCode = false;
   let code = [];
   let blockCount = 0;
@@ -131,19 +151,35 @@ export function parseMarkdown(file, text) {
 
   const target = () => (section ? section.children : root);
 
+  const pushBlock = (parent, block) => {
+    if (blockCount >= MAX_BLOCKS) {
+      warning = `内容较多，只保留了前 ${MAX_BLOCKS} 条`;
+      return false;
+    }
+    parent.push(block);
+    blockCount++;
+    return true;
+  };
+
   const addText = (value) => {
     for (const chunk of splitText(value)) {
-      if (blockCount >= MAX_BLOCKS) {
-        warning = `内容较多，只保留了前 ${MAX_BLOCKS} 条`;
-        return;
-      }
-      target().push(makeNoteBlock(chunk, []));
-      blockCount++;
+      if (!pushBlock(target(), makeNoteBlock(chunk, []))) return;
     }
+  };
+
+  /** 列表项按缩进嵌套：缩进更深的是上一项的下一级，这样上下级不会摊平。 */
+  const addListItem = (indentRaw, value) => {
+    const indent = String(indentRaw || '').replace(/\t/g, '  ').length;
+    while (listStack.length && listStack[listStack.length - 1].indent >= indent) listStack.pop();
+    const parent = listStack.length ? listStack[listStack.length - 1].block.children : target();
+    const block = makeNoteBlock(value, []);
+    if (!pushBlock(parent, block)) return;
+    listStack.push({ indent, block });
   };
 
   const flushParagraph = () => {
     if (!paragraph.length) return;
+    listStack = [];
     const value = cleanInline(paragraph.join(' '));
     paragraph = [];
     if (value) addText(value);
@@ -151,6 +187,7 @@ export function parseMarkdown(file, text) {
 
   const addHeading = (value, level) => {
     flushParagraph();
+    listStack = [];
     while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
     const parent = stack.length ? stack[stack.length - 1].block.children : root;
     const block = makeNoteBlock(value, []);
@@ -213,17 +250,24 @@ export function parseMarkdown(file, text) {
       }
       continue;
     }
-    const bullet = line.match(/^\s*[-*+•]\s+(.*)$/);
+    const bullet = line.match(/^(\s*)[-*+•]\s+(.*)$/);
     if (bullet) {
       flushParagraph();
-      const value = cleanInline(bullet[1]);
-      if (value) addText(value);
+      const value = cleanInline(bullet[2]);
+      if (value) addListItem(bullet[1], value);
       continue;
     }
-    if (/^\s*\d+[.)、]\s+/.test(line)) {
+    const ordered = line.match(/^(\s*)\d+[.)、]\s+(.*)$/);
+    if (ordered) {
       flushParagraph();
-      const value = cleanInline(line.replace(/^\s*\d+[.)、]\s+/, ''));
-      if (value) addText(value);
+      const value = cleanInline(ordered[2]);
+      if (value) addListItem(ordered[1], value);
+      continue;
+    }
+    if (isPseudoHeading(lines, i)) {
+      // 没有 # 的章节名（如幕布导出的 Git.md），按二级标题挂进层级。
+      flushParagraph();
+      addHeading(cleanInline(line), 2);
       continue;
     }
     paragraph.push(line.replace(/^\s*>\s?/, ''));
@@ -254,47 +298,148 @@ function countBlocks(list) {
   return n;
 }
 
-function pdfLineText(items) {
-  let line = '';
-  const lines = [];
-  for (const item of items || []) {
-    const str = String(item && item.str ? item.str : '');
-    if (!str) continue;
-    if (!line) line = str;
-    else {
-      const noSpace = PUNCT_END.test(line) || PUNCT_START.test(str) || (CJK_END.test(line) && CJK_START.test(str));
-      line += (noSpace ? '' : ' ') + str;
-    }
-    if (item.hasEOL) {
-      if (line.trim()) lines.push(line.trim());
-      line = '';
-    }
-  }
-  if (line.trim()) lines.push(line.trim());
-  return lines.join('\n');
+/** 取一段文字的字号：pdf.js 给的是 height，兜底用 transform 的缩放。 */
+function pdfItemSize(item) {
+  if (item && typeof item.height === 'number' && item.height > 0) return item.height;
+  const t = item && item.transform;
+  if (Array.isArray(t) && typeof t[3] === 'number' && t[3] !== 0) return Math.abs(t[3]);
+  return 10;
 }
 
-function pdfParagraphs(raw) {
-  const text = String(raw || '')
-    .replace(/\r/g, '')
-    .replace(/-\n(?=[A-Za-z])/g, '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-  if (!text) return [];
-  const rawParas = text.split(/\n\s*\n/);
+function joinPdfParts(parts) {
+  let line = '';
+  const sorted = [...parts].sort((a, b) => a.x - b.x);
+  for (const part of sorted) {
+    const str = part.str;
+    if (!str) continue;
+    if (!line) {
+      line = str;
+      continue;
+    }
+    const noSpace = PUNCT_END.test(line) || PUNCT_START.test(str) || (CJK_END.test(line) && CJK_START.test(str));
+    line += (noSpace ? '' : ' ') + str;
+  }
+  return line.replace(/\s+/g, ' ').trim();
+}
+
+/** 把一页的文字项按基线聚成行，保留字号与左边界，供标题/正文判定。 */
+function pdfRows(items) {
+  const groups = [];
+  for (const item of items || []) {
+    const str = String(item && item.str ? item.str : '');
+    if (!str.trim()) continue;
+    const size = pdfItemSize(item);
+    const t = (item && item.transform) || [];
+    const x = typeof t[4] === 'number' ? t[4] : 0;
+    const y = typeof t[5] === 'number' ? t[5] : 0;
+    let group = null;
+    for (const g of groups) {
+      if (Math.abs(g.y - y) <= Math.max(2, size * 0.4)) {
+        group = g;
+        break;
+      }
+    }
+    if (!group) {
+      group = { y, x, size, parts: [] };
+      groups.push(group);
+    }
+    group.parts.push({ x, str, size });
+    group.x = Math.min(group.x, x);
+    group.size = Math.max(group.size, size);
+  }
+  return groups
+    .map((g) => ({ text: joinPdfParts(g.parts), size: g.size, x: g.x, y: g.y }))
+    .filter((row) => row.text)
+    .sort((a, b) => b.y - a.y);
+}
+
+/**
+ * 从排版线索里还原 PDF 层级。经验：幕布 / Markdown 转出的 PDF 里，
+ * 标题是「短、以中文开头、不含标点与空格」的行，且缩进比正文浅；
+ * 缩进越浅层级越高。识别不出两个以上标题时返回 null（调用方平铺）。
+ */
+function buildPdfTree(rows, title) {
+  if (rows.length < 3) return null;
+  const sizes = rows.map((row) => row.size).sort((a, b) => a - b);
+  const median = sizes[Math.floor(sizes.length / 2)] || 0;
+  if (!(median > 0)) return null;
+
+  const keyOf = (row) => `${Math.round(row.x / 8)}:${row.size.toFixed(1)}`;
+  const isHeading = (row) => {
+    const text = row.text;
+    if (!text || text.length < 2 || text.length > 44) return false;
+    if (!/^[\u3400-\u9fff]/.test(text)) return false;
+    if (/[\s\u3000]/.test(text)) return false;
+    if (/[，、；：。！？,;:!?]/.test(text)) return false;
+    if (/^\d/.test(text)) return false;
+    return row.size >= median * 0.99;
+  };
+  const headings = rows.filter(isHeading);
+  if (headings.length < 2) return null;
+
+  const seen = new Map();
+  for (const row of headings) {
+    const key = keyOf(row);
+    if (!seen.has(key)) seen.set(key, row);
+  }
+  // 缩进越浅层级越高；同一缩进时字号大的更高。
+  const ordered = [...seen.entries()].sort((a, b) => a[1].x - b[1].x || b[1].size - a[1].size);
+  const rank = new Map();
+  ordered.forEach(([key], index) => rank.set(key, Math.min(index, 2)));
+
+  const root = { title, blocks: [], children: [] };
+  const stack = [root];
+  let pending = [];
+  const flush = () => {
+    if (!pending.length) return;
+    const text = pending.join(' ');
+    pending = [];
+    for (const chunk of splitText(text)) stack[stack.length - 1].blocks.push(makeNoteBlock(chunk, []));
+  };
+
+  for (const row of rows) {
+    if (isHeading(row)) {
+      flush();
+      const level = (rank.get(keyOf(row)) || 0) + 1;
+      while (stack.length > level) stack.pop();
+      const node = { title: row.text.slice(0, 44), blocks: [], children: [] };
+      stack[stack.length - 1].children.push(node);
+      stack.push(node);
+      continue;
+    }
+    // 页脚（幕布导出带作者/发布方）字号更小且很短，直接丢弃。
+    if (row.size < median * 0.92 && row.text.length < 40) continue;
+    pending.push(row.text);
+    // 正文按行成块：命令/说明类 PDF 一行就是一条，合并反而糊在一起。
+    flush();
+  }
+  flush();
+  return root;
+}
+
+/** 结构树转笔记块：标题成为块本身，正文与子标题嵌套在 children 里。 */
+function outlineToBlocks(node) {
+  const blocks = [...node.blocks];
+  for (const child of node.children) {
+    blocks.push(makeNoteBlock(child.title, outlineToBlocks(child), false));
+  }
+  return blocks;
+}
+
+/** 按预算裁剪块树（复制节点，不动原对象）。 */
+function clipBlocks(list, state) {
   const out = [];
-  for (const para of rawParas) {
-    const flat = para.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-    if (!flat) continue;
-    for (const chunk of splitText(flat)) out.push(chunk);
+  for (const block of list) {
+    if (state.left <= 0) break;
+    state.left--;
+    out.push({ ...block, children: clipBlocks(block.children || [], state) });
   }
   return out;
 }
 
 /**
- * 解析 PDF。扫描版/纯图片 PDF 没有可提取文字，会抛错让 UI 提示。
+ * 解析 PDF。优先按字号/缩进还原标题层级；识别不出来时退回平铺。
+ * 扫描版/纯图片 PDF 没有可提取文字，会抛错让 UI 提示。
  * @param {{name:string, size:number, lastModified:number}} file
  */
 export async function parsePdf(file, onProgress) {
@@ -310,38 +455,47 @@ export async function parsePdf(file, onProgress) {
     title = '';
   }
   const pageCount = pdf.numPages;
-  const content = [];
-  let blocks = 0;
+  const rows = [];
   let chars = 0;
-  let warning = '';
   for (let pageNo = 1; pageNo <= pageCount; pageNo++) {
     const page = await pdf.getPage(pageNo);
     const textContent = await page.getTextContent({ normalizeWhitespace: true });
-    const pageText = pdfLineText(textContent.items);
-    chars += pageText.length;
-    for (const para of pdfParagraphs(pageText)) {
-      if (blocks >= MAX_BLOCKS) {
-        warning = `内容较多，只保留了前 ${MAX_BLOCKS} 条`;
-        break;
-      }
-      content.push(makeNoteBlock(para, []));
-      blocks++;
+    for (const row of pdfRows(textContent.items)) {
+      rows.push(row);
+      chars += row.text.length;
     }
     if (onProgress) onProgress(pageNo, pageCount);
-    if (blocks >= MAX_BLOCKS) break;
   }
   await pdf.destroy();
-  if (!content.length) throw new Error('没有提取到文字，可能是扫描版 PDF');
+  if (!rows.length) throw new Error('没有提取到文字，可能是扫描版 PDF');
+
+  const docTitle = cleanTitle(title, baseName(file.name));
+  const tree = buildPdfTree(rows, docTitle);
+  let content = [];
+  if (tree) {
+    content = outlineToBlocks(tree);
+  } else {
+    for (const row of rows) {
+      for (const chunk of splitText(row.text)) content.push(makeNoteBlock(chunk, []));
+    }
+  }
+
+  let warning = '';
+  if (countBlocks(content) > MAX_BLOCKS) {
+    content = clipBlocks(content, { left: MAX_BLOCKS });
+    warning = `内容较多，只保留了前 ${MAX_BLOCKS} 条`;
+  }
+
   return {
     key: `${file.name}:${file.size}:${file.lastModified}`,
     file,
-    title: cleanTitle(title, baseName(file.name)),
+    title: docTitle,
     kind: 'pdf',
     content,
-    blocks,
+    blocks: countBlocks(content),
     chars,
     pages: pageCount,
-    structured: false,
+    structured: Boolean(tree),
     warning
   };
 }

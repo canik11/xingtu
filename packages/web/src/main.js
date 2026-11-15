@@ -387,7 +387,10 @@ async function boot() {
  * 等用户第一次点击/按键；解锁失败或超时也照常开场，只是没有声音。
  */
 function startIntroWithSound() {
+  let started = false;
   const beginIntro = () => {
+    if (started) return;
+    started = true;
     hideIntroPrompt();
     introSoundStart();
     playIntro({
@@ -404,20 +407,29 @@ function startIntroWithSound() {
     return;
   }
 
+  // 音频没解锁也要照常开场：最多等 1.5s 让用户点一下（顺便解锁声音），
+  // 超时就直接静音开场，绝不把用户卡在黑幕上。
   showIntroPrompt();
-  let waiting = true;
+  const timer = setTimeout(beginIntro, 1500);
   const onGesture = () => {
-    if (!waiting) return;
-    waiting = false;
-    window.removeEventListener('pointerdown', onGesture, true);
-    window.removeEventListener('keydown', onGesture, true);
-    const timeout = new Promise((resolve) => setTimeout(() => resolve(false), 1200));
-    Promise.race([unlockAudio().catch(() => false), timeout])
-      .catch(() => false)
-      .then(() => beginIntro());
+    if (started) return;
+    clearTimeout(timer);
+    unlockAudio().catch(() => false);
+    beginIntro();
   };
-  window.addEventListener('pointerdown', onGesture, true);
-  window.addEventListener('keydown', onGesture, true);
+  window.addEventListener('pointerdown', onGesture, { capture: true, once: true });
+  window.addEventListener('keydown', onGesture, { capture: true, once: true });
+}
+
+/** 黑幕期间的手势先拿来解锁音频，避免点击丢在 boot 还没完成的时候。 */
+function armIntroAudioUnlock() {
+  const tryUnlock = () => {
+    window.removeEventListener('pointerdown', tryUnlock, true);
+    window.removeEventListener('keydown', tryUnlock, true);
+    unlockAudio().catch(() => false);
+  };
+  window.addEventListener('pointerdown', tryUnlock, true);
+  window.addEventListener('keydown', tryUnlock, true);
 }
 
 /** 全局错误兜底：显示红条，避免“白屏无提示”。 */
@@ -428,6 +440,9 @@ function setFatalHandler() {
 
 function start() {
   mountIntro();
+  // 黑幕一出现就给提示并接住第一次手势：boot 期间点击也不会白点干等。
+  showIntroPrompt();
+  armIntroAudioUnlock();
   boot().catch((error) => {
     console.error('[starmap] 启动失败', error);
     destroyIntro();

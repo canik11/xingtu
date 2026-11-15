@@ -239,10 +239,12 @@ function frame(now) {
       drawSingularity(now);
     } else {
       fire();
-      const curtain = 1 - smoothstep(120, 1500, age);
+      const curtain = 1 - smoothstep(120, 1200, age);
       drawCurtain(curtain);
-      drawBlast(now, age, cx, cy);
-      if (age > 2050) finish();
+      // 爆炸动画收在 1.5s 内，之后不再往画布上画任何东西：
+      // 避免残留的中心光点在星海露出后还停在画面中央。
+      if (age < 1500) drawBlast(now, age, cx, cy);
+      if (age > 1600) finish();
     }
   }
   if (!finished) raf = requestAnimationFrame(frame);
@@ -306,9 +308,7 @@ export function showIntroPrompt() {
   if (!layer || prompt) return;
   prompt = document.createElement('div');
   prompt.className = 'intro-prompt';
-  prompt.innerHTML =
-    '<span class="intro-prompt-main">点击任意处，进入星海</span>' +
-    '<span class="intro-prompt-sub">浏览器需要一次点击才允许播放声音</span>';
+  prompt.innerHTML = '<span class="intro-prompt-main">点击任意处，进入星海</span>';
   layer.appendChild(prompt);
   void prompt.offsetWidth;
   prompt.classList.add('show');
