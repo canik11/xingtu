@@ -64,43 +64,42 @@ export function introWait(dur = 2.4) {
   sub({ freq: 36, endFreq: 44, dur: dur + 0.4, peak: 0.04, attack: 1.0, send: 0.15 });
 }
 
-/** 奇点蓄力：星核在黑暗里收紧，气流被吸向中心（很短，只为给爆炸一个引信）。 */
+/** 奇点蓄力：一声清钟由弱到强，气流轻轻聚拢（和其他界面音效同一套音色）。 */
 export function introCharge(dur = 0.42) {
   if (!uiOn()) return;
-  // 高频气流被吸过来：从宽到窄，像一根越拧越紧的弦。
+  bell(N.D5, { dur: 0.9, peak: 0.05, attack: dur, send: 0.7, bright: 1.0, spread: 0.3 });
   noise({
-    dur: dur + 0.1,
-    peak: 0.03,
-    attack: dur * 0.85,
-    type: 'bandpass',
-    f0: 4800,
-    f1: 1080,
-    q: 0.9,
-    send: 0.55
+    dur: dur + 0.2,
+    peak: 0.02,
+    attack: dur * 0.9,
+    type: 'lowpass',
+    f0: 300,
+    f1: 1200,
+    q: 0.7,
+    send: 0.5
   });
-  // 一小段上滑音，把注意力拉到中心。
-  tone({ freq: N.A4, endFreq: N.E5, type: 'triangle', dur: dur, peak: 0.028, attack: dur * 0.8, send: 0.5 });
-  // 低频潜流托底。
-  sub({ freq: 42, endFreq: 58, dur: dur + 0.3, peak: 0.06, attack: dur * 0.9, send: 0.15 });
 }
 
-/** 星核爆开：明亮的中高频冲击 + 短促低音托底，不是一坨低频震动。 */
+/** 星核绽放：五声琶音从中心漾开，钟声 + 一层轻气流 + 星尘收尾。 */
 export function introBlast() {
   if (!uiOn()) return;
-  // 第一下：白噪爆裂 + 镲片，先给耳朵一个亮的瞬时冲击（主要响度在这里）。
-  noise({ dur: 0.5, peak: 0.3, attack: 0.002, type: 'highpass', f0: 2400, f1: 900, q: 0.6, send: 0.32 });
-  noise({ dur: 0.34, peak: 0.22, attack: 0.003, type: 'bandpass', f0: 5200, f1: 1800, q: 0.7, send: 0.5 });
-  whoosh({ from: 6200, to: 900, dur: 0.42, peak: 0.09, attack: 0.004, send: 0.45, q: 0.9 });
-  // 低音只负责托一下，短促收住，不拖成轰隆。
-  sub({ freq: 92, endFreq: 46, dur: 0.34, peak: 0.12, attack: 0.004, send: 0.18 });
-  sub({ freq: 62, endFreq: 34, dur: 0.9, peak: 0.07, attack: 0.01, delay: 0.12, send: 0.16 });
-  // 钟声：音区抬到 D4/A4/D5，泛音更亮，像碎片撞在金属上。
-  [N.D4, N.A4, N.D5].forEach((freq, i) => {
-    bell(freq, { dur: 2.4, peak: 0.09, attack: 0.003, delay: i * 0.028, send: 0.82, bright: 1.35, spread: 0.6 });
+  // 五声琶音：D4 F#4 A4 D5 F#5，越往上越轻，和切换形状、点亮节点的音色同源。
+  const notes = [N.D4, N.Fs4, N.A4, N.D5, N.Fs5];
+  notes.forEach((freq, i) => {
+    bell(freq, {
+      dur: 2.2,
+      peak: 0.095 - i * 0.008,
+      attack: 0.004,
+      delay: i * 0.045,
+      send: 0.82,
+      bright: 1.2,
+      spread: 0.55
+    });
   });
-  // 尾音：一层慢慢降温的气流 + 高处星尘，收得干净。
-  noise({ dur: 1.7, peak: 0.045, attack: 0.06, type: 'lowpass', f0: 1400, f1: 220, q: 0.8, delay: 0.14, send: 0.55 });
-  sparkle({ count: 18, base: N.D6, spread: 2600, dur: 1.4, peak: 0.02, delay: 0.7, send: 0.7 });
+  // 一层很轻的气流把声音送开，不用噪声爆裂。
+  noise({ dur: 0.9, peak: 0.028, attack: 0.02, type: 'bandpass', f0: 2600, f1: 900, q: 0.8, send: 0.6 });
+  // 高处星尘收尾。
+  sparkle({ count: 14, base: N.D6, spread: 2200, dur: 1.2, peak: 0.016, delay: 0.45, send: 0.7 });
 }
 
 /** 没能赶上自动播放时的柔和替代：星海苏醒。 */

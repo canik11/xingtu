@@ -103,7 +103,7 @@ function spawnBurst() {
   const cx = w / 2;
   const cy = h / 2;
   particles = [];
-  for (let i = 0; i < 280; i++) {
+  for (let i = 0; i < 160; i++) {
     const a = Math.random() * TAU;
     // 速度 0.85~3.15 px/ms：爆开够快，中心不会被慢粒子堆成一团白点。
     const speed = 0.85 + Math.pow(Math.random(), 1.5) * 2.3;
@@ -238,14 +238,11 @@ function drawBeams(age) {
   band(false);
 }
 
-// 六道同心光环：不同延迟、速度、粗细与亮度，一层叠一层地涌出去。
+// 三道同心光环：不同延迟、速度、粗细与亮度，一层叠一层地涌出去。
 const RINGS = [
   { delay: 0, dur: 800, w: 2.6, a: 0.8, k: 0.5 },
   { delay: 110, dur: 1100, w: 1.8, a: 0.6, k: 0.72 },
-  { delay: 270, dur: 1400, w: 1.2, a: 0.44, k: 0.92 },
-  { delay: 520, dur: 1700, w: 3.2, a: 0.34, k: 1.12 },
-  { delay: 880, dur: 2050, w: 1.2, a: 0.24, k: 1.32 },
-  { delay: 1100, dur: 2300, w: 2.2, a: 0.18, k: 1.42 }
+  { delay: 270, dur: 1400, w: 1.2, a: 0.44, k: 0.92 }
 ];
 
 function drawRings(age, maxR) {
@@ -472,15 +469,11 @@ function frame(now) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         drawCore(age);
-        drawRays(age);
-        drawStarBurst(age);
         drawRings(age, maxR);
         drawParticles(dt, age);
-        drawEmbers(dt, age);
-        drawSparks(age);
         ctx.restore();
         // 最外侧光环与闪光点在 2.6 秒前淡尽、2.7 秒收场：星海露出后不留任何光点。
-        if (age > 2400) finish();
+        if (age > 1800) finish();
       }
     }
   } catch (err) {
@@ -582,6 +575,8 @@ export function destroyIntro() {
   prompt = null;
   if (node) node.remove();
 }
+
+
 
 
 

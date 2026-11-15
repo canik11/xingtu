@@ -1,6 +1,6 @@
 // 星海环境声：一层极轻的持续和弦垫，随星海形状换调、随层级换亮度。
 // 默认关闭，避免长时间学习时被声音牵着走；在「声音」面板里可以单独打开。
-import { audioContext, audioReady, connectMix } from './engine.js';
+import { audioContext, audioReady, bell, connectMix } from './engine.js';
 
 const LEVELS = [0.58, 0.36, 0.27, 0.17, 0.1];
 
@@ -159,18 +159,12 @@ export function ambientState() {
 let waitBus = null;
 let waitTimer = 0;
 
-// 等待页的四个和弦（D 大调），每 7.5 秒滑过去一个，永远循环，没有接缝。
-const WAIT_CHORDS = [
-  [146.83, 220.0, 293.66, 369.99],
-  [123.47, 185.0, 246.94, 311.13],
-  [98.0, 146.83, 196.0, 246.94],
-  [110.0, 164.81, 220.0, 277.18]
-];
-const WAIT_LEVELS = [0.05, 0.038, 0.026, 0.018];
+// 等待页的星铃音阶（D 大调五声），随机取音，安静但一直有变化。
+const WAIT_NOTES = [587.33, 880.0, 739.99, 1318.51, 1174.66];
 
 /**
- * 点击进入之前铺在等待页下的一层循环音：四个中音组成和弦，缓慢换和弦。
- * 用持续振荡器而不是采样循环，天然首尾无缝，不会听到接缝。
+ * 点击进入之前铺在等待页下的一层循环音：一个极轻的中音微光垫 + 稀疏星铃。
+ * 用持续振荡器 + 定时星铃，天然首尾无缝，不会听到接缝，也没有低频震动。
  */
 export function startWaitAmbience() {
   if (waitBus || !audioReady()) return null;
@@ -179,51 +173,44 @@ export function startWaitAmbience() {
   const now = ctx.currentTime;
   const out = ctx.createGain();
   out.gain.value = 0.0001;
-  const nodes = [out, ...connectMix(out, { pan: 0, send: 0.62 })];
+  const nodes = [out, ...connectMix(out, { pan: 0, send: 0.7 })];
   const voices = [];
-  const oscs = [];
-  for (let i = 0; i < 4; i++) {
-    const osc = ctx.createOscillator();
-    osc.type = i < 2 ? 'triangle' : 'sine';
-    osc.frequency.value = WAIT_CHORDS[0][i];
-    osc.detune.value = (i - 1.5) * 3;
-    const gain = ctx.createGain();
-    gain.gain.value = WAIT_LEVELS[i];
-    const lfo = ctx.createOscillator();
-    lfo.type = 'sine';
-    lfo.frequency.value = 0.06 + i * 0.023;
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = WAIT_LEVELS[i] * 0.28;
-    lfo.connect(lfoGain);
-    lfoGain.connect(gain.gain);
-    const pan = ctx.createStereoPanner();
-    pan.pan.value = (i - 1.5) * 0.28;
-    osc.connect(gain);
-    gain.connect(pan);
-    pan.connect(out);
-    osc.start();
-    lfo.start();
-    oscs.push(osc);
-    voices.push(osc, lfo, gain, lfoGain, pan);
-  }
+  // 唯一一条持续音：293.66Hz（D4）的正弦，带慢呼吸，只当中频底光。
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = 293.66;
+  const gain = ctx.createGain();
+  gain.gain.value = 0.014;
+  const lfo = ctx.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.value = 0.07;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 0.006;
+  lfo.connect(lfoGain);
+  lfoGain.connect(gain.gain);
+  osc.connect(gain);
+  gain.connect(out);
+  osc.start();
+  lfo.start();
+  voices.push(osc, lfo, gain, lfoGain);
   out.gain.setTargetAtTime(0.9, now + 0.04, 1.2);
   waitBus = { ctx, out, nodes, voices };
-  // 和弦每 7.5 秒滑过去一个：持续音 + 长滑音，首尾天然无缝。
-  let chord = 0;
-  const advance = () => {
+  // 星铃：每隔 3.8~6 秒一声，随机音高、随机左右。
+  const ring = () => {
     if (!waitBus) return;
-    chord = (chord + 1) % WAIT_CHORDS.length;
-    const t = ctx.currentTime + 0.05;
-    for (let i = 0; i < oscs.length; i++) {
-      try {
-        oscs[i].frequency.setTargetAtTime(WAIT_CHORDS[chord][i], t, 1.9);
-      } catch (err) {
-        /* 已断开 */
-      }
-    }
-    waitTimer = setTimeout(advance, 7500);
+    const note = WAIT_NOTES[Math.floor(Math.random() * WAIT_NOTES.length)];
+    bell(note, {
+      dur: 2.8,
+      peak: 0.05,
+      attack: 0.005,
+      send: 0.85,
+      bright: 1.05,
+      spread: 0.5,
+      pan: (Math.random() - 0.5) * 1.1
+    });
+    waitTimer = setTimeout(ring, 3800 + Math.random() * 2200);
   };
-  waitTimer = setTimeout(advance, 7500);
+  waitTimer = setTimeout(ring, 900);
   return waitBus;
 }
 /** 收起等待页背景音：淡出后释放。 */
