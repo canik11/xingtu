@@ -16,7 +16,7 @@ export const SHAPES = [
   { id: 'helix', name: 'DNA 双螺旋', hint: '两条主链盘旋上升，碱基对横档相连' },
   { id: 'torus', name: '星环', hint: '起伏的环面上，节点沿管壁缠绕' },
   { id: 'lattice', name: '晶格', hint: '立方线框，节点沿棱生长' },
-  { id: 'tree', name: '知识树', hint: '递归分叉的立体生命树' },
+  { id: 'rose', name: '玫瑰', hint: '三层花瓣螺旋收拢，花心到外缘层层展开' },
   { id: 'wave', name: '星波', hint: '四层错落的星环荡开涟漪' },
   { id: 'binary', name: '双星系统', hint: '两颗恒星拉起物质桥，节点沿三维 8 字轨道环绕' }
 ];
@@ -121,72 +121,55 @@ function ringAt(u, v) {
   );
 }
 
-// ——— 知识树 ———
-// 主干竖直，树冠收成一个球：27 个枝端均匀长在球面上，
-// 枝干分三层从主干向球面辐射。任何角度看都是一棵枝冠丰满的树，
-// 而不是向上摊平的一把扇子。世界 y 轴向下，“向上”取负号。
-const TREE_CROWN = { x: 0, y: -0.28, z: 0 };
-const TREE_LAYERS = [
-  { rad: 0.1, count: 3, phase: 0.4 },
-  { rad: 0.4, count: 9, phase: 1.2 },
-  { rad: 0.62, count: 27, phase: 2.0 }
+// ——— 玫瑰 ———
+// 三层花瓣错开方位角旋开：内层收拢在花心，外层舒展下卷；
+// 花瓣中段向上拱、边缘向下垂，从任何角度看都是一朵立体的花冠。
+// 世界 y 轴向下，“向上”取负号：花心在上、外缘在下。
+const ROSE_LAYERS = [
+  { petals: 5, rad: 0.2, y: 0.28, hw: 0.5, lift: 0.16, droop: 0.0, alpha: 0.95 },
+  { petals: 8, rad: 0.48, y: 0.02, hw: 0.42, lift: 0.14, droop: 0.1, alpha: 0.75 },
+  { petals: 13, rad: 0.78, y: -0.38, hw: 0.32, lift: 0.1, droop: 0.26, alpha: 0.55 }
 ];
+const ROSE_TWIST = 0.6;
+// 整朵花斜对镜头：碗口微微侧倾，花瓣的层叠与厚度才看得出来。
+const ROSE_PITCH = 0.75;
+const ROSE_YAW = 0.35;
 
-let treeCache = null;
-
-/** 第 i 个枝端：黄金角球面点，按层取不同半径与相位。 */
-function crownPoint(i, layer) {
-  const p = fibonacci(i, layer.count, layer.phase);
-  const rad = layer.rad * (0.94 + jitter(i * 13 + layer.count, 29) * 0.12);
-  return { x: TREE_CROWN.x + p.x * rad, y: TREE_CROWN.y + p.y * rad, z: TREE_CROWN.z + p.z * rad };
+function rosePose(p) {
+  return spinY(tiltX(p, ROSE_PITCH), ROSE_YAW);
 }
 
-/** 按层（BFS）顺序返回主干与全部枝段，节点先铺主干、再铺满整圈树冠。 */
-function treeBranches() {
-  if (treeCache) return treeCache;
-  const root = { x: 0, y: 0.9, z: 0 };
-  const fork = { x: 0.02, y: 0.36, z: 0.02 };
-  const trunk = { a: root, b: fork, c: { x: 0.05, y: 0.66, z: 0.03 }, level: 0, len: 0.54 };
-  const layers = [[], [], []];
-
-  const build = (base, depth, group) => {
-    const layer = TREE_LAYERS[depth];
-    for (let k = 0; k < 3; k++) {
-      const idx = group * 3 + k;
-      const tip = crownPoint(idx, layer);
-      const len = Math.hypot(tip.x - base.x, tip.y - base.y, tip.z - base.z);
-      // 控制点从树冠中心向外拱，枝条像从主干里长出来，而不是直连。
-      const dx = tip.x - TREE_CROWN.x;
-      const dy = tip.y - TREE_CROWN.y;
-      const dz = tip.z - TREE_CROWN.z;
-      const dl = Math.hypot(dx, dy, dz) || 1;
-      const bend = len * 0.2;
-      const center = {
-        x: (base.x + tip.x) / 2 + (dx / dl) * bend,
-        y: (base.y + tip.y) / 2 + (dy / dl) * bend,
-        z: (base.z + tip.z) / 2 + (dz / dl) * bend
-      };
-      layers[depth].push({ a: base, b: tip, c: center, level: depth + 1, len });
-      if (depth < 2) build(tip, depth + 1, idx);
-    }
-  };
-  build(fork, 0, 0);
-  treeCache = [trunk, ...layers[0], ...layers[1], ...layers[2]];
-  return treeCache;
+/** 第 L 层第 k 片花瓣：s 从花心(0)到瓣尖(1)，side 横向铺满整片花瓣。 */
+function rosePetal(L, k, s, side) {
+  const layer = ROSE_LAYERS[L];
+  const phi0 = (k / layer.petals) * TAU + L * ROSE_TWIST;
+  const ss = Math.min(1, Math.max(0, s));
+  const phi = phi0 + side * layer.hw * Math.sin(Math.PI * Math.min(1, ss * 0.94));
+  const r = layer.rad * (0.14 + 0.86 * Math.pow(ss, 0.88));
+  const y =
+    layer.y -
+    layer.lift * Math.sin(Math.PI * Math.min(1, ss * 1.02)) +
+    layer.droop * ss * ss +
+    0.012 * Math.sin(phi * 3 + L);
+  return rosePose({ x: Math.cos(phi) * r, y, z: Math.sin(phi) * r });
 }
 
-/** 沿所有枝段按弧长取点，星尘才勾得出整棵树的轮廓。 */
-function treeAlong(f) {
-  const list = treeBranches();
-  let total = 0;
-  for (const br of list) total += br.len;
-  let want = Math.min(1, Math.max(0, f)) * total;
-  for (const br of list) {
-    if (want <= br.len) return quadAt(br.a, br.c, br.b, want / br.len);
-    want -= br.len;
+/** 花瓣中线：骨架与星尘共用，从花心射向瓣尖。 */
+function roseRib(L, k, s) {
+  return rosePetal(L, k, s, 0);
+}
+
+let rosePetalsCache = null;
+
+/** 全部花瓣的顺序表（先内层后外层），星尘与骨架按它分配。 */
+function rosePetals() {
+  if (rosePetalsCache) return rosePetalsCache;
+  const out = [];
+  for (let L = 0; L < ROSE_LAYERS.length; L++) {
+    for (let k = 0; k < ROSE_LAYERS[L].petals; k++) out.push({ L, k });
   }
-  const last = list[list.length - 1];
-  return last.b;
+  rosePetalsCache = out;
+  return out;
 }
 
 // ——— 星波 ———
@@ -298,14 +281,20 @@ export function shapePoint(shape, i, count) {
         0.5
       );
     }
-    case 'tree': {
-      // 知识树：星尘沿主干与全部枝段按弧长铺开，整棵树的轮廓一目了然。
-      const p = treeAlong((i + 0.5) / n);
-      const k = 0.012;
+    case 'rose': {
+      // 玫瑰：每片花瓣分到一批星尘，从花心一路铺到瓣尖。
+      const petals = rosePetals();
+      const petal = petals[i % petals.length];
+      const rounds = Math.max(1, Math.ceil(n / petals.length));
+      const row = Math.floor(i / petals.length);
+      const s = Math.min(1, (row + 0.5) / rounds);
+      const side = (jitter(i, 13) - 0.5) * 0.9;
+      const p = rosePetal(petal.L, petal.k, s, side);
+      const k = 0.01;
       return {
-        x: p.x + (jitter(i, 5) - 0.5) * k,
-        y: p.y + (jitter(i, 7) - 0.5) * k,
-        z: p.z + (jitter(i, 9) - 0.5) * k
+        x: p.x + (jitter(i, 3) - 0.5) * k,
+        y: p.y + (jitter(i, 5) - 0.5) * k,
+        z: p.z + (jitter(i, 7) - 0.5) * k
       };
     }
     case 'wave': {
@@ -363,13 +352,16 @@ export function shapePath(shape, t) {
         0.5
       );
     }
-    case 'tree': {
-      // 按 DFS 顺序遍历主干与每一根枝段，节点依次落在枝条上。
-      const list = treeBranches();
-      const s = u * list.length;
-      const k = Math.min(list.length - 1, Math.floor(s));
-      const br = list[k];
-      return quadAt(br.a, br.c, br.b, Math.min(1, s - k));
+    case 'rose': {
+      // 节点像露珠一样落在最外层花瓣上：沿花瓣序列铺开，花心与内层留空。
+      const petals = rosePetals().filter((p) => p.L === 2);
+      const total = petals.length;
+      const f = Math.min(total - 1e-6, u * total);
+      const idx = Math.floor(f);
+      const petal = petals[idx];
+      const s = 0.55 + 0.2 * (f - idx);
+      const side = 0.1;
+      return rosePetal(petal.L, petal.k, s, side);
     }
     case 'wave': {
       // 每四分之一程绕完一层环，整条路径是一级级向外荡开的涟漪。
@@ -476,50 +468,72 @@ export function shapeSkeleton(shape, detail = 90) {
         ]);
       }
       break;
-    case 'tree': {
-      const list = treeBranches();
-      const trunk = list[0];
-      // 主干画两条带锥度的并线：根粗梢细，树才站得住
-      for (const sign of [-1, 1]) {
-        line(
-          (t) => {
-            const p = quadAt(trunk.a, trunk.c, trunk.b, t);
-            const off = sign * (0.048 - t * 0.032);
-            return { x: p.x + off, y: p.y, z: p.z + off * 0.6 };
-          },
-          26
-        );
-      }
-      // 全部枝段，逐层变细变淡；主枝画双线，枝干才显粗壮
-      for (const br of list.slice(1)) {
-        const alpha = br.level === 1 ? 1 : br.level === 2 ? 0.85 : 0.62;
-        const count = br.level === 3 ? 8 : 12;
-        if (br.level <= 2) {
-          for (const off of [-0.014, 0.014]) {
-            line(
-              (t) => {
-                const p = quadAt(br.a, br.c, br.b, t);
-                return { x: p.x + off, y: p.y, z: p.z + off * 0.5 };
-              },
-              count,
-              alpha
-            );
+    case 'rose': {
+      // 外层花瓣画成叶片：从花心沿一侧边缘到瓣尖，再沿另一侧回到花心。
+      const outer = ROSE_LAYERS.length - 1;
+      {
+        const layer = ROSE_LAYERS[outer];
+        for (let k = 0; k < layer.petals; k++) {
+          const pts = [];
+          const steps = 14;
+          for (let i = 0; i <= steps; i++) {
+            const s = Math.max(0.02, i / steps);
+            pts.push(rosePetal(outer, k, s, -0.92));
           }
-        } else {
-          line((t) => quadAt(br.a, br.c, br.b, t), count, alpha);
+          // 瓣尖收成圆头，而不是两片边缘交成尖角。
+          for (let i = 1; i < 7; i++) {
+            pts.push(rosePetal(outer, k, 1, -0.92 + (i / 7) * 1.84));
+          }
+          for (let i = steps - 1; i >= 0; i--) {
+            const s = Math.max(0.02, i / steps);
+            pts.push(rosePetal(outer, k, s, 0.92));
+          }
+          lines.push({ pts, alpha: layer.alpha });
         }
       }
-      // 根系：四条向外下方伸的短弧
-      const root = trunk.a;
-      const tips = [
-        { x: 0.17, y: root.y + 0.07, z: 0.04 },
-        { x: -0.16, y: root.y + 0.09, z: 0.06 },
-        { x: 0.05, y: root.y + 0.1, z: -0.14 },
-        { x: -0.06, y: root.y + 0.08, z: 0.16 }
-      ];
-      for (const tip of tips) {
-        const ctrl = { x: tip.x * 0.45, y: root.y + 0.02, z: tip.z * 0.45 };
-        line((t) => quadAt(root, ctrl, tip, t), 10, 0.3);
+      // 每层花瓣的外缘：半径随花瓣数起伏，勾出层层展开的花冠。
+      for (let L = 0; L < ROSE_LAYERS.length; L++) {
+        const layer = ROSE_LAYERS[L];
+        const pts = [];
+        const steps = 96;
+        for (let i = 0; i <= steps; i++) {
+          const a = (i / steps) * TAU;
+          const lobe = Math.cos(layer.petals * (a - L * ROSE_TWIST));
+          const r = layer.rad * (0.92 + 0.16 * lobe);
+          const y = layer.y + layer.droop + 0.05 * Math.cos(a * 3 + L);
+          pts.push(rosePose({ x: Math.cos(a) * r, y, z: Math.sin(a) * r }));
+        }
+        lines.push({ pts, alpha: layer.alpha * 0.72 });
+      }
+      // 花心：两个小环兜住中心。
+      for (const ang of [0.15, 1.05]) {
+        const pts = [];
+        for (let i = 0; i <= 20; i++) {
+          const a = (i / 20) * TAU;
+          const p = tiltX({ x: Math.cos(a) * 0.1, y: Math.sin(a) * 0.1, z: 0 }, ang);
+          pts.push(rosePose({ x: p.x, y: 0.3 + p.y, z: p.z }));
+        }
+        lines.push({ pts, alpha: 0.55 });
+      }
+      // 花茎：从花冠底部向下探出，带一点弯曲；两片叶子从茎上舒展开。
+      const stemA = rosePose({ x: 0, y: -0.46, z: 0 });
+      const stemC = rosePose({ x: 0.05, y: -0.66, z: 0.03 });
+      const stemB = rosePose({ x: 0.02, y: -0.86, z: 0.04 });
+      for (const side of [-1, 1]) {
+        line(
+          (t) => {
+            const p = quadAt(stemA, stemC, stemB, t);
+            return { x: p.x + side * 0.012, y: p.y, z: p.z };
+          },
+          24,
+          0.6
+        );
+      }
+      for (const side of [-1, 1]) {
+        const base = quadAt(stemA, stemC, stemB, 0.4);
+        const tip = rosePose({ x: side * 0.24, y: -0.5, z: 0.1 });
+        const ctrl = rosePose({ x: side * 0.13, y: -0.66, z: 0.05 });
+        line((t) => quadAt(base, ctrl, tip, t), 16, 0.45);
       }
       break;
     }
@@ -600,8 +614,8 @@ export function shapeCloudDir(shape, dir) {
       return planeDir(0.95, dir, 1.0, 0.3);
     case 'wave':
       return { x: dir.x * 1.6, y: dir.y * 0.8, z: dir.z * 1.6 };
-    case 'tree':
-      return { x: dir.x * 1.05, y: dir.y * 1.25, z: dir.z * 1.05 };
+    case 'rose':
+      return { x: dir.x, y: dir.y * 0.85, z: dir.z };
     case 'binary':
       return dir;
     case 'lattice':
@@ -612,7 +626,9 @@ export function shapeCloudDir(shape, dir) {
 
 function loadShape() {
   try {
-    const value = localStorage.getItem(STORE_KEY);
+    let value = localStorage.getItem(STORE_KEY);
+    // 旧版把“知识树”存在同一个键里，现在这个位置换成了玫瑰。
+    if (value === 'tree') value = 'rose';
     if (SHAPES.some((s) => s.id === value)) ui.shape = value;
   } catch (e) {
     /* 隐私模式 / 存储不可用时保持默认球形。 */
