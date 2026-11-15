@@ -732,7 +732,7 @@ body.appearance-dragging {
   display: flex;
   flex-direction: column;
   gap: 9px;
-  width: 204px;
+  width: 176px;
   padding: 11px 11px 9px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -743,8 +743,8 @@ body.appearance-dragging {
   transition: width .26s, padding .26s, gap .26s;
 }
 .shape-bar[data-collapsed="1"] {
-  width: 46px;
-  padding: 9px 5px;
+  width: 36px;
+  padding: 8px 5px;
   gap: 0;
   align-items: center;
 }
@@ -760,6 +760,13 @@ body.appearance-dragging {
   font-size: 11px;
   letter-spacing: .14em;
   text-align: left;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.shape-bar.dragging .shape-bar-toggle {
+  cursor: grabbing;
 }
 .shape-bar-toggle:hover {
   color: #fff;
@@ -767,8 +774,9 @@ body.appearance-dragging {
 .shape-bar[data-collapsed="1"] .shape-bar-toggle {
   flex-direction: column;
   justify-content: center;
-  gap: 8px;
-  padding: 3px 0;
+  gap: 0;
+  padding: 4px 0;
+  min-height: 28px;
 }
 .shape-bar-chevron {
   width: 7px;
@@ -785,10 +793,11 @@ body.appearance-dragging {
 }
 .shape-bar-title {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .shape-bar[data-collapsed="1"] .shape-bar-title {
-  writing-mode: vertical-rl;
-  letter-spacing: .22em;
+  display: none;
 }
 .shape-bar-body {
   display: flex;
@@ -804,7 +813,7 @@ body.appearance-dragging {
 }
 .shape-bar-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
 }
 .shape-card {
@@ -847,34 +856,27 @@ body.appearance-dragging {
   letter-spacing: .01em;
   white-space: nowrap;
 }
-.shape-bar-hint {
-  margin: 0;
-  padding: 0 2px;
-  color: #7d90ad;
-  font-size: 9.5px;
-  line-height: 1.45;
-  letter-spacing: .02em;
-}
+
 @media (max-width: 900px) {
   .shape-bar {
     left: 12px;
     top: 86px;
-    width: 182px;
+    width: 160px;
     padding: 9px 9px 7px;
   }
   .shape-bar[data-collapsed="1"] {
-    width: 42px;
+    width: 32px;
     padding: 8px 4px;
   }
 }
 @media (max-width: 660px) {
   .shape-bar {
     top: 78px;
-    width: 164px;
+    width: 148px;
   }
   .shape-card-icon {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
   }
 }
 @media (max-width: 600px) {

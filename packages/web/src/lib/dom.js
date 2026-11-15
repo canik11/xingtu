@@ -43,7 +43,6 @@ export function cacheDom() {
   el.shapeBarToggle = $id('shapeBarToggle');
   el.shapeBarBody = $id('shapeBarBody');
   el.shapeBarList = $id('shapeBarList');
-  el.shapeBarHint = $id('shapeBarHint');
   el.dock = $id('dock');
   el.dockName = $id('dockName');
   el.dockMeta = $id('dockMeta');

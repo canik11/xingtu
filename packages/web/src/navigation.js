@@ -5,7 +5,7 @@ import { ui, view } from './state.js';
 import { index } from './store.js';
 import { center3DScene, fitFocusView, panelReserve } from './camera.js';
 import { applyShape, captureTransitionFrom3D, clearTransition, resetSphereShape } from './hierarchy.js';
-import { saveShape, shapeInfo } from './shapes.js';
+import { saveShape } from './shapes.js';
 import { startTransition } from './scene/transition.js';
 import { buildFocus, captureFocusScreenMap, clearManualPositions, fitFocus, getFocus } from './focus.js';
 import { getEntity, pathOf, courseOf, refreshOutline } from './outline.js';
@@ -158,10 +158,6 @@ export function syncNav() {
     for (const button of el.shapeBarList.querySelectorAll('[data-shape]')) {
       button.setAttribute('aria-pressed', button.dataset.shape === ui.shape ? 'true' : 'false');
     }
-  }
-  if (el.shapeBarHint) {
-    const info = shapeInfo(ui.shape);
-    el.shapeBarHint.textContent = `当前：${info.name} · ${info.hint}`;
   }
   document.body.dataset.level = level;
   updateStats();
