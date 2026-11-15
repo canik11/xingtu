@@ -30,6 +30,7 @@ import {
   topicKey,
   refreshOutline
 } from '../outline.js';
+import * as sfx from '../audio/sfx.js';
 import { catColor } from '../scene/renderer.js';
 import { masteryFor, isMastered, toggleMastery, isLeafBlock } from '../mastery.js';
 import { toast } from './feedback.js';
@@ -109,6 +110,7 @@ export function panelNode() {
 export function openPanel(id) {
   const entity = getEntity(id);
   if (!entity) return;
+  const wasOpen = panelOpen;
   const n = entity.node;
   if (ui.selection !== id) ui.panelTab = 'note';
   selectNode(id);
@@ -127,6 +129,7 @@ export function openPanel(id) {
   applyPanelWidth();
   el.panel.classList.add('open');
   el.panel.setAttribute('aria-hidden', 'false');
+  if (!wasOpen) sfx.panelOpen();
   el.scrim.hidden = false;
   // 强制一次布局，保证后续的过渡动画从 opacity:0 起步。
   void el.scrim.offsetWidth;
@@ -162,6 +165,7 @@ export function closePanel() {
   el.scrim.hidden = true;
   updateDock();
   if (!wasOpen) return;
+  sfx.panelClose();
   if (ui.level === 'local') {
     fitFocus(true);
   } else {
@@ -783,6 +787,7 @@ export function bindPanel() {
       if (entity && entity.level === 3) {
         const next = toggleMastery(entity);
         if (next === null) return;
+        sfx.mastery(next);
         toast(next ? '已标记掌握' : '已取消掌握');
         renderHeadingPanel(getEntity(entity.id) || entity);
       }

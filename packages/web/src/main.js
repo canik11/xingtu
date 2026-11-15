@@ -31,6 +31,8 @@ import { showFatal, toast } from './ui/feedback.js';
 import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath } from './kb-path.js';
 import { restoreKbFile } from './kb-file.js';
 import { hostKbSupported, requestHostKb } from './kb-host.js';
+import { initSound, introSoundStart, introSoundBlast } from './audio/cues.js';
+import { bindSound } from './ui/sound.js';
 
 let glScene = null;
 
@@ -58,6 +60,7 @@ function rebuildBackdrop() {
 
 async function boot() {
   cacheDom();
+  initSound();
   flags.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   flags.debug = /[?&]debug\b/.test(location.search);
   initBackend();
@@ -154,6 +157,7 @@ async function boot() {
   bindActions();
   bindNavigation();
   bindShapeBar();
+  bindSound();
   onQualityChange((q) => {
     setMaxScale(q.three.maxScale);
     resizeCanvas();
@@ -370,9 +374,13 @@ async function boot() {
   clock.last = performance.now();
   startLoop(ctx, glScene);
   // 首帧已经排进 rAF，再点燃开场爆炸；reduced-motion 时直接淡出黑幕。
+  introSoundStart();
   playIntro({
     reduced: flags.reducedMotion,
-    onBlast: () => startIntroTransition(1500)
+    onBlast: () => {
+      introSoundBlast();
+      startIntroTransition(1500);
+    }
   });
 }
 

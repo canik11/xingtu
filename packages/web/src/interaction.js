@@ -10,6 +10,15 @@ import { isAddOpen } from './ui/add-modal.js';
 import { nodeAt3D, rotateScene, rotateFocus, moveSphereNode } from './hierarchy.js';
 import { enterLocal, back } from './navigation.js';
 import { nodeAtFocus, edgeAtFocus, fitFocus, moveFocusNode, projectFocusNode } from './focus.js';
+import * as sfx from './audio/sfx.js';
+
+/** 选中一颗星时按它的层级和屏幕位置发声。 */
+function playSelect(hit, x) {
+  if (!hit) return;
+  const level = hit.level || (hit.kind === 'chapter' ? 2 : 1);
+  const pan = (x / Math.max(1, view.w)) * 1.4 - 0.7;
+  sfx.select(level, pan);
+}
 
 /** 屏幕坐标命中当前的局部图节点（兼容旧调试接口）。 */
 export function nodeAtScreen(x, y) {
@@ -115,7 +124,10 @@ export function bindInteraction() {
 
     if (ui.level !== 'local') {
       const hit = nodeAt3D(e.clientX, e.clientY);
-      if (hit) selectNode(hit.id);
+      if (hit) {
+        selectNode(hit.id);
+        playSelect(hit, e.clientX);
+      }
       // 球体空白拖动旋转；拖动节点移动。
       const mode = hit && ui.level === 'sphere' ? 'node3d' : 'orbit';
       ui.dragNode = {
@@ -140,7 +152,10 @@ export function bindInteraction() {
     }
 
     const hit = nodeAtFocus(e.clientX, e.clientY);
-    if (hit) selectNode(hit.id);
+    if (hit) {
+      selectNode(hit.id);
+      playSelect(hit, e.clientX);
+    }
     ui.dragNode = {
       mode: hit ? 'node' : 'rotate',
       hit,
@@ -266,7 +281,10 @@ export function bindInteraction() {
 
   function clearSelection() {
     if (ui.innerSelection) ui.innerSelection = null;
-    if (ui.selection) selectNode(null);
+    if (ui.selection) {
+      selectNode(null);
+      sfx.deselect();
+    }
     if (isPanelOpen()) closePanel();
   }
   canvas.addEventListener('pointerup', endDrag);
@@ -323,12 +341,16 @@ export function bindInteraction() {
       const key = e.key.toLowerCase();
       if (key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        toast(undo() ? '已撤销' : '没有可撤销的操作');
+        const ok = undo();
+        toast(ok ? '已撤销' : '没有可撤销的操作');
+        if (ok) sfx.undo();
         return;
       }
       if (key === 'y') {
         e.preventDefault();
-        toast(redo() ? '已重做' : '没有可重做的操作');
+        const ok = redo();
+        toast(ok ? '已重做' : '没有可重做的操作');
+        if (ok) sfx.redo();
         return;
       }
     }

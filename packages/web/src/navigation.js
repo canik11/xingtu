@@ -9,8 +9,9 @@ import { saveShape } from './shapes.js';
 import { startTransition } from './scene/transition.js';
 import { buildFocus, captureFocusScreenMap, clearManualPositions, fitFocus, getFocus } from './focus.js';
 import { getEntity, pathOf, courseOf, refreshOutline } from './outline.js';
-import { idleLabel, isStill, loadMotionPrefs, setIdleModes, setIdleSpeed, toggleIdleMode } from './motion.js';
+import { idleLabel, isIdleMode, isStill, loadMotionPrefs, setIdleModes, setIdleSpeed, toggleIdleMode } from './motion.js';
 import { updateStats } from './stats.js';
+import * as sfx from './audio/sfx.js';
 
 let panelApi = {
   openPanel: () => {},
@@ -196,7 +197,10 @@ export function enterSphere(animate = true) {
   ui.hover = null;
   ui.hoverEdge = null;
   clearTransition();
-  if (animate) startTransition({ kind: 'sphere', origin, screenFrom, dur: 1350 });
+  if (animate) {
+    startTransition({ kind: 'sphere', origin, screenFrom, dur: 1350 });
+    sfx.sphere();
+  }
   panelApi.selectNode(null);
   applySphereCamera(animate);
   syncNav();
@@ -228,7 +232,10 @@ export function enterLocal(id, opts = {}) {
   ui.selection = id;
   ui.hover = null;
   ui.hoverEdge = null;
-  if (opts.animate !== false) startTransition({ kind: 'local', origin, dur: 960 });
+  if (opts.animate !== false) {
+    startTransition({ kind: 'local', origin, dur: 960 });
+    sfx.enter(entity.level);
+  }
   ui.transition = opts.animate === false ? null : bridge;
   buildFocus(id);
   fitFocus(opts.animate !== false);
@@ -314,6 +321,7 @@ export function onPanelGeometryChanged() {
 export function applyShapeForUser(shape) {
   if (!applyShape(shape)) return false;
   saveShape(shape);
+  sfx.shape(shape);
   if (ui.level === 'sphere') applySphereCamera(true);
   syncNav();
   return true;
@@ -337,6 +345,7 @@ export function bindNavigation() {
       ui.sphereScope = ui.sphereScope >= 4 ? 1 : ui.sphereScope + 1;
       if (ui.level === 'sphere') applySphereCamera(true);
       syncNav();
+      sfx.level(ui.sphereScope);
     });
   }
   if (el.motionBtn) {
@@ -353,6 +362,7 @@ export function bindNavigation() {
       // 只开/关其他效果时不动相机；膨胀会改变球体视角半径，才重新居中。
       if (ui.level === 'sphere' && sphereRadius() !== before) applySphereCamera(true);
       syncNav();
+      sfx.motion(btn.dataset.motion, isIdleMode(btn.dataset.motion));
     });
     el.motionSpeed.addEventListener('input', () => {
       setIdleSpeed(el.motionSpeed.value);
@@ -368,6 +378,7 @@ export function bindNavigation() {
       setIdleModes({ rotate: true, breathe: false, puff: false });
       resetSphereShape();
       closeMotionPanel();
+      sfx.reset();
       if (ui.level === 'sphere') {
         applySphereCamera(true);
       } else if (ui.level === 'local') {

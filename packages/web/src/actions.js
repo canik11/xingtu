@@ -28,6 +28,7 @@ import { getKbFileName, kbFileSupported, pickKbFile, unbindKbFile } from './kb-f
 import { hostKbSupported, pickHostKb } from './kb-host.js';
 import { bindRewardDialog, openRewardDialog } from './ui/reward-dialog.js';
 import { openGlobalDoc } from './ui/global-doc.js';
+import * as sfx from './audio/sfx.js';
 import { fitFocus, rebuildFocus } from './focus.js';
 import { getEntity, refreshOutline } from './outline.js';
 import {
@@ -95,6 +96,7 @@ export function saveEdit() {
   updateDock();
   refreshCategoryDatalist();
   saveNow();
+  sfx.saved();
   toast('已保存修改');
 }
 
@@ -112,6 +114,7 @@ export function deleteSelected() {
       const result = removeNode(data, n.id);
       data.nodes = result.nodes;
       data.edges = result.edges;
+      sfx.vanish();
       ui.selection = null;
       closePanel();
       data.categories = pruneEmptyCategories(data.categories, data.nodes, BUILTIN_CATEGORY_IDS).categories;
@@ -236,6 +239,7 @@ export function saveNewNode() {
   updateDock();
   saveNow();
   enterLocal(nodeId, { from3D: ui.level === 'sphere', openSidebar: true });
+  sfx.lockLight();
   toast(`已点亮「${node.name}」，开始记录笔记吧`);
 }
 
@@ -258,6 +262,7 @@ export async function exportData() {
       const writable = await handle.createWritable();
       await writable.write(new Blob([payload], { type: 'application/json' }));
       await writable.close();
+      sfx.exported();
       toast(`已保存：${handle.name}`);
       return;
     } catch (err) {
@@ -275,6 +280,7 @@ export async function exportData() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
+  sfx.exported();
   toast('已下载数据（当前浏览器不支持选择保存位置）');
 }
 
@@ -290,6 +296,7 @@ function applyLoadedData(norm) {
   updateDock();
   refreshCategoryDatalist();
   saveNow();
+  sfx.imported();
 }
 
 /**
@@ -525,6 +532,7 @@ export function bindActions() {
   el.dockClose.addEventListener('click', () => selectNode(null));
 
   el.zoomFit.addEventListener('click', fitCurrent);
+  el.zoomFit.addEventListener('click', () => sfx.zoom());
 
   el.addRelBtn.addEventListener('click', () => {
     addState.relations.push({ other: '', label: '' });

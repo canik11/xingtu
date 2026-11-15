@@ -218,6 +218,84 @@
   font-size: 9px;
   line-height: 1.5;
 }
+
+/* 声音面板：与静默面板同一套骨架，多一个总开关和试听按钮。 */
+.sound-pop {
+  width: 248px;
+}
+
+.sound-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 2px;
+  color: #8095b5;
+  font-size: 10px;
+}
+
+.sound-switch {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid rgba(150, 190, 255, .22);
+  border-radius: 999px;
+  background: rgba(120, 160, 220, .08);
+  transition: .27s;
+}
+
+.sound-switch i {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #6f87a8;
+  transition: left .27s, background .27s, box-shadow .27s;
+}
+
+.sound-switch.is-on {
+  border-color: rgba(170, 210, 255, .5);
+  background: rgba(120, 180, 255, .22);
+}
+
+.sound-switch.is-on i {
+  left: 18px;
+  background: #dcecff;
+  box-shadow: 0 0 8px rgba(170, 215, 255, .9);
+}
+
+.sound-modes {
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 10px;
+}
+
+.sound-modes button {
+  padding: 6px 2px;
+  font-size: 9px;
+}
+
+.sound-demo {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px;
+  border: 1px solid rgba(150, 190, 255, .18);
+  border-radius: 6px;
+  background: rgba(120, 160, 220, .06);
+  color: #b9d4f2;
+  font-size: 10px;
+  transition: .27s;
+}
+
+.sound-demo:hover {
+  border-color: rgba(180, 215, 255, .4);
+  background: rgba(150, 190, 255, .13);
+  color: #eaf5ff;
+}
 .nav-scope {
   color: #566b8a;
   font-size: 10px;

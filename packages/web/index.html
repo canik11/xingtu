@@ -25,6 +25,28 @@
         <div class="nav-crumbs" id="navCrumbs"></div>
         <button class="nav-level" id="levelBtn" type="button" aria-label="切换 3D 显示层级">层级 · 一级</button>
         <button class="nav-level nav-spread" id="spreadBtn" type="button" aria-label="恢复当前形状与旋转，并清除手动拖动偏移">重置图形</button>
+        <div class="nav-motion" id="soundWrap">
+          <button class="nav-level nav-motion-btn nav-sound-btn" id="soundBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="声音设置">声音</button>
+          <div class="motion-pop sound-pop" id="soundPanel" hidden role="dialog" aria-label="声音设置">
+            <div class="motion-pop-head">声音</div>
+            <div class="sound-switch-row">
+              <span>总开关</span>
+              <button class="sound-switch" id="soundEnabled" type="button" role="switch" aria-checked="true" aria-label="声音总开关"><i></i></button>
+            </div>
+            <label class="motion-speed" for="soundVolume">
+              <span>音量</span>
+              <input id="soundVolume" type="range" min="0" max="100" step="1" value="62" />
+              <b id="soundVolumeText">62%</b>
+            </label>
+            <div class="motion-modes sound-modes" id="soundModes" role="group" aria-label="声音分类">
+              <button type="button" data-sound="ui" aria-pressed="true">界面音效</button>
+              <button type="button" data-sound="ambient" aria-pressed="false">星海氛围</button>
+              <button type="button" data-sound="pulse" aria-pressed="false">心跳应和</button>
+            </div>
+            <button class="sound-demo" id="soundDemo" type="button">试听</button>
+            <p class="motion-note" id="soundHint">按 M 键可以快速静音</p>
+          </div>
+        </div>
         <div class="nav-motion" id="motionWrap">
           <button class="nav-level nav-motion-btn" id="motionBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="调整 3D 静默效果">静默</button>
           <div class="motion-pop" id="motionPanel" hidden role="dialog" aria-label="静默效果设置">
