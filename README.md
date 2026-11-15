@@ -203,7 +203,7 @@ powershell -File scripts/build-installer.ps1
 
 ```bash
 node scripts/test.cjs
-node scripts/smoke.cjs "file:///D:/dsh/WorkSpace/xintu/app/index.html?debug"
+node scripts/smoke.cjs "file:///D:/xintu/app/index.html?debug"
 ```
 
 ## 数据说明
