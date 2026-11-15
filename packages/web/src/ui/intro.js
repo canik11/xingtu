@@ -15,6 +15,7 @@ let blastAt = 0;
 let fired = false;
 let finished = false;
 let onBlastCb = null;
+let prompt = null;
 
 let particles = [];
 let burstReady = false;
@@ -197,6 +198,7 @@ function finish() {
   layer = null;
   canvas = null;
   ctx = null;
+  prompt = null;
   window.removeEventListener('resize', resize);
   setTimeout(() => node.remove(), 460);
 }
@@ -299,6 +301,28 @@ export function playIntro({ onBlast, reduced = false } = {}) {
   window.addEventListener('keydown', skip, true);
 }
 
+/** 黑幕上的「点击任意处」提示：浏览器要一次手势才允许出声。 */
+export function showIntroPrompt() {
+  if (!layer || prompt) return;
+  prompt = document.createElement('div');
+  prompt.className = 'intro-prompt';
+  prompt.innerHTML =
+    '<span class="intro-prompt-main">点击任意处，进入星海</span>' +
+    '<span class="intro-prompt-sub">浏览器需要一次点击才允许播放声音</span>';
+  layer.appendChild(prompt);
+  void prompt.offsetWidth;
+  prompt.classList.add('show');
+}
+
+/** 收起提示，等淡出完再移除。 */
+export function hideIntroPrompt() {
+  if (!prompt) return;
+  const node = prompt;
+  prompt = null;
+  node.classList.remove('show');
+  setTimeout(() => node.remove(), 620);
+}
+
 /** boot 失败或调试跳过时直接移除，不留黑屏。 */
 export function destroyIntro() {
   if (!layer) {
@@ -313,4 +337,5 @@ export function destroyIntro() {
   layer = null;
   canvas = null;
   ctx = null;
+  prompt = null;
 }

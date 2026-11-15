@@ -137,15 +137,9 @@ export function cacheDom() {
   el.confirmTitle = $id('confirmTitle');
   el.confirmText = $id('confirmText');
   el.confirmOk = $id('confirmOk');
-  el.soundWrap = $id('soundWrap');
-  el.soundBtn = $id('soundBtn');
-  el.soundPanel = $id('soundPanel');
   el.soundEnabled = $id('soundEnabled');
   el.soundVolume = $id('soundVolume');
   el.soundVolumeText = $id('soundVolumeText');
-  el.soundModes = $id('soundModes');
-  el.soundDemo = $id('soundDemo');
-  el.soundHint = $id('soundHint');
   el.toast = $id('toast');
   el.fatal = $id('fatal');
   el.scrim.classList.remove('show');

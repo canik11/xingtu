@@ -18,7 +18,7 @@ import { bindNavigation, syncNav, setPanelApi, enterSphere, applyShapeForUser } 
 import { sceneVisuals, spherePuffState } from './hierarchy.js';
 import { projectFocusNode, buildFocus, fitFocus } from './focus.js';
 import { startIntroTransition } from './scene/transition.js';
-import { mountIntro, playIntro, destroyIntro } from './ui/intro.js';
+import { mountIntro, playIntro, destroyIntro, showIntroPrompt, hideIntroPrompt } from './ui/intro.js';
 import { onQualityChange, quality, qualitySnapshot } from './quality.js';
 import { getOutline, getEntity, refreshOutline } from './outline.js';
 import { appearanceConfig, edgeIsMastered, toggleMastery } from './mastery.js';
@@ -32,6 +32,8 @@ import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath } from './kb
 import { restoreKbFile } from './kb-file.js';
 import { hostKbSupported, requestHostKb } from './kb-host.js';
 import { initSound, introSoundStart, introSoundBlast } from './audio/cues.js';
+import { audioReady, unlockAudio, isAudioUnlocked, audioVolume } from './audio/engine.js';
+import { soundPrefs } from './audio/prefs.js';
 import { bindSound } from './ui/sound.js';
 
 let glScene = null;
@@ -367,6 +369,9 @@ async function boot() {
       },
       deleteSelected() {
         return deleteSelected();
+      },
+      audio() {
+        return { ready: audioReady(), unlocked: isAudioUnlocked(), volume: audioVolume(), prefs: soundPrefs() };
       }
     };
   }
@@ -374,14 +379,45 @@ async function boot() {
   clock.last = performance.now();
   startLoop(ctx, glScene);
   // 首帧已经排进 rAF，再点燃开场爆炸；reduced-motion 时直接淡出黑幕。
-  introSoundStart();
-  playIntro({
-    reduced: flags.reducedMotion,
-    onBlast: () => {
-      introSoundBlast();
-      startIntroTransition(1500);
-    }
-  });
+  startIntroWithSound();
+}
+
+/**
+ * 开场。浏览器要求「先有一次手势」才允许出声，所以音频没解锁时先停在黑幕上，
+ * 等用户第一次点击/按键；解锁失败或超时也照常开场，只是没有声音。
+ */
+function startIntroWithSound() {
+  const beginIntro = () => {
+    hideIntroPrompt();
+    introSoundStart();
+    playIntro({
+      reduced: flags.reducedMotion,
+      onBlast: () => {
+        introSoundBlast();
+        startIntroTransition(1500);
+      }
+    });
+  };
+
+  if (audioReady()) {
+    beginIntro();
+    return;
+  }
+
+  showIntroPrompt();
+  let waiting = true;
+  const onGesture = () => {
+    if (!waiting) return;
+    waiting = false;
+    window.removeEventListener('pointerdown', onGesture, true);
+    window.removeEventListener('keydown', onGesture, true);
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(false), 1200));
+    Promise.race([unlockAudio().catch(() => false), timeout])
+      .catch(() => false)
+      .then(() => beginIntro());
+  };
+  window.addEventListener('pointerdown', onGesture, true);
+  window.addEventListener('keydown', onGesture, true);
 }
 
 /** 全局错误兜底：显示红条，避免“白屏无提示”。 */

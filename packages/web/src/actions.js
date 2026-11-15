@@ -19,7 +19,7 @@ import {
 import { el, esc } from './lib/dom.js';
 import { ui, view } from './state.js';
 import { data, index, replaceData, reindex, saveNow, snapshot, storageAvailable } from './store.js';
-import { fitView, zoomAt, center3DScene } from './camera.js';
+import { fitView, zoomAt, center3DScene, worldToScreen } from './camera.js';
 import { heat } from './layout.js';
 import { enterLocal, enterSphere } from './navigation.js';
 import { openAppearance } from './ui/appearance.js';
@@ -29,7 +29,7 @@ import { hostKbSupported, pickHostKb } from './kb-host.js';
 import { bindRewardDialog, openRewardDialog } from './ui/reward-dialog.js';
 import { openGlobalDoc } from './ui/global-doc.js';
 import * as sfx from './audio/sfx.js';
-import { fitFocus, rebuildFocus } from './focus.js';
+import { fitFocus, rebuildFocus, projectFocusNode } from './focus.js';
 import { getEntity, refreshOutline } from './outline.js';
 import {
   openPanel,
@@ -48,6 +48,9 @@ import { bindDocImport, openDocImport } from './ui/doc-import.js';
 import { bindSearch } from './ui/search.js';
 import { toast } from './ui/feedback.js';
 import { askConfirm } from './ui/confirm.js';
+import { playBlackhole } from './ui/blackhole.js';
+import { syncSoundPanel } from './ui/sound.js';
+import { sceneVisuals } from './hierarchy.js';
 import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath, setKbPath } from './kb-path.js';
 import { updateStats } from './stats.js';
 
@@ -100,6 +103,30 @@ export function saveEdit() {
   toast('已保存修改');
 }
 
+/** 节点当前在屏幕上的位置：删除时黑洞就开在这里。 */
+function nodeScreenSpot(n) {
+  if (!n) return null;
+  let x = NaN;
+  let y = NaN;
+  if (ui.level === 'local') {
+    const p = projectFocusNode(n);
+    if (p) {
+      const s = worldToScreen(p.x, p.y);
+      x = s.x;
+      y = s.y;
+    }
+  } else {
+    const v = sceneVisuals().find((item) => item.id === n.id);
+    if (v) {
+      const s = worldToScreen(v.x, v.y);
+      x = s.x;
+      y = s.y;
+    }
+  }
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x, y };
+}
+
 /** 删除当前选中节点。 */
 export function deleteSelected() {
   const n = index.getNode(ui.selection);
@@ -111,31 +138,43 @@ export function deleteSelected() {
     confirmText: '删除',
     onConfirm: () => {
       const wasLocal = ui.level === 'local';
-      const result = removeNode(data, n.id);
-      data.nodes = result.nodes;
-      data.edges = result.edges;
-      sfx.vanish();
-      ui.selection = null;
-      closePanel();
-      data.categories = pruneEmptyCategories(data.categories, data.nodes, BUILTIN_CATEGORY_IDS).categories;
-      reindexAll();
-      refreshOutline();
-      if (wasLocal) enterSphere(false);
-      else {
-        rebuildFocus();
-        heat(0.5);
+      const swallow = () => {
+        const result = removeNode(data, n.id);
+        data.nodes = result.nodes;
+        data.edges = result.edges;
+        ui.selection = null;
+        closePanel();
+        data.categories = pruneEmptyCategories(data.categories, data.nodes, BUILTIN_CATEGORY_IDS).categories;
+        reindexAll();
+        refreshOutline();
+        if (wasLocal) enterSphere(false);
+        else {
+          rebuildFocus();
+          heat(0.5);
+        }
+      };
+      const done = () => {
+        updateStats();
+        updateDock();
+        saveNow();
+        if (el.menuDelete) el.menuDelete.hidden = true;
+        toast('节点已删除');
+      };
+      const spot = nodeScreenSpot(n);
+      if (!spot) {
+        swallow();
+        done();
+        return;
       }
-      updateStats();
-      updateDock();
-      saveNow();
-      if (el.menuDelete) el.menuDelete.hidden = true;
-      toast('节点已删除');
+      sfx.blackhole();
+      playBlackhole({ x: spot.x, y: spot.y, onSwallow: swallow, onDone: done });
     }
   });
 }
 
-/** 打开 ⋯ 菜单前同步“删除当前节点”项。 */
+/** 打开 ⋯ 菜单前同步“删除当前节点”项与声音设置。 */
 export function syncMenuState() {
+  syncSoundPanel();
   if (!el.menuDelete) return;
   const n = index.getNode(ui.selection);
   el.menuDelete.hidden = !n;

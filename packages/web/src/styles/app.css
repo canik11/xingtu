@@ -219,21 +219,7 @@
   line-height: 1.5;
 }
 
-/* 声音面板：与静默面板同一套骨架，多一个总开关和试听按钮。 */
-.sound-pop {
-  width: 248px;
-}
-
-.sound-switch-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 2px;
-  color: #8095b5;
-  font-size: 10px;
-}
-
+/* 声音设置：放在 ⋯ 菜单里的两行（总开关 / 音量）。 */
 .sound-switch {
   position: relative;
   width: 34px;
@@ -268,33 +254,98 @@
   box-shadow: 0 0 8px rgba(170, 215, 255, .9);
 }
 
-.sound-modes {
-  grid-template-columns: repeat(3, 1fr);
-  margin-top: 10px;
+.menu-sound {
+  padding: 9px 10px 6px;
 }
 
-.sound-modes button {
-  padding: 6px 2px;
-  font-size: 9px;
+.menu-sound-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #cfdcf2;
+  font-size: 12.5px;
+  letter-spacing: .02em;
 }
 
-.sound-demo {
+.menu-sound-row > span,
+.menu-sound-vol > span {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* ⋯ 菜单里的按钮默认撑满整行，这里把开关收回胶囊尺寸。 */
+.menu .sound-switch {
   display: block;
-  width: 100%;
-  margin-top: 8px;
-  padding: 6px;
-  border: 1px solid rgba(150, 190, 255, .18);
-  border-radius: 6px;
-  background: rgba(120, 160, 220, .06);
-  color: #b9d4f2;
-  font-size: 10px;
-  transition: .27s;
+  flex: none;
+  width: 34px;
+  padding: 0;
+  border-radius: 999px;
 }
 
-.sound-demo:hover {
-  border-color: rgba(180, 215, 255, .4);
-  background: rgba(150, 190, 255, .13);
-  color: #eaf5ff;
+.menu-sound-vol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  color: #8095b5;
+  font-size: 10.5px;
+}
+
+.menu-sound-vol input {
+  flex: 1;
+  min-width: 0;
+  height: 3px;
+  accent-color: #dcecff;
+}
+
+.menu-sound-vol b {
+  flex: none;
+  min-width: 30px;
+  color: #a9bdd9;
+  font-size: 10px;
+  font-weight: 400;
+  text-align: right;
+}
+
+/* 开场提示：黑幕下方等一次点击，浏览器才允许出声。 */
+.intro-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 19vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition: opacity .55s ease, transform .55s ease;
+}
+
+.intro-prompt.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.intro-prompt-main {
+  color: rgba(226, 238, 255, .92);
+  font-size: 15px;
+  letter-spacing: .22em;
+  text-shadow: 0 0 18px rgba(120, 170, 255, .5);
+  animation: introPromptBreath 2.8s ease-in-out infinite;
+}
+
+.intro-prompt-sub {
+  color: rgba(150, 175, 210, .62);
+  font-size: 10.5px;
+  letter-spacing: .12em;
+}
+
+@keyframes introPromptBreath {
+  0%, 100% { opacity: .62; }
+  50% { opacity: 1; }
 }
 .nav-scope {
   color: #566b8a;

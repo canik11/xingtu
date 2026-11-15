@@ -397,6 +397,28 @@ export function vanish() {
   }
 }
 
+/** 黑洞吞噬：张开时的低频下坠 + 吸积盘气声 + 被吞掉的一记闷响。 */
+export function blackhole() {
+  if (!uiOn()) return;
+
+  // 张开：低频一路沉下去，气声从高处被吸进来。
+  sub({ freq: 118, endFreq: 26, dur: 1.02, peak: 0.1, attack: 0.018, send: 0.22 });
+  whoosh({ from: 4200, to: 150, dur: 0.9, peak: 0.042, attack: 0.05, q: 1.6, send: 0.4 });
+
+  // 吸积盘：几个碎片被卷进去，音高越来越低、声像左右交替。
+  const shards = [N.A5, N.Fs5, N.E5, N.D5];
+  shards.forEach((freq, i) => {
+    tick(freq, { peak: 0.016, pan: i % 2 ? 0.55 : -0.55, send: 0.3, delay: 0.06 + i * 0.1, dur: 0.09 });
+  });
+
+  // 吞没（约 0.39s，与动画 42% 对齐）：一记闷响 + 闭合的气流。
+  sub({ freq: 72, endFreq: N.D2 * 0.6, dur: 0.5, peak: 0.09, attack: 0.004, send: 0.18, delay: 0.38 });
+  noise({ dur: 0.26, peak: 0.03, attack: 0.003, type: 'lowpass', f0: 900, f1: 90, q: 1.1, send: 0.35, delay: 0.4 });
+
+  // 收尾：一点余韵，证明它真的不见了。
+  bell(N.D3 * 0.62, { dur: 1.5, peak: 0.02, attack: 0.01, send: 0.55, delay: 0.58, bright: 0.4 });
+}
+
 /** 保存修改：两声很轻的确认。 */
 export function saved() {
   if (!uiOn()) return;

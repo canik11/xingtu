@@ -1,10 +1,12 @@
 // 本机声音偏好：只写 localStorage，不随知识库导出。
 // 键名风格与 quality.js / motion.js 保持一致。
 const STORE_KEY = 'starmap.sound.v1';
+// v2 把默认音量从 0.62 提到 0.87（整体响度 +40%）；旧偏好读取时同步放大一次。
+const STORE_VERSION = 2;
 
 export const SOUND_DEFAULTS = Object.freeze({
   enabled: true,
-  volume: 0.62,
+  volume: 0.87,
   ui: true,
   ambient: false,
   pulse: false
@@ -33,7 +35,10 @@ function normalize(raw) {
       if (typeof raw[key] === 'boolean') next[key] = raw[key];
     }
     const value = Number(raw.volume);
-    if (Number.isFinite(value)) next.volume = clamp(value, RANGES.volume[0], RANGES.volume[1]);
+    if (Number.isFinite(value)) {
+      const boost = Number(raw.v) === STORE_VERSION ? 1 : 1.4;
+      next.volume = clamp(value * boost, RANGES.volume[0], RANGES.volume[1]);
+    }
   }
   return next;
 }
@@ -64,7 +69,7 @@ export function isSoundOn(category) {
 function persist() {
   if (!backend) return;
   try {
-    backend.setItem(STORE_KEY, JSON.stringify(state));
+    backend.setItem(STORE_KEY, JSON.stringify({ ...state, v: STORE_VERSION }));
   } catch (err) {
     /* 存储不可用时仅本次生效 */
   }
