@@ -41,6 +41,29 @@ function uiOn() {
 
 /* ------------------------------ 开场 ------------------------------ */
 
+/** 等待页的氛围音：星海在呼吸，奇点在被一点点吸向中心。 */
+export function introWait(dur = 2.4) {
+  if (!uiOn()) return;
+  // 两声很低的持续音，撑起整片黑暗的底。
+  tone({ freq: N.D2, type: 'sine', dur: dur + 0.6, peak: 0.05, attack: 1.1, send: 0.5 });
+  tone({ freq: N.A2, type: 'triangle', dur: dur + 0.4, peak: 0.026, attack: 1.4, send: 0.45, detune: 5 });
+  // 稀疏的星铃，像远处偶尔闪一下的星。
+  [0, 0.62, 1.28, 1.94].forEach((delay, i) => {
+    bell(i % 2 ? N.A5 : N.D6, {
+      dur: 1.9,
+      peak: 0.016,
+      delay,
+      pan: i % 2 ? 0.32 : -0.32,
+      send: 0.72,
+      bright: 0.7
+    });
+  });
+  // 气流被吸向中心：越来越亮的一层薄雾。
+  noise({ dur: dur + 0.2, peak: 0.016, attack: dur * 0.8, type: 'lowpass', f0: 180, f1: 760, q: 0.7, send: 0.5 });
+  // 很低的潜流，托住整个等待页。
+  sub({ freq: 36, endFreq: 44, dur: dur + 0.4, peak: 0.04, attack: 1.0, send: 0.15 });
+}
+
 /** 奇点蓄力：星核在黑暗里收紧，气流被吸向中心（很短，只为给爆炸一个引信）。 */
 export function introCharge(dur = 0.42) {
   if (!uiOn()) return;

@@ -78,8 +78,8 @@ function syncAmbient() {
 /* ------------------------------ 开场 ------------------------------ */
 
 /**
- * 在 playIntro 之前调用：蓄力音 + 2.6 秒后标记开场结束。
- * 若音频尚未解锁，蓄力音会被引擎静默丢弃，不会报错。
+ * 在等待页开始时调用：星海低鸣 + 稀疏星铃，让黑幕不安静。
+ * 若音频尚未解锁，声音会被引擎静默丢弃，不会报错。
  */
 export function introSoundStart() {
   introStarted = true;
@@ -89,8 +89,14 @@ export function introSoundStart() {
   clearTimeout(wakeTimer);
   wakeTimer = setTimeout(() => {
     introDone = true;
-  }, 2600);
-  sfx.introCharge(0.42);
+  }, 3200);
+  sfx.introWait(2.4);
+}
+
+/** 等待页结束、奇点收紧时调用（紧接在爆炸之前）。 */
+export function introSoundCharge() {
+  if (!introStarted) return;
+  sfx.introCharge(0.18);
 }
 
 /** 在 onBlast 里调用：大爆炸。重复调用只响一次。 */

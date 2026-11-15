@@ -1,4 +1,4 @@
-// 主入口：组装状态、数据、场景与 UI，启动渲染循环。
+﻿// 主入口：组装状态、数据、场景与 UI，启动渲染循环。
 import '@starmap/core/styles';
 import './styles/app.css';
 import { randRange, ensurePositions, warmup } from '@starmap/core';
@@ -31,7 +31,7 @@ import { showFatal, toast } from './ui/feedback.js';
 import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath } from './kb-path.js';
 import { restoreKbFile } from './kb-file.js';
 import { hostKbSupported, requestHostKb } from './kb-host.js';
-import { initSound, introSoundStart, introSoundBlast } from './audio/cues.js';
+import { initSound, introSoundStart, introSoundCharge, introSoundBlast } from './audio/cues.js';
 import { audioReady, unlockAudio, isAudioUnlocked, audioVolume } from './audio/engine.js';
 import { soundPrefs } from './audio/prefs.js';
 import { bindSound } from './ui/sound.js';
@@ -392,17 +392,30 @@ function startIntroWithSound() {
     if (started) return;
     started = true;
     hideIntroPrompt();
+    // 点击后先让等待页的星海低鸣响 2.4 秒（奇点同步被吸入），
+    // 再由奇点收紧、炸开，进入星海。
     introSoundStart();
-    playIntro({
-      reduced: flags.reducedMotion,
-      onBlast: () => {
-        introSoundBlast();
-        startIntroTransition(1500);
-        // 保底：就算开场 canvas 的动画停在中途，过渡结束后也把遮罩撤掉，
-        // 免得粒子残影一直盖在星海上。
-        setTimeout(destroyIntro, 1900);
-      }
-    });
+    let launched = false;
+    const launch = () => {
+      if (launched) return;
+      launched = true;
+      window.clearTimeout(waitTimer);
+      introSoundCharge();
+      playIntro({
+        reduced: flags.reducedMotion,
+        onBlast: () => {
+          introSoundBlast();
+          startIntroTransition(1500);
+          // 保底：就算开场 canvas 的动画停在中途，过渡结束后也把遮罩撤掉，
+          // 免得粒子残影一直盖在星海上。
+          setTimeout(destroyIntro, 1900);
+        }
+      });
+    };
+    const waitTimer = window.setTimeout(launch, 2400);
+    // 等待期间再点一下/按任意键，可以直接开始爆炸，不用等满。
+    window.addEventListener('pointerdown', launch, { capture: true, once: true });
+    window.addEventListener('keydown', launch, { capture: true, once: true });
   };
 
   if (audioReady()) {
