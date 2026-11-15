@@ -28,7 +28,7 @@ export function getLevel() {
 }
 
 /** 不同形状的基准取景半径：非球形骨架更大，统一退到 430 左右。 */
-const SHAPE_RADIUS = { galaxy: 430, helix: 430, torus: 430, lattice: 440, rose: 410, wave: 430, binary: 420 };
+const SHAPE_RADIUS = { galaxy: 430, helix: 430, torus: 430, lattice: 440, wave: 430, binary: 420 };
 
 function sphereRadius() {
   const shaped = SHAPE_RADIUS[ui.shape];
