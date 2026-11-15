@@ -100,14 +100,14 @@ function spawnBurst() {
       vx: Math.cos(a) * speed * flatten,
       vy: Math.sin(a) * speed * 0.9,
       life: 0,
-      max: 700 + Math.random() * 1250,
+      max: 560 + Math.random() * 640,
       size: 0.7 + Math.pow(Math.random(), 2) * 2.2,
       rgb: PALETTE[Math.random() < 0.62 ? 1 : Math.random() < 0.5 ? 0 : Math.random() < 0.6 ? 3 : 2]
     });
   }
 }
 
-function drawBlast(now, age, cx, cy) {
+function drawBlast(now, age, cx, cy, fade = 1) {
   spawnBurst();
   const dt = Math.min(48, Math.max(0, now - last));
   ctx.save();
@@ -118,14 +118,14 @@ function drawBlast(now, age, cx, cy) {
     const t = (age - i * 90) / (860 + i * 240);
     if (t < 0 || t > 1) continue;
     const r = 60 + Math.pow(t, 0.52) * (Math.max(w, h) * 0.62);
-    ctx.strokeStyle = `rgba(202,226,255,${(1 - t) * 0.14})`;
+    ctx.strokeStyle = `rgba(202,226,255,${(1 - t) * 0.14 * fade})`;
     ctx.lineWidth = 1.6 * (1 - t) + 0.4;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, TAU);
     ctx.stroke();
   }
 
-  // 爆散粒子：短尾迹 + 光点。
+  // 爆散粒子：短尾迹 + 光点。过渡收尾时整体淡出，不留残余。
   for (const p of particles) {
     p.life += dt;
     if (p.life > p.max) continue;
@@ -137,7 +137,7 @@ function drawBlast(now, age, cx, cy) {
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     const k = 1 - p.life / p.max;
-    const alpha = Math.min(1, k * 1.7) * 0.85;
+    const alpha = Math.min(1, k * 1.7) * 0.85 * fade;
     ctx.strokeStyle = `rgba(${p.rgb},${alpha * 0.5})`;
     ctx.lineWidth = p.size * 0.85;
     ctx.beginPath();
@@ -229,8 +229,11 @@ function frame(now) {
         fire();
         const curtain = 1 - smoothstep(0, 400, age);
         drawCurtain(curtain);
-        // 不再画爆炸粒子/冲击环：点击后就是黑幕快速淡出，星海直接显出来。
-        if (age > 520) finish();
+        // 保留爆炸粒子与冲击环，但让它们随过渡一起淡尽：
+        // 星海完全露出后，画布上不再留下任何残留光点。
+        const fade = 1 - smoothstep(620, 960, age);
+        if (age < 980) drawBlast(now, age, cx, cy, fade);
+        if (age > 1020) finish();
       }
     }
   } catch (err) {
