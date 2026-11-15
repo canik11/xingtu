@@ -38,11 +38,7 @@ export function cacheDom() {
   el.menu = $id('menu');
   el.menuDelete = $id('menuDelete');
   el.moreWrap = $id('moreWrap');
-  el.zoomIn = $id('zoomIn');
-  el.zoomOut = $id('zoomOut');
   el.zoomFit = $id('zoomFit');
-  el.hints = document.querySelector('.hints');
-  el.zoom = document.querySelector('.zoom');
   el.dock = $id('dock');
   el.dockName = $id('dockName');
   el.dockMeta = $id('dockMeta');

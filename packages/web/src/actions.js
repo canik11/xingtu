@@ -19,7 +19,7 @@ import {
 import { el, esc } from './lib/dom.js';
 import { ui, view } from './state.js';
 import { data, index, replaceData, reindex, saveNow, snapshot, storageAvailable } from './store.js';
-import { fitView, zoomAt, zoomCenter, center3DScene, zoom3DCenter } from './camera.js';
+import { fitView, zoomAt, center3DScene } from './camera.js';
 import { heat } from './layout.js';
 import { enterLocal, enterSphere } from './navigation.js';
 import { openAppearance } from './ui/appearance.js';
@@ -489,12 +489,6 @@ export async function applyDocImport(items) {
 
 /* ------------------------- 绑定 ------------------------- */
 
-/** 缩放按钮：局部图用相机缩放，星海用球心缩放。 */
-function zoomBy(factor) {
-  if (ui.level === 'local') zoomCenter(factor);
-  else zoom3DCenter(factor);
-}
-
 /** 重置视图：局部视图恢复布局并适配画面，3D 视图回到球心。 */
 function fitCurrent() {
   if (ui.level === 'local') {
@@ -530,8 +524,6 @@ export function bindActions() {
   });
   el.dockClose.addEventListener('click', () => selectNode(null));
 
-  el.zoomIn.addEventListener('click', () => zoomBy(1.22));
-  el.zoomOut.addEventListener('click', () => zoomBy(1 / 1.22));
   el.zoomFit.addEventListener('click', fitCurrent);
 
   el.addRelBtn.addEventListener('click', () => {

@@ -50,18 +50,6 @@ export function applySphereCamera(animate = true) {
   center3DScene(animate, sphereRadius());
 }
 
-function hintFor(level) {
-  if (level === 'sphere') {
-    if (ui.sphereScope >= 3) {
-      return '拖动空白旋转 · 右键拖动平移 · 拖动节点移动 · 单击选中 · 双击展开课程 / 章节';
-    }
-    return ui.sphereScope === 2
-      ? '拖动空白旋转 · 右键拖动平移 · 拖动节点移动 · 单击选中 · 双击展开课程'
-      : '拖动空白旋转 · 右键拖动平移 · 拖动节点移动 · 单击选中 · 双击展开';
-  }
-  return '拖动空白旋转 · 右键拖动平移 · 拖动节点移动 · 滚轮缩放 · 双击下钻 / 打开笔记';
-}
-
 function closeMotionPanel() {
   if (!el.motionPanel) return;
   el.motionPanel.hidden = true;
@@ -166,7 +154,6 @@ export function syncNav() {
       level === 'sphere' ? '恢复标准图形与旋转，并清除手动拖动偏移' : '恢复当前视图的标准图形与位置'
     );
   }
-  if (el.hints) el.hints.textContent = hintFor(level);
   document.body.dataset.level = level;
   updateStats();
 }
