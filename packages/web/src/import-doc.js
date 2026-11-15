@@ -310,7 +310,10 @@ function joinPdfParts(parts) {
   let line = '';
   const sorted = [...parts].sort((a, b) => a.x - b.x);
   for (const part of sorted) {
-    const str = part.str;
+    // 幕布等工具导出的 PDF 偶尔把汉字拆成「康熙部首」码位（如 U+2F64 的「⽤」），
+    // 先做 NFKC 归一化，既还原成正常汉字，也让 CJK 拼接规则继续生效。
+    const raw = String(part.str || '');
+    const str = raw.normalize ? raw.normalize('NFKC') : raw;
     if (!str) continue;
     if (!line) {
       line = str;
