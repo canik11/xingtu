@@ -157,9 +157,19 @@ export function ambientState() {
 /* ---------------------- 等待页的循环背景音 ---------------------- */
 
 let waitBus = null;
+let waitTimer = 0;
+
+// 等待页的四个和弦（D 大调），每 7.5 秒滑过去一个，永远循环，没有接缝。
+const WAIT_CHORDS = [
+  [146.83, 220.0, 293.66, 369.99],
+  [123.47, 185.0, 246.94, 311.13],
+  [98.0, 146.83, 196.0, 246.94],
+  [110.0, 164.81, 220.0, 277.18]
+];
+const WAIT_LEVELS = [0.05, 0.038, 0.026, 0.018];
 
 /**
- * 点击进入之前铺在等待页下的一层循环音：四个低音持续振荡 + 各自的慢呼吸。
+ * 点击进入之前铺在等待页下的一层循环音：四个中音组成和弦，缓慢换和弦。
  * 用持续振荡器而不是采样循环，天然首尾无缝，不会听到接缝。
  */
 export function startWaitAmbience() {
@@ -169,47 +179,59 @@ export function startWaitAmbience() {
   const now = ctx.currentTime;
   const out = ctx.createGain();
   out.gain.value = 0.0001;
-  const nodes = [out, ...connectMix(out, { pan: 0, send: 0.55 })];
+  const nodes = [out, ...connectMix(out, { pan: 0, send: 0.62 })];
   const voices = [];
-  const spec = [
-    { f: 55.0, type: 'sine', level: 0.045, lfo: 0.041, depth: 0.012, pan: 0 },
-    { f: 73.42, type: 'sine', level: 0.036, lfo: 0.052, depth: 0.01, pan: -0.22 },
-    { f: 110.0, type: 'triangle', level: 0.022, lfo: 0.071, depth: 0.007, pan: 0.24 },
-    { f: 146.83, type: 'sine', level: 0.012, lfo: 0.093, depth: 0.005, pan: -0.1 }
-  ];
-  for (const s of spec) {
+  const oscs = [];
+  for (let i = 0; i < 4; i++) {
     const osc = ctx.createOscillator();
-    osc.type = s.type;
-    osc.frequency.value = s.f;
-    osc.detune.value = (Math.random() - 0.5) * 6;
+    osc.type = i < 2 ? 'triangle' : 'sine';
+    osc.frequency.value = WAIT_CHORDS[0][i];
+    osc.detune.value = (i - 1.5) * 3;
     const gain = ctx.createGain();
-    gain.gain.value = s.level;
+    gain.gain.value = WAIT_LEVELS[i];
     const lfo = ctx.createOscillator();
     lfo.type = 'sine';
-    lfo.frequency.value = s.lfo;
+    lfo.frequency.value = 0.06 + i * 0.023;
     const lfoGain = ctx.createGain();
-    lfoGain.gain.value = s.depth;
+    lfoGain.gain.value = WAIT_LEVELS[i] * 0.28;
     lfo.connect(lfoGain);
     lfoGain.connect(gain.gain);
     const pan = ctx.createStereoPanner();
-    pan.pan.value = s.pan;
+    pan.pan.value = (i - 1.5) * 0.28;
     osc.connect(gain);
     gain.connect(pan);
     pan.connect(out);
     osc.start();
     lfo.start();
+    oscs.push(osc);
     voices.push(osc, lfo, gain, lfoGain, pan);
   }
-  out.gain.setTargetAtTime(0.9, now + 0.04, 1.6);
+  out.gain.setTargetAtTime(0.9, now + 0.04, 1.2);
   waitBus = { ctx, out, nodes, voices };
+  // 和弦每 7.5 秒滑过去一个：持续音 + 长滑音，首尾天然无缝。
+  let chord = 0;
+  const advance = () => {
+    if (!waitBus) return;
+    chord = (chord + 1) % WAIT_CHORDS.length;
+    const t = ctx.currentTime + 0.05;
+    for (let i = 0; i < oscs.length; i++) {
+      try {
+        oscs[i].frequency.setTargetAtTime(WAIT_CHORDS[chord][i], t, 1.9);
+      } catch (err) {
+        /* 已断开 */
+      }
+    }
+    waitTimer = setTimeout(advance, 7500);
+  };
+  waitTimer = setTimeout(advance, 7500);
   return waitBus;
 }
-
 /** 收起等待页背景音：淡出后释放。 */
 export function stopWaitAmbience(fade = 0.7) {
   if (!waitBus) return;
   const bus = waitBus;
   waitBus = null;
+  clearTimeout(waitTimer);
   const now = bus.ctx.currentTime;
   bus.out.gain.cancelScheduledValues(now);
   bus.out.gain.setValueAtTime(Math.max(0.0001, bus.out.gain.value), now);
@@ -234,3 +256,4 @@ export function stopWaitAmbience(fade = 0.7) {
 export function waitAmbienceRunning() {
   return !!waitBus;
 }
+

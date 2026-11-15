@@ -84,25 +84,23 @@ export function introCharge(dur = 0.42) {
   sub({ freq: 42, endFreq: 58, dur: dur + 0.3, peak: 0.06, attack: dur * 0.9, send: 0.15 });
 }
 
-/** 超新星：三层气壳错开炸开，最后沉进余烬冷却的低鸣里。 */
+/** 星核爆开：明亮的中高频冲击 + 短促低音托底，不是一坨低频震动。 */
 export function introBlast() {
   if (!uiOn()) return;
-  // 第一层（白热）：主轰鸣 + 从高处扫下的气浪。
-  sub({ freq: 96, endFreq: 24, dur: 1.5, peak: 0.24, attack: 0.004, send: 0.25 });
-  noise({ dur: 1.3, peak: 0.12, attack: 0.008, type: 'bandpass', f0: 7600, f1: 180, q: 0.9, send: 0.72 });
-  whoosh({ from: 6800, to: 180, dur: 1.1, peak: 0.055, attack: 0.006, send: 0.6, q: 1.2 });
-  // 第二层（金）：0.32 秒后跟上，亮一点、近一点。
-  sub({ freq: 70, endFreq: 22, dur: 1.2, peak: 0.13, attack: 0.01, delay: 0.32, send: 0.22 });
-  noise({ dur: 1.1, peak: 0.06, attack: 0.02, type: 'bandpass', f0: 3600, f1: 220, q: 1.1, delay: 0.3, send: 0.6 });
-  // 第三层（蓝）：0.72 秒后，更冷、更远。
-  sub({ freq: 52, endFreq: 18, dur: 1.6, peak: 0.08, attack: 0.03, delay: 0.72, send: 0.2 });
-  // 钟声余韵：三声从光里浮出来。
-  [N.D3, N.A3, N.D4].forEach((freq, i) => {
-    bell(freq, { dur: 3.2, peak: 0.08, attack: 0.004, delay: i * 0.025, send: 0.8, bright: 1.0, spread: 0.7 });
+  // 第一下：白噪爆裂 + 镲片，先给耳朵一个亮的瞬时冲击（主要响度在这里）。
+  noise({ dur: 0.5, peak: 0.3, attack: 0.002, type: 'highpass', f0: 2400, f1: 900, q: 0.6, send: 0.32 });
+  noise({ dur: 0.34, peak: 0.22, attack: 0.003, type: 'bandpass', f0: 5200, f1: 1800, q: 0.7, send: 0.5 });
+  whoosh({ from: 6200, to: 900, dur: 0.42, peak: 0.09, attack: 0.004, send: 0.45, q: 0.9 });
+  // 低音只负责托一下，短促收住，不拖成轰隆。
+  sub({ freq: 92, endFreq: 46, dur: 0.34, peak: 0.12, attack: 0.004, send: 0.18 });
+  sub({ freq: 62, endFreq: 34, dur: 0.9, peak: 0.07, attack: 0.01, delay: 0.12, send: 0.16 });
+  // 钟声：音区抬到 D4/A4/D5，泛音更亮，像碎片撞在金属上。
+  [N.D4, N.A4, N.D5].forEach((freq, i) => {
+    bell(freq, { dur: 2.4, peak: 0.09, attack: 0.003, delay: i * 0.028, send: 0.82, bright: 1.35, spread: 0.6 });
   });
-  // 冷却：1.1 秒后一层慢慢降温的低鸣，接上余烬的视觉。
-  sub({ freq: 40, endFreq: 26, dur: 2.2, peak: 0.05, attack: 0.9, delay: 1.1, send: 0.18 });
-  sparkle({ count: 16, base: N.D5, spread: 2800, dur: 1.6, peak: 0.016, delay: 1.2, send: 0.7 });
+  // 尾音：一层慢慢降温的气流 + 高处星尘，收得干净。
+  noise({ dur: 1.7, peak: 0.045, attack: 0.06, type: 'lowpass', f0: 1400, f1: 220, q: 0.8, delay: 0.14, send: 0.55 });
+  sparkle({ count: 18, base: N.D6, spread: 2600, dur: 1.4, peak: 0.02, delay: 0.7, send: 0.7 });
 }
 
 /** 没能赶上自动播放时的柔和替代：星海苏醒。 */

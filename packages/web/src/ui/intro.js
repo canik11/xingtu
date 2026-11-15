@@ -1,4 +1,4 @@
-﻿// 开场动效：奇点呼吸 → 大爆炸 → 星空与星海从中心展开。
+// 开场动效：奇点呼吸 → 大爆炸 → 星空与星海从中心展开。
 // 纯 DOM canvas 覆盖层，WebGL 场景在爆炸瞬间由 scene/transition.js 接管遮罩。
 import { TAU } from '@starmap/core';
 
@@ -103,7 +103,7 @@ function spawnBurst() {
   const cx = w / 2;
   const cy = h / 2;
   particles = [];
-  for (let i = 0; i < 520; i++) {
+  for (let i = 0; i < 280; i++) {
     const a = Math.random() * TAU;
     // 速度 0.85~3.15 px/ms：爆开够快，中心不会被慢粒子堆成一团白点。
     const speed = 0.85 + Math.pow(Math.random(), 1.5) * 2.3;
@@ -132,11 +132,11 @@ const COOL = '226,238,255';
 function drawCore(age) {
   if (age > 700) return;
   const k = 1 - Math.min(1, age / 700);
-  const a = Math.pow(k, 1.5);
+  const a = Math.pow(k, 1.5) * 0.82;
   if (a <= 0.01) return;
   const cx = w / 2;
   const cy = h / 2;
-  const r = 90 + (1 - k) * 380;
+  const r = 80 + (1 - k) * 300;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
   g.addColorStop(0, `rgba(255,255,255,${a})`);
   g.addColorStop(0.16, `rgba(255,255,255,${a * 0.82})`);
@@ -153,14 +153,14 @@ function drawCore(age) {
 function drawRays(age) {
   const t = Math.min(1, age / 1500);
   if (t >= 1) return;
-  const alpha = Math.pow(1 - t, 1.3) * 0.5;
+  const alpha = Math.pow(1 - t, 1.3) * 0.2;
   if (alpha <= 0.01) return;
   const cx = w / 2;
   const cy = h / 2;
   const spin = age * 0.000045;
   const reach = Math.max(w, h);
-  for (let i = 0; i < 88; i++) {
-    const a = (i / 88) * TAU + spin;
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * TAU + spin;
     const vary = 0.55 + ((i * 37) % 100) / 160;
     const inner = 46 + (i % 6) * 14;
     const outer = inner + reach * 0.74 * Math.pow(t, 0.55) * vary;
@@ -186,14 +186,14 @@ function drawRays(age) {
 function drawStarBurst(age) {
   const t = Math.min(1, age / 1200);
   if (t >= 1) return;
-  const alpha = Math.pow(1 - t, 1.6) * 0.9;
+  const alpha = Math.pow(1 - t, 1.6) * 0.7;
   if (alpha <= 0.01) return;
   const cx = w / 2;
   const cy = h / 2;
   const reach = Math.max(w, h) * 0.72;
   const len = 200 + reach * Math.pow(t, 0.5);
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * TAU - Math.PI / 2;
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * TAU - Math.PI / 2;
     const long = i % 2 === 0;
     const sl = long ? len : len * 0.42;
     const spread = long ? 0.012 : 0.008;
@@ -238,18 +238,14 @@ function drawBeams(age) {
   band(false);
 }
 
-// 十道同心光环：不同延迟、速度、粗细与亮度，一层叠一层地涌出去。
+// 六道同心光环：不同延迟、速度、粗细与亮度，一层叠一层地涌出去。
 const RINGS = [
-  { delay: 0, dur: 800, w: 3.2, a: 0.95, k: 0.5 },
-  { delay: 50, dur: 950, w: 1.4, a: 0.8, k: 0.62 },
-  { delay: 110, dur: 1100, w: 2.2, a: 0.72, k: 0.72 },
-  { delay: 180, dur: 1250, w: 4.2, a: 0.6, k: 0.82 },
-  { delay: 270, dur: 1400, w: 1.2, a: 0.54, k: 0.92 },
-  { delay: 380, dur: 1550, w: 5.4, a: 0.46, k: 1.02 },
-  { delay: 520, dur: 1700, w: 1.6, a: 0.4, k: 1.12 },
-  { delay: 680, dur: 1850, w: 3.6, a: 0.34, k: 1.22 },
-  { delay: 880, dur: 2050, w: 1.1, a: 0.28, k: 1.32 },
-  { delay: 1100, dur: 2300, w: 2.6, a: 0.22, k: 1.42 }
+  { delay: 0, dur: 800, w: 2.6, a: 0.8, k: 0.5 },
+  { delay: 110, dur: 1100, w: 1.8, a: 0.6, k: 0.72 },
+  { delay: 270, dur: 1400, w: 1.2, a: 0.44, k: 0.92 },
+  { delay: 520, dur: 1700, w: 3.2, a: 0.34, k: 1.12 },
+  { delay: 880, dur: 2050, w: 1.2, a: 0.24, k: 1.32 },
+  { delay: 1100, dur: 2300, w: 2.2, a: 0.18, k: 1.42 }
 ];
 
 function drawRings(age, maxR) {
@@ -282,7 +278,7 @@ let sparks = [];
 function spawnSparks() {
   if (sparks.length) return;
   sparks = [];
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 44; i++) {
     const a = Math.random() * TAU;
     const r = 60 + Math.pow(Math.random(), 0.6) * 520;
     sparks.push({
@@ -321,7 +317,7 @@ function spawnEmbers() {
   const cx = w / 2;
   const cy = h / 2;
   embers = [];
-  for (let i = 0; i < 72; i++) {
+  for (let i = 0; i < 36; i++) {
     const a = Math.random() * TAU;
     const speed = 0.05 + Math.random() * 0.22;
     embers.push({
@@ -478,14 +474,13 @@ function frame(now) {
         drawCore(age);
         drawRays(age);
         drawStarBurst(age);
-        drawBeams(age);
         drawRings(age, maxR);
         drawParticles(dt, age);
         drawEmbers(dt, age);
         drawSparks(age);
         ctx.restore();
         // 最外侧光环与闪光点在 2.6 秒前淡尽、2.7 秒收场：星海露出后不留任何光点。
-        if (age > 2800) finish();
+        if (age > 2400) finish();
       }
     }
   } catch (err) {
@@ -587,3 +582,6 @@ export function destroyIntro() {
   prompt = null;
   if (node) node.remove();
 }
+
+
+
