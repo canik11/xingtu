@@ -151,7 +151,7 @@ export function syncNav() {
     el.spreadBtn.setAttribute('aria-pressed', 'false');
     el.spreadBtn.setAttribute(
       'aria-label',
-      level === 'sphere' ? '恢复标准图形与旋转，并清除手动拖动偏移' : '恢复当前视图的标准图形与位置'
+      level === 'sphere' ? '恢复当前形状与旋转，并清除手动拖动偏移' : '恢复当前视图的标准图形与位置'
     );
   }
   if (el.shapeBarList) {
@@ -358,11 +358,7 @@ export function bindNavigation() {
   }
   if (el.spreadBtn) {
     el.spreadBtn.addEventListener('click', () => {
-      // 「重置图形」同时恢复默认球形，避免用户找不到回到球形的方法。
-      if (ui.shape !== 'sphere') {
-        applyShape('sphere');
-        saveShape('sphere');
-      }
+      // 「重置图形」只把当前所选形状恢复成标准形态，不切回球形。
       setIdleModes({ rotate: true, breathe: false, puff: false });
       resetSphereShape();
       closeMotionPanel();
