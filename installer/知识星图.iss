@@ -1,10 +1,10 @@
 ; 知识星图安装包脚本（Inno Setup 6）
 ; 构建：powershell -File scripts\build-installer.ps1
-; 版本号由构建脚本通过 /DAppVersion=x.y.z 传入，默认 0.2.0。
+; 版本号由构建脚本通过 /DAppVersion=x.y.z 传入，默认 0.3.0。
 
 #define AppName "知识星图"
 #ifndef AppVersion
-  #define AppVersion "0.2.0"
+  #define AppVersion "0.3.0"
 #endif
 #define AppPublisher "canik"
 #define AppExeName "知识星图.exe"

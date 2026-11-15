@@ -1,6 +1,6 @@
 {
   "name": "@starmap/web",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "知识星图 Web 界面：星空画布、节点交互、幕布式笔记面板。",
