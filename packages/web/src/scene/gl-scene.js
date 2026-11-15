@@ -821,7 +821,7 @@ class WebGLScene {
         if (i === 0) g.moveTo(s.x, s.y);
         else g.lineTo(s.x, s.y);
       }
-      g.stroke({ width: 1.4, color: 0x9fc4ff, alpha: 0.42 * gain * weight });
+      g.stroke({ width: 1.8, color: 0xa9c9ff, alpha: 0.62 * gain * weight });
     }
   }
 

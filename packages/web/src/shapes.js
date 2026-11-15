@@ -12,13 +12,13 @@ const STORE_KEY = 'starmap.shape.v1';
 
 export const SHAPES = [
   { id: 'sphere', name: '球形', hint: '均匀铺满球面' },
-  { id: 'galaxy', name: '棒旋星系', hint: '棒状核心 + 两条旋臂 + 潮汐尾' },
+  { id: 'galaxy', name: '旋涡星云', hint: '倾斜的星盘上，两条旋臂从明亮的核心荡开' },
   { id: 'helix', name: 'DNA 双螺旋', hint: '两条主链盘旋上升，碱基对横档相连' },
-  { id: 'torus', name: '莫比乌斯环', hint: '扭转半圈的立体星带' },
+  { id: 'torus', name: '星环', hint: '起伏的环面上，节点沿管壁缠绕' },
   { id: 'lattice', name: '晶格', hint: '立方线框，节点沿棱生长' },
-  { id: 'tree', name: '知识树', hint: '主干向上分叉，知识点像枝叶生长' },
-  { id: 'wave', name: '波浪光带', hint: '一条在星海里起伏飘动的光带' },
-  { id: 'binary', name: '双星系统', hint: '两颗恒星拉起物质桥，节点沿 ∞ 轨道环绕' }
+  { id: 'tree', name: '知识树', hint: '递归分叉的立体生命树' },
+  { id: 'wave', name: '星波', hint: '四层错落的星环荡开涟漪' },
+  { id: 'binary', name: '双星系统', hint: '两颗恒星拉起物质桥，节点沿三维 8 字轨道环绕' }
 ];
 
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
@@ -57,19 +57,167 @@ function unitize(v) {
   return { x: v.x / len, y: v.y / len, z: v.z / len };
 }
 
-const BINARY_YAW = 0.5;
-const BINARY_TILT = 0.62;
+/** 二次贝塞尔取点：枝干弯曲靠它，直来直去会像扫帚。 */
+function quadAt(a, c, b, t) {
+  const it = 1 - t;
+  const w0 = it * it;
+  const w1 = 2 * it * t;
+  const w2 = t * t;
+  return {
+    x: a.x * w0 + c.x * w1 + b.x * w2,
+    y: a.y * w0 + c.y * w1 + b.y * w2,
+    z: a.z * w0 + c.z * w1 + b.z * w2
+  };
+}
 
-/** 双星系统的 ∞ 轨道：t 为极角，两个叶瓣一上一下，带回旋的 z 深度。 */
+/** 绕 Y 轴旋转，给多层圆环错开方位。 */
+function spinY(p, angle) {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return { x: p.x * c + p.z * s, y: p.y, z: -p.x * s + p.z * c };
+}
+
+// ——— 旋涡星云 ———
+// 一个倾斜的星系盘：盘面先绕 X 轴倾斜、再绕 Y 轴偏转，
+// 中心隆起成球状核球。投影里是带前后进深的椭圆盘，而不是贴屏的旋臂。
+const DISK_TILT = 1.02;
+const DISK_YAW = 0.42;
+const DISK_SPIN = 1.45;
+const DISK_R = 0.92;
+
+/** 盘面上的极坐标点：u 从 0（核心）到 1（外缘），arm 错开半圈成双臂。 */
+function diskAt(u, arm) {
+  const r = 0.12 + u * DISK_R;
+  const phi = u * TAU * DISK_SPIN + arm * Math.PI;
+  return spinY(
+    tiltX({ x: Math.cos(phi) * r, y: -0.02, z: Math.sin(phi) * r }, DISK_TILT),
+    DISK_YAW
+  );
+}
+
+/** 核心：一个略微压扁的小球，从任何角度看都有体积。 */
+function bulgeAt(i, count) {
+  const p = fibonacci(i, Math.max(1, count), 0.7);
+  const rad = 0.17;
+  return tiltX({ x: p.x * rad, y: p.y * rad - 0.03, z: p.z * rad }, DISK_TILT * 0.55);
+}
+
+// ——— 星环 ———
+// 真正的环面：主环半径上叠一圈起伏，节点沿管壁螺旋缠绕。
+const RING_R = 0.64;
+const RING_TUBE = 0.27;
+const RING_TILT = 0.95;
+
+function ringAt(u, v) {
+  const wave = Math.sin(u * 2) * 0.18;
+  const cr = RING_R + RING_TUBE * Math.cos(v);
+  return tiltX(
+    {
+      x: cr * Math.cos(u),
+      y: wave + RING_TUBE * Math.sin(v) * 0.92,
+      z: cr * Math.sin(u)
+    },
+    RING_TILT
+  );
+}
+
+// ——— 知识树 ———
+// 主干竖直，树冠收成一个球：27 个枝端均匀长在球面上，
+// 枝干分三层从主干向球面辐射。任何角度看都是一棵枝冠丰满的树，
+// 而不是向上摊平的一把扇子。世界 y 轴向下，“向上”取负号。
+const TREE_CROWN = { x: 0, y: -0.28, z: 0 };
+const TREE_LAYERS = [
+  { rad: 0.1, count: 3, phase: 0.4 },
+  { rad: 0.4, count: 9, phase: 1.2 },
+  { rad: 0.62, count: 27, phase: 2.0 }
+];
+
+let treeCache = null;
+
+/** 第 i 个枝端：黄金角球面点，按层取不同半径与相位。 */
+function crownPoint(i, layer) {
+  const p = fibonacci(i, layer.count, layer.phase);
+  const rad = layer.rad * (0.94 + jitter(i * 13 + layer.count, 29) * 0.12);
+  return { x: TREE_CROWN.x + p.x * rad, y: TREE_CROWN.y + p.y * rad, z: TREE_CROWN.z + p.z * rad };
+}
+
+/** 按层（BFS）顺序返回主干与全部枝段，节点先铺主干、再铺满整圈树冠。 */
+function treeBranches() {
+  if (treeCache) return treeCache;
+  const root = { x: 0, y: 0.9, z: 0 };
+  const fork = { x: 0.02, y: 0.36, z: 0.02 };
+  const trunk = { a: root, b: fork, c: { x: 0.05, y: 0.66, z: 0.03 }, level: 0, len: 0.54 };
+  const layers = [[], [], []];
+
+  const build = (base, depth, group) => {
+    const layer = TREE_LAYERS[depth];
+    for (let k = 0; k < 3; k++) {
+      const idx = group * 3 + k;
+      const tip = crownPoint(idx, layer);
+      const len = Math.hypot(tip.x - base.x, tip.y - base.y, tip.z - base.z);
+      // 控制点从树冠中心向外拱，枝条像从主干里长出来，而不是直连。
+      const dx = tip.x - TREE_CROWN.x;
+      const dy = tip.y - TREE_CROWN.y;
+      const dz = tip.z - TREE_CROWN.z;
+      const dl = Math.hypot(dx, dy, dz) || 1;
+      const bend = len * 0.2;
+      const center = {
+        x: (base.x + tip.x) / 2 + (dx / dl) * bend,
+        y: (base.y + tip.y) / 2 + (dy / dl) * bend,
+        z: (base.z + tip.z) / 2 + (dz / dl) * bend
+      };
+      layers[depth].push({ a: base, b: tip, c: center, level: depth + 1, len });
+      if (depth < 2) build(tip, depth + 1, idx);
+    }
+  };
+  build(fork, 0, 0);
+  treeCache = [trunk, ...layers[0], ...layers[1], ...layers[2]];
+  return treeCache;
+}
+
+/** 沿所有枝段按弧长取点，星尘才勾得出整棵树的轮廓。 */
+function treeAlong(f) {
+  const list = treeBranches();
+  let total = 0;
+  for (const br of list) total += br.len;
+  let want = Math.min(1, Math.max(0, f)) * total;
+  for (const br of list) {
+    if (want <= br.len) return quadAt(br.a, br.c, br.b, want / br.len);
+    want -= br.len;
+  }
+  const last = list[list.length - 1];
+  return last.b;
+}
+
+// ——— 星波 ———
+// 四层星环朝不同方向交织：近水平、近竖直、斜交、反竖直，
+// 从任何角度看都有环穿过视线，不会退化成叠在一起的扁椭圆。
+const RIPPLE_RINGS = [
+  { r: 0.42, y: -0.26, pitch: 0.3, yaw: 0.0, alpha: 0.62 },
+  { r: 0.66, y: -0.08, pitch: 1.28, yaw: 0.55, alpha: 0.55 },
+  { r: 0.9, y: 0.12, pitch: 0.62, yaw: 1.9, alpha: 0.48 },
+  { r: 1.14, y: 0.3, pitch: -1.16, yaw: 0.2, alpha: 0.42 }
+];
+
+function rippleAt(k, a) {
+  const ring = RIPPLE_RINGS[k];
+  const p = tiltX({ x: Math.cos(a) * ring.r, y: 0, z: Math.sin(a) * ring.r }, ring.pitch);
+  const q = spinY(p, ring.yaw);
+  return { x: q.x, y: q.y + ring.y + Math.sin(a * 3 + k) * 0.05, z: q.z };
+}
+
+// ——— 双星系统 ———
+const BINARY_YAW = 0.42;
+const BINARY_TILT = 0.5;
+
+/** 三维 8 字轨道：x/y 决定 ∞ 形，z 的 cos 让两片叶瓣一前一后。 */
 function binaryAt(t) {
-  const s = Math.sin(t);
-  const d = 1 + s * s;
-  const x0 = (0.94 * Math.cos(t)) / d;
-  const y0 = (0.94 * s * Math.cos(t)) / d;
-  const z0 = Math.sin(t * 2) * 0.12;
+  const x0 = 1.0 * Math.sin(t);
+  const y0 = 0.76 * Math.sin(2 * t);
+  const z0 = 0.5 * Math.cos(t);
   const c = Math.cos(BINARY_YAW);
   const sn = Math.sin(BINARY_YAW);
-  return tiltX({ x: x0 * c - y0 * sn, y: x0 * sn + y0 * c, z: z0 }, BINARY_TILT);
+  return tiltX({ x: x0 * c - z0 * sn, y: y0, z: x0 * sn + z0 * c }, BINARY_TILT);
 }
 
 /**
@@ -83,35 +231,20 @@ export function shapePoint(shape, i, count) {
   const n = Math.max(1, count);
   switch (shape) {
     case 'galaxy': {
-      // 棒旋星系：细长棒状核心、两条主旋臂、一条甩出去的潮汐尾。
-      const barCount = Math.max(1, Math.round(n * 0.18));
-      const tailCount = Math.max(1, Math.round(n * 0.18));
-      const armCount = Math.max(2, n - barCount - tailCount);
-      if (i < barCount) {
-        const u = (i + 0.5) / barCount;
-        const a = i * GOLDEN;
-        return tiltX(
-          { x: (u - 0.5) * 1.05, y: Math.cos(a) * 0.085, z: Math.sin(a) * 0.085 },
-          1.0
-        );
+      // 旋涡星云：大部分星尘沿两条螺旋臂铺开，其余聚成中心核球。
+      const armCount = Math.max(4, Math.round(n * 0.75));
+      if (i < armCount) {
+        const per = Math.max(1, Math.ceil(armCount / 2));
+        const u = (Math.floor(i / 2) + 0.5) / per;
+        const p = diskAt(Math.min(1, u), i % 2);
+        const spread = 0.015 + u * 0.04;
+        return {
+          x: p.x + (jitter(i, 7) - 0.5) * spread,
+          y: p.y + (jitter(i, 9) - 0.5) * spread,
+          z: p.z + (jitter(i, 11) - 0.5) * spread
+        };
       }
-      if (i >= n - tailCount) {
-        // 潮汐尾：从盘缘甩出去的一条长弧，打破“圆盘”的轮廓。
-        const u = (i - (n - tailCount) + 0.5) / tailCount;
-        const theta = 0.15 + u * 1.25;
-        const r = 0.92 + u * 0.85;
-        const y = (u - 0.5) * 0.2 + Math.sin(u * Math.PI) * 0.08;
-        return tiltX({ x: Math.cos(theta) * r, y, z: Math.sin(theta) * r }, 1.05);
-      }
-      const j = i - barCount;
-      const arm = j % 2;
-      const ring = Math.floor(j / 2);
-      const rings = Math.max(1, Math.ceil(armCount / 2));
-      const t = Math.min(1, (ring + 0.5) / rings);
-      const r = 0.2 + 0.92 * Math.pow(t, 0.72);
-      const theta = arm * Math.PI + r * 4.2 + (jitter(i, 7) - 0.5) * 0.3;
-      const thick = (jitter(i, 11) - 0.5) * (0.05 + Math.max(0, 1 - r / 0.42) * 0.4);
-      return tiltX({ x: Math.cos(theta) * r, y: thick, z: Math.sin(theta) * r }, 1.05);
+      return bulgeAt(i - armCount, n - armCount);
     }
     case 'helix': {
       // DNA：两条主链（占 2/3 点）+ 碱基对横档（占 1/3 点）。
@@ -144,17 +277,10 @@ export function shapePoint(shape, i, count) {
       };
     }
     case 'torus': {
-      // 莫比乌斯带：沿带宽方向扭转半圈，投影是倾斜的立体扭带而不是正圆环。
-      const theta = ((i + 0.5) / n) * TAU;
-      const u = (jitter(i, 5) - 0.5) * 2;
-      const R = 0.7;
-      const w = 0.24;
-      const twist = theta / 2;
-      const cr = R + w * u * Math.cos(twist);
-      return tiltX(
-        { x: cr * Math.cos(theta), y: w * u * Math.sin(twist), z: cr * Math.sin(theta) },
-        0.9
-      );
+      // 星环：星尘铺满整个环面，绕主环与绕管壁各取一个黄金角相位。
+      const u = ((i + 0.5) / n) * TAU;
+      const v = (i * GOLDEN + 0.7) % TAU;
+      return ringAt(u, v);
     }
     case 'lattice': {
       // 正方体线框：12 条棱上均匀采点，形成清晰的晶格骨架。
@@ -173,45 +299,24 @@ export function shapePoint(shape, i, count) {
       );
     }
     case 'tree': {
-      // 知识树：主干向上，三层枝杈向不同方位伸展，星尘沿枝干勾勒树形。
-      // 世界 y 轴在屏幕上是向下的，这里取负号让树冠朝上。
-      const trunk = Math.max(2, Math.round(n * 0.18));
-      if (i < trunk) {
-        const u = (i + 0.5) / trunk;
-        return {
-          x: Math.sin(u * 1.1) * 0.05,
-          y: 0.88 - u * 1.38,
-          z: Math.cos(u * 0.8) * 0.05
-        };
-      }
-      const j = i - trunk;
-      const layer = j % 3;
-      const dir = Math.floor(j / 3) % 3;
-      const k = Math.floor(j / 9);
-      const per = Math.max(1, Math.ceil((n - trunk) / 9));
-      const u = Math.min(1, (k + 0.5) / per);
-      const baseY = -0.05 + layer * 0.3;
-      const spread = 0.42 + layer * 0.22;
-      const angle = dir * (TAU / 3) + layer * 0.45;
-      const r = u * spread;
+      // 知识树：星尘沿主干与全部枝段按弧长铺开，整棵树的轮廓一目了然。
+      const p = treeAlong((i + 0.5) / n);
+      const k = 0.012;
       return {
-        x: Math.cos(angle) * r,
-        y: -(baseY + u * (0.3 + layer * 0.12) - u * u * 0.08),
-        z: Math.sin(angle) * r
+        x: p.x + (jitter(i, 5) - 0.5) * k,
+        y: p.y + (jitter(i, 7) - 0.5) * k,
+        z: p.z + (jitter(i, 9) - 0.5) * k
       };
     }
     case 'wave': {
-      // 立体星波：一条沿 x 轴起伏的光带，投影是清晰的 S 形波浪，
-      // 带宽很薄，节点多时也不会糊成一团云。
-      const u = (i + 0.5) / n;
-      const band = (jitter(i, 3) - 0.5) * 2;
-      const x = (u - 0.5) * 2.15;
-      const y = Math.sin(u * TAU * 1.12) * 0.62 + band * 0.05;
-      const z = band * 0.1 + Math.cos(u * TAU * 0.9) * 0.2;
-      return { x, y, z };
+      // 星波：四层环平分星尘，每层再均匀铺一圈。
+      const k = i % RIPPLE_RINGS.length;
+      const per = Math.max(1, Math.ceil(n / RIPPLE_RINGS.length));
+      const a = ((Math.floor(i / RIPPLE_RINGS.length) + 0.5) / per) * TAU;
+      return rippleAt(k, a);
     }
     case 'binary': {
-      // 双星系统：星尘沿 ∞ 轨道流动，两个叶瓣在镜头里一上一下。
+      // 双星系统：星尘沿三维 8 字轨道流动，两片叶瓣一前一后。
       return binaryAt(((i + 0.5) / n) * TAU);
     }
     case 'sphere':
@@ -228,13 +333,10 @@ export function shapePath(shape, t) {
   const u = Math.min(1, Math.max(0, t));
   switch (shape) {
     case 'galaxy': {
-      // 两条旋臂轮流承载整棵树，走完一条再走另一条。
+      // 前半程沿臂 A 从核心荡到外缘，后半程沿臂 B 荡回核心。
       const arm = u < 0.5 ? 0 : 1;
-      const s = u < 0.5 ? u * 2 : (u - 0.5) * 2;
-      const r = 0.2 + 0.92 * Math.pow(s, 0.78);
-      const theta = arm * Math.PI + r * 4.2;
-      const thick = Math.sin(s * Math.PI) * 0.05;
-      return tiltX({ x: Math.cos(theta) * r, y: thick, z: Math.sin(theta) * r }, 1.05);
+      const s = u < 0.5 ? u * 2 : (1 - u) * 2;
+      return diskAt(s, arm);
     }
     case 'helix': {
       // 前半程走链 A 由下到上，后半程走链 B 由上到下，形成完整的双链环。
@@ -244,9 +346,8 @@ export function shapePath(shape, t) {
       return { x: Math.cos(theta) * 0.5, y: (s - 0.5) * 1.72, z: Math.sin(theta) * 0.5 };
     }
     case 'torus': {
-      // 沿莫比乌斯带中线走一圈（中线不扭，仍是一条倾斜的环）。
-      const theta = u * TAU;
-      return tiltX({ x: Math.cos(theta) * 0.7, y: 0, z: Math.sin(theta) * 0.7 }, 0.9);
+      // 节点沿主环走一圈，只在管壁上小幅起伏：环面清楚，又不会绕成毛线球。
+      return ringAt(u * TAU, Math.sin(u * TAU * 2 + 0.6) * 0.55);
     }
     case 'lattice': {
       // 沿 12 条棱串行，走完整个立方线框。
@@ -263,39 +364,20 @@ export function shapePath(shape, t) {
       );
     }
     case 'tree': {
-      // 前 18% 走主干，后 82% 依次走过 9 根枝杈。
-      if (u < 0.18) {
-        const s = u / 0.18;
-        return {
-          x: Math.sin(s * 1.1) * 0.05,
-          y: 0.88 - s * 1.38,
-          z: Math.cos(s * 0.8) * 0.05
-        };
-      }
-      const s = (u - 0.18) / 0.82;
-      const seg = Math.min(8, Math.floor(s * 9));
-      const f = Math.min(1, Math.max(0, s * 9 - seg));
-      const layer = seg % 3;
-      const dir = Math.floor(seg / 3);
-      const baseY = -0.05 + layer * 0.3;
-      const spread = 0.42 + layer * 0.22;
-      const angle = dir * (TAU / 3) + layer * 0.45;
-      const r = f * spread;
-      return {
-        x: Math.cos(angle) * r,
-        y: -(baseY + f * (0.3 + layer * 0.12) - f * f * 0.08),
-        z: Math.sin(angle) * r
-      };
+      // 按 DFS 顺序遍历主干与每一根枝段，节点依次落在枝条上。
+      const list = treeBranches();
+      const s = u * list.length;
+      const k = Math.min(list.length - 1, Math.floor(s));
+      const br = list[k];
+      return quadAt(br.a, br.c, br.b, Math.min(1, s - k));
     }
     case 'wave': {
-      // 沿光带中线从一端走到另一端。
-      const x = (u - 0.5) * 2.15;
-      const y = Math.sin(u * TAU * 1.12) * 0.62;
-      const z = Math.cos(u * TAU * 0.9) * 0.2;
-      return { x, y, z };
+      // 每四分之一程绕完一层环，整条路径是一级级向外荡开的涟漪。
+      const k = Math.min(RIPPLE_RINGS.length - 1, Math.floor(u * RIPPLE_RINGS.length));
+      return rippleAt(k, (u * RIPPLE_RINGS.length - k) * TAU);
     }
     case 'binary':
-      // 沿 ∞ 轨道走完整一圈，两个叶瓣各承载一部分节点。
+      // 沿三维 8 字轨道走完整一圈，两片叶瓣各承载一部分节点。
       return binaryAt(u * TAU);
     case 'sphere':
     default:
@@ -319,29 +401,37 @@ export function shapeTangent(shape, t) {
  */
 export function shapeSkeleton(shape, detail = 90) {
   const lines = [];
-  const line = (fn, count = detail) => {
+  const line = (fn, count = detail, alpha) => {
     const pts = [];
     for (let i = 0; i <= count; i++) pts.push(fn(i / count));
-    lines.push(pts);
+    lines.push(alpha == null ? pts : { pts, alpha });
   };
   switch (shape) {
     case 'galaxy': {
-      // 两条旋臂
-      for (let arm = 0; arm < 2; arm++) {
-        line((t) => {
-          const r = 0.2 + 0.92 * Math.pow(t, 0.72);
-          const theta = arm * Math.PI + r * 4.2;
-          return tiltX({ x: Math.cos(theta) * r, y: 0, z: Math.sin(theta) * r }, 1.05);
-        });
+      // 两条螺旋臂，画亮一点，从关系线里也能看清
+      for (let arm = 0; arm < 2; arm++) line((t) => diskAt(t, arm), 160, 0.9);
+      // 盘外缘：星系的椭圆轮廓
+      line(
+        (t) =>
+          spinY(
+            tiltX({ x: Math.cos(t * TAU) * 1.04, y: -0.02, z: Math.sin(t * TAU) * 1.04 }, DISK_TILT),
+            DISK_YAW
+          ),
+        80,
+        0.4
+      );
+      // 核球：三个不同朝向的小环，中心有一团体积
+      for (const ang of [0.4, 1.2, 2.0]) {
+        line(
+          (t) => {
+            const a = t * TAU;
+            const p = tiltX({ x: Math.cos(a) * 0.17, y: Math.sin(a) * 0.17, z: 0 }, ang);
+            return { x: p.x, y: p.y - 0.03, z: p.z };
+          },
+          30,
+          0.5
+        );
       }
-      // 棒状核心
-      line((t) => tiltX({ x: (t - 0.5) * 1.05, y: 0, z: 0 }, 1.0), 12);
-      // 潮汐尾
-      line((t) => {
-        const theta = 0.15 + t * 1.25;
-        const r = 0.92 + t * 0.85;
-        return tiltX({ x: Math.cos(theta) * r, y: (t - 0.5) * 0.2, z: Math.sin(theta) * r }, 1.05);
-      }, 40);
       break;
     }
     case 'helix': {
@@ -369,21 +459,12 @@ export function shapeSkeleton(shape, detail = 90) {
       break;
     }
     case 'torus': {
-      const R = 0.7;
-      const w = 0.24;
-      const at = (theta, u) => {
-        const cr = R + w * u * Math.cos(theta / 2);
-        return tiltX(
-          { x: cr * Math.cos(theta), y: w * u * Math.sin(theta / 2), z: cr * Math.sin(theta) },
-          0.9
-        );
-      };
-      // 莫比乌斯带的两条边缘 + 中线
-      for (const u of [-1, 0, 1]) line((t) => at(t * TAU, u));
-      // 横向肋线：让“扭转半圈”的带面一眼可见
-      for (let k = 0; k < 12; k++) {
-        const theta = ((k + 0.5) / 12) * TAU;
-        lines.push({ pts: [at(theta, -1), at(theta, 0), at(theta, 1)], alpha: 0.5 });
+      // 外缘与内缘两条主环，勾出甜甜圈的轮廓
+      for (const v of [0, Math.PI]) line((t) => ringAt(t * TAU, v));
+      // 六道经线：每道绕管壁一圈，环面的厚度与孔洞一眼可见
+      for (let k = 0; k < 6; k++) {
+        const u = ((k + 0.5) / 6) * TAU;
+        line((t) => ringAt(u, t * TAU), 16, 0.42);
       }
       break;
     }
@@ -396,67 +477,88 @@ export function shapeSkeleton(shape, detail = 90) {
       }
       break;
     case 'tree': {
-      // 主干（屏幕坐标里 y 向下，取负让树冠朝上）
-      line((t) => ({
-        x: Math.sin(t * 1.1) * 0.05,
-        y: 0.88 - t * 1.38,
-        z: Math.cos(t * 0.8) * 0.05
-      }), 24);
-      // 三层枝杈，每层三根，向不同方位伸展
-      for (let layer = 0; layer < 3; layer++) {
-        for (let dir = 0; dir < 3; dir++) {
-          const baseY = -0.05 + layer * 0.3;
-          const spread = 0.42 + layer * 0.22;
-          const angle = dir * (TAU / 3) + layer * 0.45;
-          line((t) => {
-            const r = t * spread;
-            return {
-              x: Math.cos(angle) * r,
-              y: -(baseY + t * (0.3 + layer * 0.12) - t * t * 0.08),
-              z: Math.sin(angle) * r
-            };
-          }, 14);
+      const list = treeBranches();
+      const trunk = list[0];
+      // 主干画两条带锥度的并线：根粗梢细，树才站得住
+      for (const sign of [-1, 1]) {
+        line(
+          (t) => {
+            const p = quadAt(trunk.a, trunk.c, trunk.b, t);
+            const off = sign * (0.048 - t * 0.032);
+            return { x: p.x + off, y: p.y, z: p.z + off * 0.6 };
+          },
+          26
+        );
+      }
+      // 全部枝段，逐层变细变淡；主枝画双线，枝干才显粗壮
+      for (const br of list.slice(1)) {
+        const alpha = br.level === 1 ? 1 : br.level === 2 ? 0.85 : 0.62;
+        const count = br.level === 3 ? 8 : 12;
+        if (br.level <= 2) {
+          for (const off of [-0.014, 0.014]) {
+            line(
+              (t) => {
+                const p = quadAt(br.a, br.c, br.b, t);
+                return { x: p.x + off, y: p.y, z: p.z + off * 0.5 };
+              },
+              count,
+              alpha
+            );
+          }
+        } else {
+          line((t) => quadAt(br.a, br.c, br.b, t), count, alpha);
         }
       }
-      // 树根
-      lines.push([{ x: 0, y: 0.88, z: 0 }, { x: -0.3, y: 0.98, z: 0.12 }]);
-      lines.push([{ x: 0, y: 0.88, z: 0 }, { x: 0.3, y: 0.98, z: -0.12 }]);
+      // 根系：四条向外下方伸的短弧
+      const root = trunk.a;
+      const tips = [
+        { x: 0.17, y: root.y + 0.07, z: 0.04 },
+        { x: -0.16, y: root.y + 0.09, z: 0.06 },
+        { x: 0.05, y: root.y + 0.1, z: -0.14 },
+        { x: -0.06, y: root.y + 0.08, z: 0.16 }
+      ];
+      for (const tip of tips) {
+        const ctrl = { x: tip.x * 0.45, y: root.y + 0.02, z: tip.z * 0.45 };
+        line((t) => quadAt(root, ctrl, tip, t), 10, 0.3);
+      }
       break;
     }
     case 'wave': {
-      // 光带的三条纵向轮廓线 + 两端横档，整体像一条起伏的飘带。
-      for (const band of [-1, 0, 1]) {
-        line((t) => {
-          const x = (t - 0.5) * 2.15;
-          const y = Math.sin(t * TAU * 1.12) * 0.62 + band * 0.05;
-          const z = band * 0.1 + Math.cos(t * TAU * 0.9) * 0.2;
-          return { x, y, z };
-        });
+      // 四层倾斜的环，半径、高度、倾角、方位各自错开
+      for (let k = 0; k < RIPPLE_RINGS.length; k++) {
+        line((t) => rippleAt(k, t * TAU), 100, RIPPLE_RINGS[k].alpha);
       }
-      for (const t of [0, 1]) {
-        const x = (t - 0.5) * 2.15;
-        const y = Math.sin(t * TAU * 1.12) * 0.62;
-        const z = Math.cos(t * TAU * 0.9) * 0.2;
-        lines.push([
-          { x, y: y - 0.05, z: z - 0.1 },
-          { x, y: y + 0.05, z: z + 0.1 }
-        ]);
+      // 波心：中心一点小小的涟漪环
+      const core = [];
+      for (let i = 0; i <= 24; i++) {
+        const a = (i / 24) * TAU;
+        core.push({ x: Math.cos(a) * 0.07, y: 0.02, z: Math.sin(a) * 0.07 });
       }
+      lines.push({ pts: core, alpha: 0.5 });
       break;
     }
     case 'binary': {
-      // ∞ 轨道本体
+      // 三维 8 字轨道本体
       line((t) => binaryAt(t * TAU), 160);
-      // 两颗主星：分别在两个叶瓣中心画一圈淡淡的光环。
+      // 两颗主星：x 轴两端各带一个倾斜光环
       for (const side of [-1, 1]) {
-        const c = binaryAt(side < 0 ? Math.PI : 0);
+        const c = binaryAt(side < 0 ? Math.PI / 2 : (3 * Math.PI) / 2);
         const ring = [];
-        for (let i = 0; i <= 30; i++) {
-          const a = (i / 30) * TAU;
-          ring.push({ x: c.x + Math.cos(a) * 0.15, y: c.y + Math.sin(a) * 0.15, z: c.z });
+        for (let i = 0; i <= 40; i++) {
+          const a = (i / 40) * TAU;
+          const p = tiltX(
+            { x: Math.cos(a) * 0.16, y: 0, z: Math.sin(a) * 0.16 },
+            BINARY_TILT + side * 0.35
+          );
+          ring.push({ x: c.x + p.x, y: c.y + p.y, z: c.z + p.z });
         }
-        lines.push({ pts: ring, alpha: 0.7 });
+        lines.push({ pts: ring, alpha: 0.75 });
       }
+      // 物质桥：两星之间越过中心上方的一条弧
+      const a = binaryAt(Math.PI / 2);
+      const b = binaryAt((3 * Math.PI) / 2);
+      const ctrl = tiltX(spinY({ x: 0, y: 0.9, z: 0 }, BINARY_YAW), BINARY_TILT);
+      line((t) => quadAt(a, ctrl, b, t), 40, 0.4);
       break;
     }
     case 'sphere':
@@ -491,15 +593,15 @@ function planeDir(angle, dir, tangent = 1.3, normal = 0) {
 export function shapeCloudDir(shape, dir) {
   switch (shape) {
     case 'galaxy':
-      return planeDir(1.05, dir, 1.2, 0.05);
+      return planeDir(DISK_TILT, dir, 1.15, 0.28);
     case 'helix':
       return { x: dir.x * 0.7, y: dir.y * 1.1, z: dir.z * 0.7 };
     case 'torus':
-      return planeDir(0.9, dir, 1.0, 0.25);
+      return planeDir(0.95, dir, 1.0, 0.3);
     case 'wave':
-      return { x: dir.x * 1.5, y: dir.y * 1.25, z: dir.z * 0.55 };
+      return { x: dir.x * 1.6, y: dir.y * 0.8, z: dir.z * 1.6 };
     case 'tree':
-      return { x: dir.x * 1.05, y: dir.y * 1.2, z: dir.z * 1.05 };
+      return { x: dir.x * 1.05, y: dir.y * 1.25, z: dir.z * 1.05 };
     case 'binary':
       return dir;
     case 'lattice':
