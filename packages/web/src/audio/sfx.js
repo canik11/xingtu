@@ -80,26 +80,39 @@ export function introCharge(dur = 0.42) {
   });
 }
 
-/** 星核绽放：五声琶音从中心漾开，钟声 + 一层轻气流 + 星尘收尾。 */
+/** 星核绽放：一段四秒的小曲——和声长音铺底，钟琴旋律上行，最后落在 D 大三和弦。 */
 export function introBlast() {
   if (!uiOn()) return;
-  // 五声琶音：D4 F#4 A4 D5 F#5，越往上越轻，和切换形状、点亮节点的音色同源。
-  const notes = [N.D4, N.Fs4, N.A4, N.D5, N.Fs5];
-  notes.forEach((freq, i) => {
-    bell(freq, {
-      dur: 2.2,
-      peak: 0.095 - i * 0.008,
-      attack: 0.004,
-      delay: i * 0.045,
-      send: 0.82,
-      bright: 1.2,
-      spread: 0.55
+  // 和声：D 大三和弦的钟琴长音，分在左右两侧轻轻铺开。
+  [N.D4, N.Fs4, N.A4].forEach((freq, i) => {
+    tone({
+      freq,
+      type: 'sine',
+      dur: 3.8,
+      peak: 0.045,
+      attack: 0.02,
+      pan: (i - 1) * 0.32,
+      send: 0.82
     });
   });
-  // 一层很轻的气流把声音送开，不用噪声爆裂。
-  noise({ dur: 0.9, peak: 0.028, attack: 0.02, type: 'bandpass', f0: 2600, f1: 900, q: 0.8, send: 0.6 });
-  // 高处星尘收尾。
-  sparkle({ count: 14, base: N.D6, spread: 2200, dur: 1.2, peak: 0.016, delay: 0.45, send: 0.7 });
+  // 旋律：D5 → F#5 → A5 → B5 → D6，每 160ms 一颗，像星尘被一串串点亮。
+  const melody = [N.D5, N.Fs5, N.A5, N.B5, N.D6];
+  melody.forEach((freq, i) => {
+    bell(freq, {
+      dur: 1.7,
+      peak: 0.075 - i * 0.004,
+      attack: 0.003,
+      delay: 0.05 + i * 0.16,
+      send: 0.85,
+      bright: 1.15,
+      spread: 0.5
+    });
+  });
+  // 收束：D 大三和弦齐鸣，把所有音收在同一个和声里。
+  [N.D4, N.A4, N.D5].forEach((freq) => {
+    bell(freq, { dur: 2.6, peak: 0.055, attack: 0.004, delay: 1.05, send: 0.85, bright: 1.0, spread: 0.45 });
+  });
+  sparkle({ count: 10, base: N.D6, spread: 1800, dur: 1.5, peak: 0.013, delay: 1.25, send: 0.7 });
 }
 
 /** 没能赶上自动播放时的柔和替代：星海苏醒。 */

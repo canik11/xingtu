@@ -1,4 +1,4 @@
-// 开场动效：奇点呼吸 → 大爆炸 → 星空与星海从中心展开。
+﻿// 开场动效：奇点呼吸 → 大爆炸 → 星空与星海从中心展开。
 // 纯 DOM canvas 覆盖层，WebGL 场景在爆炸瞬间由 scene/transition.js 接管遮罩。
 import { TAU } from '@starmap/core';
 
@@ -473,7 +473,7 @@ function frame(now) {
         drawParticles(dt, age);
         ctx.restore();
         // 最外侧光环与闪光点在 2.6 秒前淡尽、2.7 秒收场：星海露出后不留任何光点。
-        if (age > 1800) finish();
+        if (age > 2400) finish();
       }
     }
   } catch (err) {
@@ -575,6 +575,7 @@ export function destroyIntro() {
   prompt = null;
   if (node) node.remove();
 }
+
 
 
 
