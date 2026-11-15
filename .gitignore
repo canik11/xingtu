@@ -10,6 +10,9 @@ packaging/*.zip
 packaging/*.png
 packaging/_verify*.mjs
 
+# 本机构建工具（Inno Setup 编译器与下载缓存）
+tools/
+
 # 本机私有知识库，不进入公开仓库
 private_knowledge_data/
 
