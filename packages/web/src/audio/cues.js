@@ -78,8 +78,9 @@ function syncAmbient() {
 /* ------------------------------ 开场 ------------------------------ */
 
 /**
- * 在等待页开始时调用：星海低鸣 + 稀疏星铃，让黑幕不安静。
- * 若音频尚未解锁，声音会被引擎静默丢弃，不会报错。
+ * 开场开始时调用：只登记开场状态，等待页不再额外铺一层长音
+ * （点击后立刻爆炸，等待音会盖住爆炸）。
+ * 若音频尚未解锁，后续音效会被引擎静默丢弃，不会报错。
  */
 export function introSoundStart() {
   introStarted = true;
@@ -90,7 +91,6 @@ export function introSoundStart() {
   wakeTimer = setTimeout(() => {
     introDone = true;
   }, 3200);
-  sfx.introWait(2.4);
 }
 
 /** 等待页结束、奇点收紧时调用（紧接在爆炸之前）。 */
