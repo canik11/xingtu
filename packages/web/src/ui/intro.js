@@ -89,12 +89,14 @@ function spawnBurst() {
   particles = [];
   for (let i = 0; i < count; i++) {
     const a = Math.random() * TAU;
-    const speed = 0.1 + Math.pow(Math.random(), 1.75) * 1.55;
+    const speed = 0.28 + Math.pow(Math.random(), 1.4) * 1.5;
     // 一点扁平的盘状偏好，让爆发像星盘张开而不是均匀球壳。
     const flatten = 0.55 + Math.random() * 0.65;
+    // 从中心外一圈起步，避免慢速粒子在正中间堆成一团白点。
+    const r0 = 30 + Math.random() * 46;
     particles.push({
-      x: cx + Math.cos(a) * Math.random() * 8,
-      y: cy + Math.sin(a) * Math.random() * 8,
+      x: cx + Math.cos(a) * r0,
+      y: cy + Math.sin(a) * r0 * 0.9,
       vx: Math.cos(a) * speed * flatten,
       vy: Math.sin(a) * speed * 0.9,
       life: 0,
@@ -111,13 +113,13 @@ function drawBlast(now, age, cx, cy) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
-  // 冲击波：三圈由快到慢散开。
+  // 冲击波：三圈由快到慢散开（只留极细的淡环，不再有中心爆闪）。
   for (let i = 0; i < 3; i++) {
     const t = (age - i * 90) / (860 + i * 240);
     if (t < 0 || t > 1) continue;
-    const r = 18 + Math.pow(t, 0.52) * (Math.max(w, h) * 0.62);
-    ctx.strokeStyle = `rgba(202,226,255,${(1 - t) * 0.32})`;
-    ctx.lineWidth = 2.6 * (1 - t) + 0.6;
+    const r = 60 + Math.pow(t, 0.52) * (Math.max(w, h) * 0.62);
+    ctx.strokeStyle = `rgba(202,226,255,${(1 - t) * 0.14})`;
+    ctx.lineWidth = 1.6 * (1 - t) + 0.4;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, TAU);
     ctx.stroke();
@@ -148,30 +150,6 @@ function drawBlast(now, age, cx, cy) {
     ctx.fill();
   }
 
-  // 中心闪光 + 放射星芒。
-  const flash = Math.exp(-Math.pow(age / 240, 2)) * 0.92;
-  if (flash > 0.003) {
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(w, h) * 0.72);
-    g.addColorStop(0, `rgba(255,255,255,${flash})`);
-    g.addColorStop(0.16, `rgba(214,232,255,${flash * 0.72})`);
-    g.addColorStop(0.52, `rgba(128,170,255,${flash * 0.2})`);
-    g.addColorStop(1, 'rgba(40,70,160,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-  }
-  const spike = Math.exp(-Math.pow(age / 420, 2));
-  if (spike > 0.01) {
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * TAU + 0.2;
-      const len = 30 + spike * 190;
-      ctx.strokeStyle = `rgba(235,245,255,${spike * 0.5})`;
-      ctx.lineWidth = 1.4;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(a) * 10, cy + Math.sin(a) * 10);
-      ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len);
-      ctx.stroke();
-    }
-  }
   ctx.restore();
 }
 
