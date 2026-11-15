@@ -2,8 +2,6 @@
 import { el } from '../lib/dom.js';
 import { getOutline } from '../outline.js';
 import { quality, resetQuality, setQuality } from '../quality.js';
-import { SHAPES, shapeIcon, shapeId, shapeInfo } from '../shapes.js';
-import { applyShapeForUser } from '../navigation.js';
 import {
   appearanceConfig,
   appearanceColors,
@@ -200,39 +198,11 @@ function renderCourses() {
   }
 }
 
-function renderShapes() {
-  const current = shapeId();
-  el.appearanceShapes.replaceChildren();
-  for (const shape of SHAPES) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'appearance-shape';
-    button.dataset.shape = shape.id;
-    button.title = shape.hint;
-    button.setAttribute('aria-pressed', shape.id === current ? 'true' : 'false');
-    const icon = document.createElement('span');
-    icon.className = 'appearance-shape-icon';
-    icon.innerHTML = shapeIcon(shape.id);
-    const name = document.createElement('span');
-    name.className = 'appearance-shape-name';
-    name.textContent = shape.name;
-    button.append(icon, name);
-    el.appearanceShapes.appendChild(button);
-  }
-  syncShapeHint(current);
-}
-
-function syncShapeHint(id = shapeId()) {
-  if (!el.appearanceShapeHint) return;
-  el.appearanceShapeHint.textContent = `当前：${shapeInfo(id).name} · ${shapeInfo(id).hint}`;
-}
-
 function renderAll() {
   ensureAppearance();
   syncColorUi();
   syncScaleUi();
   syncQualityUi();
-  renderShapes();
   renderCourses();
 }
 
@@ -325,13 +295,6 @@ export function bindAppearance() {
     if (!button) return;
     clearCourseAppearance(button.dataset.resetCourse);
     renderCourses();
-  });
-
-  el.appearanceShapes.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-shape]');
-    if (!button || !button.dataset.shape) return;
-    applyShapeForUser(button.dataset.shape);
-    renderShapes();
   });
 
   el.appearanceReset.addEventListener('click', () => {

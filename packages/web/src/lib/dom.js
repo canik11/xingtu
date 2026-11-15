@@ -39,6 +39,11 @@ export function cacheDom() {
   el.menuDelete = $id('menuDelete');
   el.moreWrap = $id('moreWrap');
   el.zoomFit = $id('zoomFit');
+  el.shapeBar = $id('shapeBar');
+  el.shapeBarToggle = $id('shapeBarToggle');
+  el.shapeBarBody = $id('shapeBarBody');
+  el.shapeBarList = $id('shapeBarList');
+  el.shapeBarHint = $id('shapeBarHint');
   el.dock = $id('dock');
   el.dockName = $id('dockName');
   el.dockMeta = $id('dockMeta');
@@ -86,8 +91,6 @@ export function cacheDom() {
   el.rewardLayer = $id('rewardLayer');
   el.rewardDone = $id('rewardDone');
   el.appearanceCourses = $id('appearanceCourses');
-  el.appearanceShapes = $id('appearanceShapes');
-  el.appearanceShapeHint = $id('appearanceShapeHint');
   el.appearanceReset = $id('appearanceReset');
   el.appearanceDone = $id('appearanceDone');
   el.qualityMaxScale = $id('qualityMaxScale');

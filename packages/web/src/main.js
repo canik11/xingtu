@@ -25,6 +25,7 @@ import { appearanceConfig, edgeIsMastered, toggleMastery } from './mastery.js';
 import { bindAddModal } from './ui/add-modal.js';
 import { bindConfirm } from './ui/confirm.js';
 import { bindAppearance } from './ui/appearance.js';
+import { bindShapeBar } from './ui/shape-bar.js';
 import { bindGlobalDoc } from './ui/global-doc.js';
 import { showFatal, toast } from './ui/feedback.js';
 import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath } from './kb-path.js';
@@ -152,6 +153,7 @@ async function boot() {
   bindGlobalDoc();
   bindActions();
   bindNavigation();
+  bindShapeBar();
   onQualityChange((q) => {
     setMaxScale(q.three.maxScale);
     resizeCanvas();

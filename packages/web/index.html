@@ -91,6 +91,17 @@
       <div class="search-results" id="searchResults" role="listbox" aria-label="搜索结果"></div>
     </div>
 
+    <aside class="shape-bar" id="shapeBar" data-collapsed="0" aria-label="星海形状">
+      <button class="shape-bar-toggle" id="shapeBarToggle" type="button" aria-expanded="true" aria-controls="shapeBarBody" title="收起星海形状">
+        <span class="shape-bar-chevron" aria-hidden="true"></span>
+        <span class="shape-bar-title">星海形状</span>
+      </button>
+      <div class="shape-bar-body" id="shapeBarBody">
+        <div class="shape-bar-list" id="shapeBarList" role="group" aria-label="星海形状"></div>
+        <p class="shape-bar-hint" id="shapeBarHint">当前：球形 · 均匀铺满球面</p>
+      </div>
+    </aside>
+
     <div class="zoom">
       <button id="zoomFit" type="button" aria-label="重置视图" title="重置视图">
         <svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"></path></svg>
@@ -231,14 +242,6 @@
               <output class="appearance-slider-value" id="qualityAmbientValue" for="qualityAmbient">100%</output>
             </label>
             <p class="field-note">倍率越高越清晰、越吃显卡；像素预算限制单帧总像素，低配设备可调小。</p>
-          </section>
-          <section class="appearance-section">
-            <div class="appearance-section-head">
-              <h3>星海形状</h3>
-              <span class="field-note">课程与章节会一起变形，可随时切回球形</span>
-            </div>
-            <div class="appearance-shapes" id="appearanceShapes" role="group" aria-label="星海形状"></div>
-            <p class="field-note" id="appearanceShapeHint">球形的知识星图。</p>
           </section>
           <section class="appearance-section">
             <div class="appearance-section-head">
