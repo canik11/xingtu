@@ -1,7 +1,9 @@
-// 外观设置弹窗：画质参数 + 全局默认色/掌握色与按课程覆盖。
+// 外观设置弹窗：星海形状 + 画质参数 + 全局默认色/掌握色与按课程覆盖。
 import { el } from '../lib/dom.js';
 import { getOutline } from '../outline.js';
 import { quality, resetQuality, setQuality } from '../quality.js';
+import { SHAPES, shapeIcon, shapeId, shapeInfo } from '../shapes.js';
+import { applyShapeForUser } from '../navigation.js';
 import {
   appearanceConfig,
   appearanceColors,
@@ -198,11 +200,38 @@ function renderCourses() {
   }
 }
 
+function renderShapes() {
+  if (!el.appearanceShapes) return;
+  const current = shapeId();
+  el.appearanceShapes.replaceChildren();
+  for (const shape of SHAPES) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'appearance-shape';
+    btn.dataset.shape = shape.id;
+    btn.setAttribute('aria-pressed', String(shape.id === current));
+    btn.title = shape.hint;
+    const icon = document.createElement('span');
+    icon.className = 'appearance-shape-icon';
+    icon.innerHTML = shapeIcon(shape.id);
+    const name = document.createElement('span');
+    name.className = 'appearance-shape-name';
+    name.textContent = shape.name;
+    btn.append(icon, name);
+    el.appearanceShapes.appendChild(btn);
+  }
+  if (el.appearanceShapeHint) {
+    const info = shapeInfo(current);
+    el.appearanceShapeHint.textContent = `${info.name} · ${info.hint}`;
+  }
+}
+
 function renderAll() {
   ensureAppearance();
   syncColorUi();
   syncScaleUi();
   syncQualityUi();
+  renderShapes();
   renderCourses();
 }
 
@@ -289,6 +318,15 @@ export function bindAppearance() {
     setCourseAppearance(row.dataset.course, input.dataset.kind, input.value);
     updateCourseRow(input);
   });
+
+  if (el.appearanceShapes) {
+    el.appearanceShapes.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-shape]');
+      if (!button) return;
+      if (!applyShapeForUser(button.dataset.shape)) return;
+      renderShapes();
+    });
+  }
 
   el.appearanceCourses.addEventListener('click', (event) => {
     const button = event.target.closest('[data-reset-course]');

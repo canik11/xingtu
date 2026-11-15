@@ -102,6 +102,24 @@
   flex: none;
 }
 
+/* 静默按钮只显示“静默”，开启效果时用右下小圆点提示，不再拉长文案。 */
+.nav-motion-btn::after {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin-left: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: rgba(159, 210, 255, 0);
+  transition: background .18s, box-shadow .18s;
+}
+
+.nav-motion-btn.is-on::after {
+  background: #9fd2ff;
+  box-shadow: 0 0 6px rgba(159, 210, 255, .9);
+}
+
 .nav-motion[hidden],
 .motion-pop[hidden] {
   display: none;
@@ -510,6 +528,8 @@ body.appearance-dragging {
   user-select: none;
 }
 .appearance-body {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 4px 2px 6px;
   scrollbar-width: thin;
@@ -721,6 +741,58 @@ body.appearance-dragging {
   color: #ffcf82;
   font-size: 9.5px;
   letter-spacing: .04em;
+}
+
+/* 外观弹窗里的星海形状网格（与左侧常驻形状栏共用 shapes.js）。 */
+.appearance-shapes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.appearance-shape {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px 7px;
+  border: 1px solid rgba(150, 190, 255, .13);
+  border-radius: 10px;
+  background: rgba(10, 19, 35, .42);
+  color: #b9cde2;
+  cursor: pointer;
+  transition: border-color .18s, background .18s, color .18s, box-shadow .18s;
+}
+.appearance-shape:hover {
+  border-color: rgba(160, 205, 255, .4);
+  background: rgba(34, 62, 104, .4);
+  color: #e4f1ff;
+}
+.appearance-shape[aria-pressed="true"] {
+  border-color: rgba(160, 205, 255, .62);
+  background: rgba(60, 105, 175, .25);
+  color: #f2f9ff;
+  box-shadow: 0 0 18px rgba(110, 170, 255, .22), inset 0 0 12px rgba(120, 180, 255, .12);
+}
+.appearance-shape-icon {
+  display: block;
+  width: 38px;
+  height: 38px;
+  color: inherit;
+}
+.appearance-shape-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.appearance-shape-name {
+  font-size: 11.5px;
+  letter-spacing: .02em;
+}
+@media (max-width: 600px) {
+  .appearance-shapes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 /* 星海形状：独立到页面左侧的常驻折叠面板。 */

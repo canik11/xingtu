@@ -26,7 +26,7 @@
         <button class="nav-level" id="levelBtn" type="button" aria-label="切换 3D 显示层级">层级 · 一级</button>
         <button class="nav-level nav-spread" id="spreadBtn" type="button" aria-label="恢复当前形状与旋转，并清除手动拖动偏移">重置图形</button>
         <div class="nav-motion" id="motionWrap">
-          <button class="nav-level nav-motion-btn" id="motionBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="调整 3D 静默效果">静默 · 旋转</button>
+          <button class="nav-level nav-motion-btn" id="motionBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="调整 3D 静默效果">静默</button>
           <div class="motion-pop" id="motionPanel" hidden role="dialog" aria-label="静默效果设置">
             <div class="motion-pop-head">静默效果</div>
             <div class="motion-modes" role="group" aria-label="静默模式">
@@ -241,6 +241,14 @@
               <output class="appearance-slider-value" id="qualityAmbientValue" for="qualityAmbient">100%</output>
             </label>
             <p class="field-note">倍率越高越清晰、越吃显卡；像素预算限制单帧总像素，低配设备可调小。</p>
+          </section>
+          <section class="appearance-section">
+            <div class="appearance-section-head">
+              <h3>星海形状</h3>
+              <span class="field-note">课程、章节与知识点一起变形</span>
+            </div>
+            <div class="appearance-shapes" id="appearanceShapes" role="group" aria-label="星海形状"></div>
+            <p class="field-note" id="appearanceShapeHint">球形的知识星图。</p>
           </section>
           <section class="appearance-section">
             <div class="appearance-section-head">

@@ -526,7 +526,15 @@ class WebGLScene {
       labelNodes.push({ v, p, rad, dim, selected: isActive || isHovered });
       if (isActive) this.drawRings(p.x, p.y, rad, rgb, true, t);
     }
-    labelNodes.sort((a, b) => (b.selected ? 1 : 0) - (a.selected ? 1 : 0) || b.v.depth - a.v.depth);
+    labelNodes.sort((a, b) => {
+      const rank = (item) =>
+        (item.selected ? 3 : 0) +
+        (item.v.kind === 'top' ? 2 : item.v.kind === 'chapter' ? 1 : 0);
+      return rank(b) - rank(a) || b.v.depth - a.v.depth;
+    });
+    // 屏幕空间防重叠：课程标签先占位，章节 / 知识点只在空位出现。
+    // 节点很多（层级·全部）时标签不会叠成一团，形状轮廓才看得清。
+    const labelRects = [];
     let chapterLabels = 0;
     const chapterLimit = ui.sphereScope >= 3 ? 18 : cam.scale > 1.35 ? 48 : 30;
     for (const item of labelNodes) {
@@ -534,7 +542,7 @@ class WebGLScene {
         if (chapterLabels >= chapterLimit) continue;
         chapterLabels++;
       }
-      this.draw3DLabel(item.v, item.p, item.rad, item.dim, item.selected, t);
+      this.draw3DLabel(item.v, item.p, item.rad, item.dim, item.selected, t, labelRects);
     }
     this.clearUnused();
     if (!visuals.some((v) => v.id === (ui.level === 'inner' ? ui.innerSelection : ui.selection))) {
@@ -661,7 +669,7 @@ class WebGLScene {
     this.clearUnused();
   }
 
-  draw3DLabel(v, p, rad, dim, selected, t) {
+  draw3DLabel(v, p, rad, dim, selected, t, placed = null) {
     if (dim < 0.04) return;
     let show = true;
     let size = 12.5;
@@ -689,6 +697,18 @@ class WebGLScene {
     let text = v.label;
     if (v.kind === 'chapter' && !selected && text.length > 18) text = `${text.slice(0, 17)}…`;
     if (v.kind === 'point' && !selected && text.length > 14) text = `${text.slice(0, 13)}…`;
+    const w = text.length * size * 0.62;
+    const h = size + 4;
+    const top = p.y + rad + (ui.level === 'inner' ? 10 : 11.5);
+    const box = { x0: x - w / 2, x1: x + w / 2, y0: top, y1: top + h };
+    if (placed) {
+      if (!selected) {
+        for (const r of placed) {
+          if (box.x0 < r.x1 && box.x1 > r.x0 && box.y0 < r.y1 && box.y1 > r.y0) return;
+        }
+      }
+      placed.push(box);
+    }
     const label = this.getLabel(`n:${v.id}`, text, size, selected || v.kind === 'center' ? '600' : '400', rgbHex(masteryRgb(v.node)), 0);
     label.position.set(x, p.y + rad + (ui.level === 'inner' ? 10 : 11.5));
     label.alpha = clamp(dim * (v.kind === 'chapter' ? 0.34 + v.depth * 0.58 : 0.55 + v.depth * 0.55), 0.06, 1);
@@ -801,7 +821,7 @@ class WebGLScene {
         if (i === 0) g.moveTo(s.x, s.y);
         else g.lineTo(s.x, s.y);
       }
-      g.stroke({ width: 1.25, color: 0x9fc4ff, alpha: 0.34 * gain * weight });
+      g.stroke({ width: 1.4, color: 0x9fc4ff, alpha: 0.42 * gain * weight });
     }
   }
 
@@ -859,7 +879,7 @@ class WebGLScene {
       const sprite = this.dustSprites[i];
       sprite.position.set(s.x, s.y);
       const twinkle = 0.72 + 0.28 * Math.sin(t * 0.0011 + i * 1.7);
-      sprite.alpha = Math.min(0.7, (0.14 + q.depth * 0.34) * twinkle) * gain * shapeDim;
+      sprite.alpha = Math.min(0.8, (0.16 + q.depth * 0.36) * twinkle) * gain * shapeDim;
       const scale = (0.055 + q.depth * 0.075) * (0.8 + (q.persp - 1) * 0.3);
       sprite.scale.set(scale);
     }

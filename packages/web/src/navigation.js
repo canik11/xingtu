@@ -28,7 +28,7 @@ export function getLevel() {
 }
 
 /** 不同形状的基准取景半径：非球形骨架更大，统一退到 430 左右。 */
-const SHAPE_RADIUS = { galaxy: 430, helix: 430, torus: 430, lattice: 440, rose: 430, wave: 430, fish: 440 };
+const SHAPE_RADIUS = { galaxy: 430, helix: 430, torus: 430, lattice: 440, tree: 410, wave: 430, binary: 420 };
 
 function sphereRadius() {
   const shaped = SHAPE_RADIUS[ui.shape];
@@ -131,7 +131,13 @@ export function syncNav() {
     el.motionWrap.hidden = !sphereOnly;
     if (!sphereOnly) closeMotionPanel();
     else {
-      el.motionBtn.textContent = `静默 · ${idleLabel()}`;
+      el.motionBtn.textContent = '静默';
+      const motionOn = !isStill();
+      el.motionBtn.classList.toggle('is-on', motionOn);
+      el.motionBtn.setAttribute(
+        'aria-label',
+        motionOn ? `静默效果：${idleLabel()}，点击调整` : '静默效果：当前关闭，点击调整'
+      );
       el.motionBtn.classList.toggle('is-open', !el.motionPanel.hidden);
       el.motionPanel.querySelectorAll('[data-motion]').forEach((btn) => {
         const mode = btn.dataset.motion;

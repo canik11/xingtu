@@ -167,23 +167,21 @@ function shapeLayout() {
   courses.forEach((course, ci) => {
     const baseT = (ci + 0.5) / n;
     const span = (1 / n) * 0.9;
-    const chapters = chaptersOf(course.id);
-    place(course.id, baseT, 0.012);
-    chapters.forEach((chapter, cj) => {
-      const ct = baseT + ((cj + 0.5) / Math.max(1, chapters.length) - 0.5) * span * 0.8;
-      place(chapter.id, ct, 0.04);
-      if (ui.sphereScope < 3) return;
-      const points = pointsOf(chapter.id);
-      points.forEach((point, pi) => {
+    // 把这一门课下所有可见节点按“课程 → 章节 → 知识点”的顺序排成一列，
+    // 再均匀铺满整段路径。节点多时沿骨架铺开，不会在树冠/环的一小段里糊成一团。
+    const members = [{ id: course.id, spread: 0.006 }];
+    for (const chapter of chaptersOf(course.id)) {
+      members.push({ id: chapter.id, spread: 0.022 });
+      if (ui.sphereScope < 3) continue;
+      for (const point of pointsOf(chapter.id)) {
         // 层级 3 只显示直属于章节的知识点；第 4 档“全部”才继续展开更深层。
-        if (ui.sphereScope < 4 && (point.depth || 0) > 0) return;
-        const pt =
-          ct +
-          ((pi + 0.5) / Math.max(1, points.length) - 0.5) *
-            (span / Math.max(1, chapters.length)) *
-            0.7;
-        place(point.id, pt, 0.07);
-      });
+        if (ui.sphereScope < 4 && (point.depth || 0) > 0) continue;
+        members.push({ id: point.id, spread: 0.04 });
+      }
+    }
+    members.forEach((member, mi) => {
+      const t = baseT + ((mi + 0.5) / members.length - 0.5) * span;
+      place(member.id, t, member.spread);
     });
   });
 

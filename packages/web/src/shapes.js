@@ -16,9 +16,9 @@ export const SHAPES = [
   { id: 'helix', name: 'DNA 双螺旋', hint: '两条主链盘旋上升，碱基对横档相连' },
   { id: 'torus', name: '莫比乌斯环', hint: '扭转半圈的立体星带' },
   { id: 'lattice', name: '晶格', hint: '立方线框，节点沿棱生长' },
-  { id: 'rose', name: '星芒', hint: '十四道星芒向三维空间放射' },
+  { id: 'tree', name: '知识树', hint: '主干向上分叉，知识点像枝叶生长' },
   { id: 'wave', name: '波浪光带', hint: '一条在星海里起伏飘动的光带' },
-  { id: 'fish', name: '大肥鱼', hint: '一条在星海里游动的胖鱼' }
+  { id: 'binary', name: '双星系统', hint: '两颗恒星拉起物质桥，节点沿 ∞ 轨道环绕' }
 ];
 
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
@@ -27,12 +27,6 @@ const LATTICE_EDGES = [
   [0, 0, 0, 1, 0, 0], [0, 1, 0, 1, 1, 0], [0, 0, 1, 1, 0, 1], [0, 1, 1, 1, 1, 1],
   [0, 0, 0, 0, 1, 0], [1, 0, 0, 1, 1, 0], [0, 0, 1, 0, 1, 1], [1, 0, 1, 1, 1, 1],
   [0, 0, 0, 0, 0, 1], [1, 0, 0, 1, 0, 1], [0, 1, 0, 0, 1, 1], [1, 1, 0, 1, 1, 1]
-];
-
-const ROSE_SPIKES = [
-  [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
-  [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1],
-  [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1]
 ];
 
 function fibonacci(i, count, phase = 0) {
@@ -61,6 +55,21 @@ function tiltX(p, angle) {
 function unitize(v) {
   const len = Math.hypot(v.x, v.y, v.z) || 1;
   return { x: v.x / len, y: v.y / len, z: v.z / len };
+}
+
+const BINARY_YAW = 0.5;
+const BINARY_TILT = 0.62;
+
+/** 双星系统的 ∞ 轨道：t 为极角，两个叶瓣一上一下，带回旋的 z 深度。 */
+function binaryAt(t) {
+  const s = Math.sin(t);
+  const d = 1 + s * s;
+  const x0 = (0.94 * Math.cos(t)) / d;
+  const y0 = (0.94 * s * Math.cos(t)) / d;
+  const z0 = Math.sin(t * 2) * 0.12;
+  const c = Math.cos(BINARY_YAW);
+  const sn = Math.sin(BINARY_YAW);
+  return tiltX({ x: x0 * c - y0 * sn, y: x0 * sn + y0 * c, z: z0 }, BINARY_TILT);
 }
 
 /**
@@ -163,51 +172,47 @@ export function shapePoint(shape, i, count) {
         0.5
       );
     }
-    case 'rose': {
-      // 三维星形体：14 根放射星芒，轴向略长、对角略短。
-      const k = i % ROSE_SPIKES.length;
-      const step = Math.floor(i / ROSE_SPIKES.length);
-      const perRay = Math.max(1, Math.ceil(n / ROSE_SPIKES.length));
-      const t = (step + 0.5) / perRay;
-      const d = ROSE_SPIKES[k];
-      const spike = k < 6 ? 0.92 : 0.54;
-      const r = spike * (1 - 0.76 * t);
-      return { x: (d[0] / Math.hypot(...d)) * r, y: (d[1] / Math.hypot(...d)) * r, z: (d[2] / Math.hypot(...d)) * r };
-    }
-    case 'wave': {
-      // 立体星波：一条沿 x 轴起伏的光带，带宽在 y/z 方向展开，
-      // 投影是波浪形飘带，不再是同心圆。
-      const u = (i + 0.5) / n;
-      const band = (jitter(i, 3) - 0.5) * 2;
-      const x = (u - 0.5) * 2.05;
-      const y = Math.sin(u * TAU * 1.55) * 0.52 + band * 0.09;
-      const z = band * 0.14 + Math.cos(u * TAU * 1.15) * 0.34;
-      return { x, y, z };
-    }
-    case 'fish': {
-      // 大肥鱼：沿 x 轴拉长的纺锤形身体 + 分叉尾鳍。
-      const bodyCount = Math.max(4, Math.round(n * 0.78));
-      if (i < bodyCount) {
-        const u = (i + 0.5) / bodyCount;
-        const theta = i * GOLDEN;
-        const bodyR = 0.6 * Math.pow(Math.max(0.001, Math.sin(Math.PI * u)), 0.55) *
-          (1 + 0.12 * Math.sin(u * TAU * 1.5));
+    case 'tree': {
+      // 知识树：主干向上，三层枝杈向不同方位伸展，星尘沿枝干勾勒树形。
+      // 世界 y 轴在屏幕上是向下的，这里取负号让树冠朝上。
+      const trunk = Math.max(2, Math.round(n * 0.18));
+      if (i < trunk) {
+        const u = (i + 0.5) / trunk;
         return {
-          x: (u - 0.5) * 1.55,
-          y: Math.cos(theta) * bodyR,
-          z: Math.sin(theta) * bodyR
+          x: Math.sin(u * 1.1) * 0.05,
+          y: 0.88 - u * 1.38,
+          z: Math.cos(u * 0.8) * 0.05
         };
       }
-      // 尾鳍：在 -x 端上下分叉成两片。
-      const j = i - bodyCount;
-      const tailCount = Math.max(1, n - bodyCount);
-      const u = (j + 0.5) / tailCount;
-      const side = j % 2 === 0 ? 1 : -1;
+      const j = i - trunk;
+      const layer = j % 3;
+      const dir = Math.floor(j / 3) % 3;
+      const k = Math.floor(j / 9);
+      const per = Math.max(1, Math.ceil((n - trunk) / 9));
+      const u = Math.min(1, (k + 0.5) / per);
+      const baseY = -0.05 + layer * 0.3;
+      const spread = 0.42 + layer * 0.22;
+      const angle = dir * (TAU / 3) + layer * 0.45;
+      const r = u * spread;
       return {
-        x: -0.78 - u * 0.38,
-        y: side * (0.06 + u * 0.5),
-        z: (jitter(i, 9) - 0.5) * 0.12
+        x: Math.cos(angle) * r,
+        y: -(baseY + u * (0.3 + layer * 0.12) - u * u * 0.08),
+        z: Math.sin(angle) * r
       };
+    }
+    case 'wave': {
+      // 立体星波：一条沿 x 轴起伏的光带，投影是清晰的 S 形波浪，
+      // 带宽很薄，节点多时也不会糊成一团云。
+      const u = (i + 0.5) / n;
+      const band = (jitter(i, 3) - 0.5) * 2;
+      const x = (u - 0.5) * 2.15;
+      const y = Math.sin(u * TAU * 1.12) * 0.62 + band * 0.05;
+      const z = band * 0.1 + Math.cos(u * TAU * 0.9) * 0.2;
+      return { x, y, z };
+    }
+    case 'binary': {
+      // 双星系统：星尘沿 ∞ 轨道流动，两个叶瓣在镜头里一上一下。
+      return binaryAt(((i + 0.5) / n) * TAU);
     }
     case 'sphere':
     default:
@@ -257,34 +262,41 @@ export function shapePath(shape, t) {
         0.5
       );
     }
-    case 'rose': {
-      // 依次走 14 根星芒，从外端收向中心再跳回外端。
-      const seg = Math.min(ROSE_SPIKES.length - 1, Math.floor(u * ROSE_SPIKES.length));
-      const s = u * ROSE_SPIKES.length - seg;
-      const d = ROSE_SPIKES[seg];
-      const len = Math.hypot(...d);
-      const spike = seg < 6 ? 0.92 : 0.54;
-      const r = spike * (1 - 0.76 * s);
-      return { x: (d[0] / len) * r, y: (d[1] / len) * r, z: (d[2] / len) * r };
+    case 'tree': {
+      // 前 18% 走主干，后 82% 依次走过 9 根枝杈。
+      if (u < 0.18) {
+        const s = u / 0.18;
+        return {
+          x: Math.sin(s * 1.1) * 0.05,
+          y: 0.88 - s * 1.38,
+          z: Math.cos(s * 0.8) * 0.05
+        };
+      }
+      const s = (u - 0.18) / 0.82;
+      const seg = Math.min(8, Math.floor(s * 9));
+      const f = Math.min(1, Math.max(0, s * 9 - seg));
+      const layer = seg % 3;
+      const dir = Math.floor(seg / 3);
+      const baseY = -0.05 + layer * 0.3;
+      const spread = 0.42 + layer * 0.22;
+      const angle = dir * (TAU / 3) + layer * 0.45;
+      const r = f * spread;
+      return {
+        x: Math.cos(angle) * r,
+        y: -(baseY + f * (0.3 + layer * 0.12) - f * f * 0.08),
+        z: Math.sin(angle) * r
+      };
     }
     case 'wave': {
       // 沿光带中线从一端走到另一端。
-      const x = (u - 0.5) * 2.05;
-      const y = Math.sin(u * TAU * 1.55) * 0.52;
-      const z = Math.cos(u * TAU * 1.15) * 0.34;
+      const x = (u - 0.5) * 2.15;
+      const y = Math.sin(u * TAU * 1.12) * 0.62;
+      const z = Math.cos(u * TAU * 0.9) * 0.2;
       return { x, y, z };
     }
-    case 'fish': {
-      // 沿鱼身表面螺旋前进：u 是体长方向，theta 绕身体转两圈多。
-      const theta = u * TAU * 2.4;
-      const bodyR = 0.6 * Math.pow(Math.max(0.001, Math.sin(Math.PI * u)), 0.55) *
-        (1 + 0.12 * Math.sin(u * TAU * 1.5));
-      return {
-        x: (u - 0.5) * 1.55,
-        y: Math.cos(theta) * bodyR * 0.92,
-        z: Math.sin(theta) * bodyR * 0.92
-      };
-    }
+    case 'binary':
+      // 沿 ∞ 轨道走完整一圈，两个叶瓣各承载一部分节点。
+      return binaryAt(u * TAU);
     case 'sphere':
     default:
       return fibonacci(Math.round(u * 63), 64, 0.4);
@@ -357,18 +369,21 @@ export function shapeSkeleton(shape, detail = 90) {
       break;
     }
     case 'torus': {
+      const R = 0.7;
+      const w = 0.24;
+      const at = (theta, u) => {
+        const cr = R + w * u * Math.cos(theta / 2);
+        return tiltX(
+          { x: cr * Math.cos(theta), y: w * u * Math.sin(theta / 2), z: cr * Math.sin(theta) },
+          0.9
+        );
+      };
       // 莫比乌斯带的两条边缘 + 中线
-      for (const u of [-1, 0, 1]) {
-        line((t) => {
-          const theta = t * TAU;
-          const R = 0.7;
-          const w = 0.24;
-          const cr = R + w * u * Math.cos(theta / 2);
-          return tiltX(
-            { x: cr * Math.cos(theta), y: w * u * Math.sin(theta / 2), z: cr * Math.sin(theta) },
-            0.9
-          );
-        });
+      for (const u of [-1, 0, 1]) line((t) => at(t * TAU, u));
+      // 横向肋线：让“扭转半圈”的带面一眼可见
+      for (let k = 0; k < 12; k++) {
+        const theta = ((k + 0.5) / 12) * TAU;
+        lines.push({ pts: [at(theta, -1), at(theta, 0), at(theta, 1)], alpha: 0.5 });
       }
       break;
     }
@@ -380,111 +395,68 @@ export function shapeSkeleton(shape, detail = 90) {
         ]);
       }
       break;
-    case 'rose':
-      for (const d of ROSE_SPIKES) {
-        const len = Math.hypot(...d);
-        const spike = ROSE_SPIKES.indexOf(d) < 6 ? 0.92 : 0.54;
-        lines.push([
-          { x: 0, y: 0, z: 0 },
-          { x: (d[0] / len) * spike, y: (d[1] / len) * spike, z: (d[2] / len) * spike }
-        ]);
+    case 'tree': {
+      // 主干（屏幕坐标里 y 向下，取负让树冠朝上）
+      line((t) => ({
+        x: Math.sin(t * 1.1) * 0.05,
+        y: 0.88 - t * 1.38,
+        z: Math.cos(t * 0.8) * 0.05
+      }), 24);
+      // 三层枝杈，每层三根，向不同方位伸展
+      for (let layer = 0; layer < 3; layer++) {
+        for (let dir = 0; dir < 3; dir++) {
+          const baseY = -0.05 + layer * 0.3;
+          const spread = 0.42 + layer * 0.22;
+          const angle = dir * (TAU / 3) + layer * 0.45;
+          line((t) => {
+            const r = t * spread;
+            return {
+              x: Math.cos(angle) * r,
+              y: -(baseY + t * (0.3 + layer * 0.12) - t * t * 0.08),
+              z: Math.sin(angle) * r
+            };
+          }, 14);
+        }
       }
+      // 树根
+      lines.push([{ x: 0, y: 0.88, z: 0 }, { x: -0.3, y: 0.98, z: 0.12 }]);
+      lines.push([{ x: 0, y: 0.88, z: 0 }, { x: 0.3, y: 0.98, z: -0.12 }]);
       break;
+    }
     case 'wave': {
       // 光带的三条纵向轮廓线 + 两端横档，整体像一条起伏的飘带。
       for (const band of [-1, 0, 1]) {
         line((t) => {
-          const x = (t - 0.5) * 2.05;
-          const y = Math.sin(t * TAU * 1.55) * 0.52 + band * 0.09;
-          const z = band * 0.14 + Math.cos(t * TAU * 1.15) * 0.34;
+          const x = (t - 0.5) * 2.15;
+          const y = Math.sin(t * TAU * 1.12) * 0.62 + band * 0.05;
+          const z = band * 0.1 + Math.cos(t * TAU * 0.9) * 0.2;
           return { x, y, z };
         });
       }
       for (const t of [0, 1]) {
-        const x = (t - 0.5) * 2.05;
-        const y = Math.sin(t * TAU * 1.55) * 0.52;
-        const z = Math.cos(t * TAU * 1.15) * 0.34;
+        const x = (t - 0.5) * 2.15;
+        const y = Math.sin(t * TAU * 1.12) * 0.62;
+        const z = Math.cos(t * TAU * 0.9) * 0.2;
         lines.push([
-          { x, y: y - 0.09, z: z - 0.14 },
-          { x, y: y + 0.09, z: z + 0.14 }
+          { x, y: y - 0.05, z: z - 0.1 },
+          { x, y: y + 0.05, z: z + 0.1 }
         ]);
       }
       break;
     }
-    case 'fish': {
-      // 胖鱼轮廓：上下身体曲线、背鳍 / 胸鳍、尾鳍扇形，再点一只眼睛。
-      const bodyR = (t) => 0.6 * Math.pow(Math.max(0.001, Math.sin(Math.PI * t)), 0.55) *
-        (1 + 0.12 * Math.sin(t * TAU * 1.5));
-      const bodyX = (t) => (t - 0.5) * 1.55;
-      line((t) => ({ x: bodyX(t), y: bodyR(t), z: 0 }));
-      line((t) => ({ x: bodyX(t), y: -bodyR(t), z: 0 }));
-      // 背鳍
-      lines.push({
-        pts: [
-          { x: bodyX(0.42), y: bodyR(0.42) * 0.96, z: 0 },
-          { x: bodyX(0.52), y: bodyR(0.52) + 0.28, z: 0 },
-          { x: bodyX(0.64), y: bodyR(0.64) * 0.92, z: 0 }
-        ],
-        alpha: 0.75
-      });
-      // 胸鳍
-      lines.push({
-        pts: [
-          { x: bodyX(0.46), y: -bodyR(0.46) * 0.9, z: 0 },
-          { x: bodyX(0.4), y: -bodyR(0.4) - 0.26, z: 0 },
-          { x: bodyX(0.58), y: -bodyR(0.58) * 0.86, z: 0 }
-        ],
-        alpha: 0.75
-      });
-      // 尾鳍：从尾根斜出去的三条线 + 扇形外缘
-      lines.push({
-        pts: [
-          { x: -0.78, y: 0, z: 0 },
-          { x: -1.16, y: 0.56, z: 0 }
-        ],
-        alpha: 0.8
-      });
-      lines.push({
-        pts: [
-          { x: -0.78, y: 0, z: 0 },
-          { x: -1.18, y: 0, z: 0 }
-        ],
-        alpha: 0.8
-      });
-      lines.push({
-        pts: [
-          { x: -0.78, y: 0, z: 0 },
-          { x: -1.16, y: -0.56, z: 0 }
-        ],
-        alpha: 0.8
-      });
-      lines.push({
-        pts: [
-          { x: -1.16, y: 0.56, z: 0 },
-          { x: -1.18, y: 0, z: 0 },
-          { x: -1.16, y: -0.56, z: 0 }
-        ],
-        alpha: 0.8
-      });
-      // 侧线：沿 z 方向的体侧轮廓，暗示胖鱼的体积
-      lines.push({
-        pts: Array.from({ length: 41 }, (_, i) => {
-          const t = i / 40;
-          return { x: bodyX(t), y: 0, z: bodyR(t) * 0.68 };
-        }),
-        alpha: 0.45
-      });
-      // 眼睛：鱼头侧面一个小圆
-      const eye = [];
-      for (let i = 0; i <= 16; i++) {
-        const a = (i / 16) * TAU;
-        eye.push({
-          x: 0.56 + Math.cos(a) * 0.075,
-          y: bodyR(0.86) * 0.35 + Math.sin(a) * 0.075,
-          z: 0.4
-        });
+    case 'binary': {
+      // ∞ 轨道本体
+      line((t) => binaryAt(t * TAU), 160);
+      // 两颗主星：分别在两个叶瓣中心画一圈淡淡的光环。
+      for (const side of [-1, 1]) {
+        const c = binaryAt(side < 0 ? Math.PI : 0);
+        const ring = [];
+        for (let i = 0; i <= 30; i++) {
+          const a = (i / 30) * TAU;
+          ring.push({ x: c.x + Math.cos(a) * 0.15, y: c.y + Math.sin(a) * 0.15, z: c.z });
+        }
+        lines.push({ pts: ring, alpha: 0.7 });
       }
-      lines.push(eye);
       break;
     }
     case 'sphere':
@@ -526,9 +498,11 @@ export function shapeCloudDir(shape, dir) {
       return planeDir(0.9, dir, 1.0, 0.25);
     case 'wave':
       return { x: dir.x * 1.5, y: dir.y * 1.25, z: dir.z * 0.55 };
-    case 'rose':
+    case 'tree':
+      return { x: dir.x * 1.05, y: dir.y * 1.2, z: dir.z * 1.05 };
+    case 'binary':
+      return dir;
     case 'lattice':
-    case 'fish':
     default:
       return dir;
   }

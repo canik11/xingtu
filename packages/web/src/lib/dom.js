@@ -90,6 +90,8 @@ export function cacheDom() {
   el.rewardLayer = $id('rewardLayer');
   el.rewardDone = $id('rewardDone');
   el.appearanceCourses = $id('appearanceCourses');
+  el.appearanceShapes = $id('appearanceShapes');
+  el.appearanceShapeHint = $id('appearanceShapeHint');
   el.appearanceReset = $id('appearanceReset');
   el.appearanceDone = $id('appearanceDone');
   el.qualityMaxScale = $id('qualityMaxScale');
