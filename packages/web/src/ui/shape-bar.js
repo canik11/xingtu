@@ -7,6 +7,7 @@ import { applyShapeForUser } from '../navigation.js';
 const STORE_KEY = 'starmap.shapebar.v1';
 const POS_KEY = 'starmap.shapebar.pos.v1';
 const DRAG_THRESHOLD = 4;
+const EDGE_GAP = 8;
 
 function readCollapsed() {
   try {
@@ -56,19 +57,54 @@ function limits() {
   const width = el.shapeBar.offsetWidth || 36;
   const height = el.shapeBar.offsetHeight || 36;
   return {
-    maxLeft: Math.max(8, window.innerWidth - width - 8),
-    maxTop: Math.max(8, window.innerHeight - height - 8)
+    maxLeft: Math.max(EDGE_GAP, window.innerWidth - width - EDGE_GAP),
+    maxTop: Math.max(EDGE_GAP, window.innerHeight - height - EDGE_GAP)
   };
 }
 
 function applyPos(left, top, remember) {
   if (!el.shapeBar) return;
   const { maxLeft, maxTop } = limits();
-  const nextLeft = clamp(left, 8, maxLeft);
-  const nextTop = clamp(top, 8, maxTop);
+  const nextLeft = clamp(left, EDGE_GAP, maxLeft);
+  const nextTop = clamp(top, EDGE_GAP, maxTop);
   el.shapeBar.style.left = `${nextLeft}px`;
   el.shapeBar.style.top = `${nextTop}px`;
   if (remember) savePos(nextLeft, nextTop);
+}
+
+/** 临时切到目标折叠态量一次尺寸，立刻恢复；不会触发过渡或闪烁。 */
+function measureSize(collapsed) {
+  const bar = el.shapeBar;
+  const previous = bar.dataset.collapsed;
+  bar.classList.add('measuring');
+  bar.dataset.collapsed = collapsed ? '1' : '0';
+  const width = bar.offsetWidth;
+  const height = bar.offsetHeight;
+  bar.dataset.collapsed = previous;
+  void bar.offsetWidth;
+  bar.classList.remove('measuring');
+  return { width, height };
+}
+
+/**
+ * 折叠/展开时贴着屏幕近的一边生长：
+ * 面板在屏幕右半就保持右边缘、向左展开；在下半就保持下边缘、向上展开。
+ * 同时按目标尺寸把位置夹回视口内，避免展开后被屏幕边缘裁掉。
+ */
+function placeAnchored(rect, size) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const anchorRight = rect.left + rect.width / 2 > vw / 2;
+  const anchorBottom = rect.top + rect.height / 2 > vh / 2;
+  const left = anchorRight ? rect.right - size.width : rect.left;
+  const top = anchorBottom ? rect.bottom - size.height : rect.top;
+  const maxLeft = Math.max(EDGE_GAP, vw - size.width - EDGE_GAP);
+  const maxTop = Math.max(EDGE_GAP, vh - size.height - EDGE_GAP);
+  const nextLeft = clamp(left, EDGE_GAP, maxLeft);
+  const nextTop = clamp(top, EDGE_GAP, maxTop);
+  el.shapeBar.style.left = `${nextLeft}px`;
+  el.shapeBar.style.top = `${nextTop}px`;
+  savePos(nextLeft, nextTop);
 }
 
 /** 尺寸变化后把面板拉回视口内；未越界时不动，避免把默认位置写死。 */
@@ -76,8 +112,8 @@ function ensureVisible() {
   if (!el.shapeBar) return;
   const rect = el.shapeBar.getBoundingClientRect();
   const { maxLeft, maxTop } = limits();
-  const nextLeft = clamp(rect.left, 8, maxLeft);
-  const nextTop = clamp(rect.top, 8, maxTop);
+  const nextLeft = clamp(rect.left, EDGE_GAP, maxLeft);
+  const nextTop = clamp(rect.top, EDGE_GAP, maxTop);
   if (nextLeft !== rect.left || nextTop !== rect.top) {
     el.shapeBar.style.left = `${nextLeft}px`;
     el.shapeBar.style.top = `${nextTop}px`;
@@ -86,13 +122,17 @@ function ensureVisible() {
 
 export function setShapeBarCollapsed(collapsed) {
   if (!el.shapeBar) return;
-  el.shapeBar.dataset.collapsed = collapsed ? '1' : '0';
+  const bar = el.shapeBar;
+  const wasCollapsed = bar.dataset.collapsed === '1';
   el.shapeBarToggle.setAttribute('aria-expanded', String(!collapsed));
   el.shapeBarToggle.title = collapsed ? '展开星海形状' : '收起星海形状';
   saveCollapsed(collapsed);
-  // 折叠/展开会改变尺寸，稍后确保面板完整留在视口内。
-  requestAnimationFrame(ensureVisible);
-  window.setTimeout(ensureVisible, 320);
+  if (wasCollapsed === collapsed) return;
+  // 先量当前矩形（旧尺寸），再量目标尺寸；位置以靠近屏幕的那条边为锚点。
+  const rect = bar.getBoundingClientRect();
+  const size = measureSize(collapsed);
+  bar.dataset.collapsed = collapsed ? '1' : '0';
+  placeAnchored(rect, size);
 }
 
 export function toggleShapeBar() {
@@ -181,10 +221,18 @@ function onKeyDown(event) {
 
 export function bindShapeBar() {
   if (!el.shapeBar) return;
+  const bar = el.shapeBar;
   renderShapeBar();
-  setShapeBarCollapsed(readCollapsed());
+  // 首次摆放不要做过渡，否则刷新时会看到面板从默认位置滑过去。
+  bar.classList.add('no-anim');
   const saved = readPos();
-  if (saved) applyPos(saved.left, saved.top, false);
+  if (saved) {
+    bar.style.left = `${saved.left}px`;
+    bar.style.top = `${saved.top}px`;
+  }
+  setShapeBarCollapsed(readCollapsed());
+  ensureVisible();
+  requestAnimationFrame(() => bar.classList.remove('no-anim'));
   el.shapeBarToggle.addEventListener('pointerdown', beginDrag);
   el.shapeBarToggle.addEventListener('pointermove', moveDrag);
   el.shapeBarToggle.addEventListener('pointerup', endDrag);
