@@ -2149,3 +2149,77 @@ body.has-unsaved .save-orb {
     animation: none;
   }
 }
+
+/* 音效设置弹窗（⋯ 菜单 → 音效设置） */
+.sound-modal {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+}
+.sound-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sound-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #cfdcf2;
+  font-size: 13px;
+}
+.sound-vol {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8095b5;
+  font-size: 11px;
+}
+.sound-vol > span {
+  flex: none;
+  white-space: nowrap;
+}
+.sound-vol input {
+  flex: 1;
+  min-width: 0;
+  accent-color: #dcecff;
+}
+.sound-vol b {
+  flex: none;
+  min-width: 34px;
+  text-align: right;
+  color: #cfdcf2;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.sound-cats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.sound-cats button {
+  padding: 7px 4px;
+  border: 1px solid rgba(160, 195, 255, .16);
+  border-radius: 8px;
+  background: rgba(10, 18, 34, .5);
+  color: #93a9c8;
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: color .25s, border-color .25s, background .25s;
+}
+.sound-cats button:hover {
+  color: #dcecff;
+  border-color: rgba(170, 210, 255, .35);
+}
+.sound-cats button.is-active {
+  color: #0d1524;
+  background: linear-gradient(135deg, rgba(205, 230, 255, .92), rgba(150, 195, 255, .82));
+  border-color: transparent;
+}
+.sound-demo {
+  align-self: flex-start;
+}
+.nav-doc {
+  letter-spacing: .08em;
+}

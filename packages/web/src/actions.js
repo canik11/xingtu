@@ -28,6 +28,7 @@ import { createKbFile, getKbFileName, kbFileSupported, pickKbFile, unbindKbFile 
 import { createHostKb, hostKbSupported, pickHostKb } from './kb-host.js';
 import { bindRewardDialog, openRewardDialog } from './ui/reward-dialog.js';
 import { openGlobalDoc } from './ui/global-doc.js';
+import { openSoundDialog } from './ui/sound.js';
 import * as sfx from './audio/sfx.js';
 import { fitFocus, rebuildFocus, projectFocusNode } from './focus.js';
 import { getEntity, refreshOutline } from './outline.js';
@@ -772,12 +773,15 @@ export function bindActions() {
     else if (action === 'delete') deleteSelected();
     else if (action === 'kb') openKbDialog();
     else if (action === 'appearance') openAppearance();
-    else if (action === 'global-doc') {
-      closePanel(true);
-      openGlobalDoc();
-    }
+    else if (action === 'sound') openSoundDialog();
     else if (action === 'reward') openRewardDialog();
   });
+  if (el.docOpenBtn) {
+    el.docOpenBtn.addEventListener('click', () => {
+      closePanel(true);
+      openGlobalDoc();
+    });
+  }
 
   el.kbPathInput.addEventListener('change', () => {
     const path = setKbPath(el.kbPathInput.value);

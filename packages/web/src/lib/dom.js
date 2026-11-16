@@ -138,9 +138,15 @@ export function cacheDom() {
   el.confirmTitle = $id('confirmTitle');
   el.confirmText = $id('confirmText');
   el.confirmOk = $id('confirmOk');
+  el.soundLayer = $id('soundLayer');
   el.soundEnabled = $id('soundEnabled');
   el.soundVolume = $id('soundVolume');
   el.soundVolumeText = $id('soundVolumeText');
+  el.soundModes = $id('soundModes');
+  el.soundDemo = $id('soundDemo');
+  el.soundHint = $id('soundHint');
+  el.soundDone = $id('soundDone');
+  el.docOpenBtn = $id('docOpenBtn');
   el.saveOrb = $id('saveOrb');
   el.docSaveOrb = $id('docSaveOrb');
   el.toast = $id('toast');

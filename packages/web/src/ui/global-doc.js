@@ -152,9 +152,11 @@ function caretOffset(textEl) {
 function toggleFold(id) {
   const owner = ownerOf(id);
   if (!owner) return;
-  const block = toggleBlock(owner.node.note, id);
-  if (!block) return;
-  sfx.docFold(!block.collapsed);
+  // toggleBlock 返回切换后的 collapsed 布尔值（无子块时返回 null），
+  // 注意不能用真假判断返回值：展开后是 false，会被误当成失败而跳过重绘。
+  const collapsed = toggleBlock(owner.node.note, id);
+  if (collapsed === null) return;
+  sfx.docFold(!collapsed);
   // 折叠只是视图状态，不点亮「未保存」提示。
   scheduleSave({ silent: true });
   render();
