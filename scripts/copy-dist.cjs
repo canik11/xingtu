@@ -33,10 +33,34 @@ for (const [from, to] of extras) {
     console.warn('跳过不存在的分发文件：' + from);
     continue;
   }
-  fs.copyFileSync(from, to);
+  try {
+    fs.copyFileSync(from, to);
+  } catch (err) {
+    // 桌面版正在运行时会锁住 exe/dll，此时跳过即可，不影响单文件版生成。
+    console.warn('复制失败（可能被运行中的程序占用），已跳过：' + to + ' — ' + err.code);
+  }
 }
 
+// 在产物 HTML 里保留第三方许可声明：MIT 要求在副本中包含版权声明与许可声明，
+// 打包压缩后源码注释会丢失，所以这里显式注入一段注释。
 const index = path.join(dest, 'index.html');
+const notice = [
+  '<!--',
+  '知识星图 xintu — 本项目代码按 CC BY-NC-SA 4.0 授权：https://creativecommons.org/licenses/by-nc-sa/4.0/',
+  '本文件内含第三方组件，保留各自许可：',
+  '  pixi.js — MIT License, Copyright (c) 2013-2023 Mathew Groves, Chad Engler',
+  '  pdf.js (pdfjs-dist) — Apache License 2.0, Copyright 2024 Mozilla Foundation',
+  '完整声明见 THIRD-PARTY-NOTICES.md 与 licenses/ 目录。',
+  '-->'
+].join('\n');
+const html = fs.readFileSync(index, 'utf8');
+if (!html.includes('知识星图 xintu — 本项目代码按')) {
+  const injected = html.includes('<head>')
+    ? html.replace('<head>', '<head>\n' + notice)
+    : html.replace(/(<!doctype html>)/i, '$1\n' + notice);
+  fs.writeFileSync(index, injected, 'utf8');
+}
+
 console.log('已生成可双击打开的版本：' + index);
 console.log('文件大小：' + (fs.statSync(index).size / 1024).toFixed(0) + ' KB');
 console.log('已附带图标与快捷方式脚本：双击 app/create-shortcut.cmd 即可生成桌面快捷方式。');

@@ -2,6 +2,7 @@
   "name": "@starmap/core",
   "version": "0.1.0",
   "private": true,
+  "license": "CC-BY-NC-SA-4.0",
   "description": "星图核心域：数据模型、大纲笔记、力导向布局、存储与查询。零 DOM 依赖，Web / API / Desktop 共享。",
   "type": "module",
   "main": "src/index.js",
