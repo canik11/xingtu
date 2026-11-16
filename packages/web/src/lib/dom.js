@@ -141,6 +141,7 @@ export function cacheDom() {
   el.soundVolume = $id('soundVolume');
   el.soundVolumeText = $id('soundVolumeText');
   el.saveOrb = $id('saveOrb');
+  el.docSaveOrb = $id('docSaveOrb');
   el.toast = $id('toast');
   el.fatal = $id('fatal');
   el.scrim.classList.remove('show');

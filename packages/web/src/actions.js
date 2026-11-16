@@ -18,7 +18,7 @@ import {
 } from '@starmap/core';
 import { el, esc } from './lib/dom.js';
 import { ui, view } from './state.js';
-import { data, index, replaceData, reindex, saveNow, snapshot, storageAvailable } from './store.js';
+import { data, index, isDirty, replaceData, reindex, saveNow, snapshot, storageAvailable } from './store.js';
 import { fitView, zoomAt, center3DScene, worldToScreen } from './camera.js';
 import { heat } from './layout.js';
 import { enterLocal, enterSphere } from './navigation.js';
@@ -718,7 +718,12 @@ export function bindActions() {
   if (!storageAvailable()) {
     setTimeout(() => toast('本地存储不可用：本次改动不会自动保存'), 1000);
   }
-  window.addEventListener('beforeunload', () => saveNow());
+  window.addEventListener('beforeunload', (event) => {
+    // 不再自动保存：有未保存的修改时让浏览器拦一下，提醒用户先保存。
+    if (!isDirty()) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
 }
 
 /** 全局动作分发（供其它模块调用，避免循环 import）。 */

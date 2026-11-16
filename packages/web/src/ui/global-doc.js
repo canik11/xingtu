@@ -15,7 +15,8 @@ import {
 } from '@starmap/core';
 import { el, esc } from '../lib/dom.js';
 import { ui } from '../state.js';
-import { data, reindex, scheduleSave } from '../store.js';
+import { data, reindex, saveNow, scheduleSave } from '../store.js';
+import { toast } from './feedback.js';
 import { getEntity, refreshOutline } from '../outline.js';
 import { rebuildFocus } from '../focus.js';
 import { toggleMastery, blockMasteryRatio, isLeafBlock } from '../mastery.js';
@@ -151,7 +152,8 @@ function toggleFold(id) {
   const owner = ownerOf(id);
   if (!owner) return;
   if (toggleBlock(owner.node.note, id) === null) return;
-  scheduleSave();
+  // 折叠只是视图状态，不点亮「未保存」提示。
+  scheduleSave({ silent: true });
   render();
 }
 
@@ -183,7 +185,7 @@ function collapseAll(value) {
     }
   };
   for (const node of data.nodes) walk(node.note || []);
-  scheduleSave();
+  scheduleSave({ silent: true });
   render();
 }
 
@@ -302,7 +304,7 @@ function onDocInput(event) {
   if (!owner) return;
   owner.block.text = currentText(text).slice(0, NOTE_LIMIT);
   scheduleSave();
-  setStatus('已保存');
+  setStatus('未保存 · 按 Ctrl+S 保存');
 }
 
 function onDocKeydown(event) {
@@ -429,6 +431,13 @@ export function closeGlobalDoc() {
 export function bindGlobalDoc() {
   if (!el.docLayer) return;
   el.docClose.addEventListener('click', closeGlobalDoc);
+  if (el.docSaveOrb) {
+    el.docSaveOrb.addEventListener('click', () => {
+      saveNow();
+      setStatus('已保存');
+      toast('已保存修改');
+    });
+  }
   el.docCollapseAll.addEventListener('click', () => collapseAll(true));
   el.docExpandAll.addEventListener('click', () => collapseAll(false));
   el.docBody.addEventListener('input', onDocInput);

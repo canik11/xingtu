@@ -1,6 +1,6 @@
 // 主循环：每帧推进相机补间、按温度推进力导向模拟、然后绘制。
 import { simulateStep } from '@starmap/core';
-import { data, index, scheduleSave } from './store.js';
+import { data, index } from './store.js';
 import { cam, view, clock, flags, ui } from './state.js';
 import { stepCamera } from './camera.js';
 import { temperature, cool } from './layout.js';
@@ -23,8 +23,8 @@ export function startLoop(ctx, gpu = null) {
     clock.last = now;
     clock.now = now;
 
-    // 相机移动只是视图状态，静默保存，不点亮「未保存」小月亮。
-    if (stepCamera(dt)) scheduleSave({ silent: true });
+    // 相机移动只改视图状态，不落盘：数据要由用户按 Ctrl+S / 点月亮保存。
+    stepCamera(dt);
 
     if (ui.level === 'local' && !ui.focusGraph && temperature.alpha > 0.0005) {
       simulateStep(data, data.edges, index.categoryMap, temperature.alpha);

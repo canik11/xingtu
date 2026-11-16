@@ -209,13 +209,12 @@ export function saveNow() {
 }
 
 /**
- * 防抖保存：先亮起未保存提示，1.6 秒后落盘。
- * @param {{ silent?: boolean }} [options] silent 时只保存、不亮提示（相机移动等自动变化）。
+ * 标记数据有修改：只点亮「未保存」提示，不再自动落盘。
+ * 保存交给用户：Ctrl+S / 点左上角月亮 / 面板的保存按钮。
+ * @param {{ silent?: boolean }} [options] silent 时不亮提示（内部批量操作用）。
  */
 export function scheduleSave(options = {}) {
   if (!options.silent) setDirty(true);
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNow, 1600);
 }
 
 /** 存储是否可用（隐私模式/配额满时为 false）。 */
