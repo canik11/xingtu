@@ -142,7 +142,7 @@ export function cacheDom() {
   el.soundEnabled = $id('soundEnabled');
   el.soundVolume = $id('soundVolume');
   el.soundVolumeText = $id('soundVolumeText');
-  el.soundModes = $id('soundModes');
+  el.soundChannels = $id('soundChannels');
   el.soundDemo = $id('soundDemo');
   el.soundHint = $id('soundHint');
   el.soundDone = $id('soundDone');

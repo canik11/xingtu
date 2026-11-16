@@ -1,7 +1,7 @@
 // 音效总调度：手势解锁、开场音、全局点击声、弹层开合、心跳应和。
 // 其他模块只管在关键动作处调用 sfx.*，这里负责「什么时候能出声」。
 import { audioReady, setMasterVolume, unlockAudio } from './engine.js';
-import { isSoundOn, onSoundChange, soundPrefs, toggleSoundPref } from './prefs.js';
+import { onSoundChange, soundPrefs, toggleSoundPref } from './prefs.js';
 import { ambientState, startAmbient, stopAmbient, startWaitAmbience, stopWaitAmbience } from './ambient.js';
 import * as sfx from './sfx.js';
 import { ui } from '../state.js';
@@ -18,8 +18,6 @@ let introDone = false;
 let introAwakened = false;
 let wakeTimer = 0;
 
-let pulseRaf = 0;
-let lastBreathAge = 0;
 
 /* ------------------------------ 解锁 ------------------------------ */
 
@@ -34,12 +32,20 @@ async function attemptUnlock() {
   applyPrefs(soundPrefs());
   syncAmbient();
   // 还没点进星海：把等待页的循环底噪铺上（持续振荡器，首尾天然无缝）。
-  if (!introStarted) startWaitAmbience();
+  if (!introStarted) syncWaitAmbience();
   // 用户在爆炸之后才第一次交互：开场音已经错过，用一声苏醒音补偿。
   if (introStarted && introDone && !introAwakened) {
     introAwakened = true;
     sfx.awaken();
   }
+}
+
+/** 等待页氛围音：只看「开场 · 等待页氛围」这一项开关。 */
+function syncWaitAmbience() {
+  const prefs = soundPrefs();
+  const want = prefs.enabled && prefs.channels.introWait === true && !introStarted;
+  if (want) startWaitAmbience();
+  else stopWaitAmbience();
 }
 
 function onGesture() {
@@ -67,6 +73,8 @@ function unbindGestures() {
 function applyPrefs(prefs) {
   setMasterVolume(prefs.enabled ? prefs.volume : 0);
   syncAmbient();
+  // 等待页还没结束：跟着「等待页氛围」的开关即时响起或收掉。
+  if (!introStarted) syncWaitAmbience();
 }
 
 function syncAmbient() {
@@ -171,25 +179,6 @@ function watchOverlays() {
   }
 }
 
-/* ------------------------------ 心跳应和 ------------------------------ */
-
-function startPulseWatch() {
-  if (pulseRaf) return;
-  const step = () => {
-    pulseRaf = requestAnimationFrame(step);
-    if (!audioReady() || !isSoundOn('pulse')) return;
-    if (ui.level !== 'sphere' || !ui.idleModes || !ui.idleModes.breathe) {
-      lastBreathAge = 0;
-      return;
-    }
-    const age = Number(ui.breathAge) || 0;
-    // breathAge 在每拍结束时归零：一次归零 = 一次心跳。
-    if (age < lastBreathAge - 600) sfx.heartbeat(0.95);
-    lastBreathAge = age;
-  };
-  pulseRaf = requestAnimationFrame(step);
-}
-
 /* ------------------------------ 初始化 ------------------------------ */
 
 export function initSound() {
@@ -202,6 +191,5 @@ export function initSound() {
   bindShortcuts();
   bindDelegates();
   watchOverlays();
-  startPulseWatch();
   onSoundChange(applyPrefs);
 }

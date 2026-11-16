@@ -361,7 +361,7 @@
         <div class="modal-head">
           <div>
             <h2 id="soundTitle">音效设置</h2>
-            <p class="field-note">界面音效跟随打开、切换、选中；编辑音效包含打字、删字与保存；开场音效是进入星海的那一段。</p>
+            <p class="field-note">每一项音效都能单独开关：关掉后，对应的操作就静音，其它声音不受影响。</p>
           </div>
           <button class="x-btn" type="button" data-sound-close aria-label="关闭">×</button>
         </div>
@@ -375,15 +375,11 @@
             <input id="soundVolume" type="range" min="0" max="100" step="1" value="87" />
             <b id="soundVolumeText">87%</b>
           </label>
-          <div class="sound-cats" id="soundModes" role="group" aria-label="音效分类">
-            <button type="button" data-sound="ui" aria-pressed="true">界面音效</button>
-            <button type="button" data-sound="edit" aria-pressed="true">编辑音效</button>
-            <button type="button" data-sound="intro" aria-pressed="true">开场音效</button>
-          </div>
+          <div class="sound-groups" id="soundChannels" role="group" aria-label="音效开关"></div>
           <p class="field-note" id="soundHint">点一下页面任意位置后，声音才会开始。</p>
-          <button class="btn ghost sound-demo" id="soundDemo" type="button">试听</button>
         </div>
         <div class="modal-foot">
+          <button class="btn ghost" type="button" id="soundDemo">全部试听</button>
           <button class="btn primary" type="button" id="soundDone">完成</button>
         </div>
       </div>

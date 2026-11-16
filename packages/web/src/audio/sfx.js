@@ -35,23 +35,15 @@ const N = {
   A6: 1760.0
 };
 
-function uiOn() {
-  return audioReady() && isSoundOn('ui');
-}
-
-function editOn() {
-  return audioReady() && isSoundOn('edit');
-}
-
-function introOn() {
-  return audioReady() && isSoundOn('intro');
+function sfxOn(channel) {
+  return audioReady() && isSoundOn(channel);
 }
 
 /* ------------------------------ 开场 ------------------------------ */
 
 /** 等待页的氛围音：星海在呼吸，奇点在被一点点吸向中心。 */
 export function introWait(dur = 2.4) {
-  if (!introOn()) return;
+  if (!sfxOn('introWait')) return;
   // 两声很低的持续音，撑起整片黑暗的底。
   tone({ freq: N.D2, type: 'sine', dur: dur + 0.6, peak: 0.05, attack: 1.1, send: 0.5 });
   tone({ freq: N.A2, type: 'triangle', dur: dur + 0.4, peak: 0.026, attack: 1.4, send: 0.45, detune: 5 });
@@ -74,7 +66,7 @@ export function introWait(dur = 2.4) {
 
 /** 奇点蓄力：一声清钟由弱到强，气流轻轻聚拢（和其他界面音效同一套音色）。 */
 export function introCharge(dur = 0.42) {
-  if (!introOn()) return;
+  if (!sfxOn('introBlast')) return;
   bell(N.D5, { dur: 0.9, peak: 0.05, attack: dur, send: 0.7, bright: 1.0, spread: 0.3 });
   noise({
     dur: dur + 0.2,
@@ -90,7 +82,7 @@ export function introCharge(dur = 0.42) {
 
 /** 星核绽放：一段四秒的小曲——和声长音铺底，钟琴旋律上行，最后落在 D 大三和弦。 */
 export function introBlast() {
-  if (!introOn()) return;
+  if (!sfxOn('introBlast')) return;
   // 和声：D 大三和弦的钟琴长音，分在左右两侧轻轻铺开。
   [N.D4, N.Fs4, N.A4].forEach((freq, i) => {
     tone({
@@ -125,7 +117,7 @@ export function introBlast() {
 
 /** 没能赶上自动播放时的柔和替代：星海苏醒。 */
 export function awaken() {
-  if (!uiOn()) return;
+  if (!sfxOn('introWait')) return;
   sub({ freq: 36, endFreq: 44, dur: 2.4, peak: 0.045, attack: 1.2, send: 0.25 });
   bell(N.D4, { dur: 3.2, peak: 0.026, send: 0.7, bright: 0.6 });
   bell(N.A4, { dur: 3.4, peak: 0.022, send: 0.75, bright: 0.5, delay: 0.26 });
@@ -150,7 +142,7 @@ const SHAPE_SOUND = {
  * @param {string} id sphere | galaxy | helix | torus | lattice | wave | binary
  */
 export function shape(id) {
-  if (!uiOn()) return;
+  if (!sfxOn('shape')) return;
   setAmbientShape(id);
   const preset = SHAPE_SOUND[id] || SHAPE_SOUND.sphere;
   noise({ dur: 0.4, peak: 0.042, attack: 0.16, type: 'bandpass', f0: 380, f1: 2600, q: 0.9, send: 0.2 });
@@ -263,7 +255,7 @@ export function shape(id) {
 
 /** 一级 / 二级 / 三级 / 全部：四格音阶，越往上升越高。 */
 export function level(scope) {
-  if (!uiOn()) return;
+  if (!sfxOn('navigate')) return;
   const notes = [N.D3, N.A3, N.D4, N.D5];
   const index = Math.max(0, Math.min(3, (Number(scope) || 1) - 1));
   const f = notes[index];
@@ -274,7 +266,7 @@ export function level(scope) {
 
 /** 星海 → 局部图：向下的穿越感，落点音高由层级决定。 */
 export function enter(levelId) {
-  if (!uiOn()) return;
+  if (!sfxOn('navigate')) return;
   setAmbientLevel('local');
   whoosh({ from: 240, to: 2800, dur: 0.6, peak: 0.05, attack: 0.32, send: 0.35, q: 0.7 });
   sub({ freq: 78, endFreq: 40, dur: 0.7, peak: 0.052, attack: 0.02, send: 0.2 });
@@ -286,7 +278,7 @@ export function enter(levelId) {
 
 /** 局部图 → 星海：反向穿越，最后展开一个开阔的三音。 */
 export function sphere() {
-  if (!uiOn()) return;
+  if (!sfxOn('navigate')) return;
   setAmbientLevel('sphere');
   whoosh({ from: 3200, to: 220, dur: 0.7, peak: 0.046, attack: 0.3, send: 0.3, q: 0.75 });
   sub({ freq: 38, endFreq: 68, dur: 0.8, peak: 0.05, attack: 0.04, send: 0.2 });
@@ -306,7 +298,7 @@ let lastSelectAt = 0;
  * @param {number} pan -1..1
  */
 export function select(levelId, pan = 0) {
-  if (!uiOn()) return;
+  if (!sfxOn('select')) return;
   const now = performance.now();
   if (now - lastSelectAt < 70) return;
   lastSelectAt = now;
@@ -318,13 +310,13 @@ export function select(levelId, pan = 0) {
 
 /** 取消选中：同音高的轻声收尾。 */
 export function deselect() {
-  if (!uiOn()) return;
+  if (!sfxOn('select')) return;
   tone({ freq: N.D4, type: 'sine', dur: 0.3, peak: 0.016, attack: 0.004, send: 0.3 });
 }
 
 /** 侧栏展开：一下纸页摩擦 + 很轻的铃。 */
 export function panelOpen() {
-  if (!uiOn()) return;
+  if (!sfxOn('panel')) return;
   noise({
     dur: 0.22,
     peak: 0.028,
@@ -342,7 +334,7 @@ export function panelOpen() {
 
 /** 侧栏收起：纸页回收，音高落回。 */
 export function panelClose() {
-  if (!uiOn()) return;
+  if (!sfxOn('panel')) return;
   noise({
     dur: 0.2,
     peak: 0.022,
@@ -361,7 +353,7 @@ export function panelClose() {
 
 /** 标记掌握（金色琶音）或取消（收回成暗色两音）。 */
 export function mastery(on) {
-  if (!uiOn()) return;
+  if (!sfxOn('mastery')) return;
   if (on) {
     [N.D5, N.Fs5, N.A5, N.D6].forEach((f, i) =>
       bell(f, {
@@ -385,7 +377,7 @@ export function mastery(on) {
 
 /** 点亮一颗新知识点：五声音阶快速上行 + 星尘。 */
 export function lockLight() {
-  if (!uiOn()) return;
+  if (!sfxOn('add')) return;
   const notes = [N.D4, N.Fs4, N.A4, N.B4, N.D5];
   notes.forEach((f, i) => {
     bell(f, {
@@ -404,7 +396,7 @@ export function lockLight() {
 
 /** 知识点消失：低频下坠 + 一点碎裂。 */
 export function vanish() {
-  if (!uiOn()) return;
+  if (!sfxOn('delete')) return;
   sub({ freq: 96, endFreq: 30, dur: 0.6, peak: 0.085, attack: 0.006, send: 0.25 });
   noise({
     dur: 0.5,
@@ -433,7 +425,7 @@ export function vanish() {
 
 /** 黑洞吞噬：张开时的低频下坠 + 吸积盘气声 + 碎片，0.84s 时一记闷响吞掉节点。 */
 export function blackhole() {
-  if (!uiOn()) return;
+  if (!sfxOn('delete')) return;
 
   // 张开：低频一路沉下去，气流从高处被卷进来。
   sub({ freq: 122, endFreq: 22, dur: 1.55, peak: 0.17, attack: 0.02, send: 0.25 });
@@ -479,14 +471,14 @@ export function blackhole() {
 /** 保存修改：两声很轻的确认。 */
 /** 保存成功：一小段收束的钟音。 */
 export function saved() {
-  if (!editOn()) return;
+  if (!sfxOn('save')) return;
   tone({ freq: N.A4, type: 'sine', dur: 0.55, peak: 0.024, attack: 0.004, send: 0.35 });
   bell(N.E5, { dur: 0.9, peak: 0.016, send: 0.45, delay: 0.07, bright: 0.6 });
 }
 
 /** 保存失败（还没有绑定知识库文件）：两声下沉的提示。 */
 export function saveFail() {
-  if (!uiOn()) return;
+  if (!sfxOn('save')) return;
   tone({ freq: N.D4, type: 'triangle', dur: 0.42, peak: 0.028, attack: 0.008, send: 0.25 });
   tone({ freq: N.A3, type: 'triangle', dur: 0.55, peak: 0.02, attack: 0.01, send: 0.25, delay: 0.09 });
 }
@@ -498,7 +490,7 @@ let lastBackAt = 0;
 
 /** 打字：极短的一粒木鱼/按键声，音高轻微随机，避免机械重复。 */
 export function keyPress() {
-  if (!editOn()) return;
+  if (!sfxOn('typing')) return;
   const now = performance.now();
   if (now - lastKeyAt < 55) return;
   lastKeyAt = now;
@@ -510,7 +502,7 @@ export function keyPress() {
 
 /** 删字 / 退格：比打字略低、带一点摩擦感。 */
 export function keyBack() {
-  if (!editOn()) return;
+  if (!sfxOn('typing')) return;
   const now = performance.now();
   if (now - lastBackAt < 80) return;
   lastBackAt = now;
@@ -520,14 +512,14 @@ export function keyBack() {
 
 /** 撤销：向下两音；重做：向上一路。 */
 export function undo() {
-  if (!uiOn()) return;
+  if (!sfxOn('undo')) return;
   bell(N.A4, { dur: 0.7, peak: 0.018, send: 0.35, bright: 0.5 });
   bell(N.Fs4, { dur: 0.9, peak: 0.016, send: 0.35, bright: 0.45, delay: 0.08 });
   noise({ dur: 0.16, peak: 0.007, attack: 0.05, type: 'bandpass', f0: 2000, f1: 700, q: 1.2, send: 0.2 });
 }
 
 export function redo() {
-  if (!uiOn()) return;
+  if (!sfxOn('undo')) return;
   bell(N.Fs4, { dur: 0.7, peak: 0.018, send: 0.35, bright: 0.5 });
   bell(N.A4, { dur: 0.9, peak: 0.016, send: 0.35, bright: 0.45, delay: 0.08 });
   noise({ dur: 0.16, peak: 0.007, attack: 0.05, type: 'bandpass', f0: 700, f1: 2200, q: 1.2, send: 0.2 });
@@ -535,7 +527,7 @@ export function redo() {
 
 /** 导入 / 载入：一整片星图展开。 */
 export function imported() {
-  if (!uiOn()) return;
+  if (!sfxOn('transfer')) return;
   [N.D4, N.A4, N.D5, N.Fs5, N.A5].forEach((f, i) =>
     bell(f, {
       dur: 2.0,
@@ -552,7 +544,7 @@ export function imported() {
 
 /** 导出：一颗短促的高音确认。 */
 export function exported() {
-  if (!uiOn()) return;
+  if (!sfxOn('transfer')) return;
   bell(N.D6, { dur: 1.4, peak: 0.02, send: 0.5, bright: 0.8 });
   bell(N.A5, { dur: 1.6, peak: 0.016, send: 0.55, bright: 0.6, delay: 0.06 });
   sparkle({ count: 5, base: 3000, spread: 2000, dur: 1.0, peak: 0.007, delay: 0.05, send: 0.6 });
@@ -572,7 +564,7 @@ const MENU_NOTES = {
 
 /** ⋯ 菜单项：一声木鱼，每项音高不同。 */
 export function menu(kind) {
-  if (!uiOn()) return;
+  if (!sfxOn('menu')) return;
   tick(MENU_NOTES[kind] || N.A4, { peak: 0.028, send: 0.12, dur: 0.12 });
   if (kind === 'reward') {
     sparkle({ count: 5, base: 2400, spread: 2000, dur: 1.2, peak: 0.007, delay: 0.05, send: 0.6 });
@@ -581,7 +573,7 @@ export function menu(kind) {
 
 /** 弹窗开 / 关。 */
 export function modal(open) {
-  if (!uiOn()) return;
+  if (!sfxOn('modal')) return;
   if (open) {
     noise({
       dur: 0.26,
@@ -611,14 +603,14 @@ export function modal(open) {
 
 /** 侧栏页签切换：一声短拨弦。 */
 export function tab() {
-  if (!uiOn()) return;
+  if (!sfxOn('tab')) return;
   tick(N.E5, { peak: 0.02, send: 0.15, dur: 0.08 });
   tone({ freq: N.B4, type: 'triangle', dur: 0.35, peak: 0.011, attack: 0.003, send: 0.3, delay: 0.01 });
 }
 
 /** 静默效果开关：旋转 / 心跳 / 膨胀 / 静止各有自己的声音。 */
 export function motion(mode, on) {
-  if (!uiOn()) return;
+  if (!sfxOn('motion')) return;
   if (mode === 'breathe') {
     if (on) {
       sub({ freq: 52, dur: 0.5, peak: 0.065, attack: 0.008, send: 0.2 });
@@ -650,28 +642,28 @@ export function motion(mode, on) {
 
 /** 重置图形 / 重置视图。 */
 export function reset() {
-  if (!uiOn()) return;
+  if (!sfxOn('reset')) return;
   whoosh({ from: 1800, to: 260, dur: 0.5, peak: 0.032, attack: 0.2, send: 0.25 });
   bell(N.D4, { dur: 1.6, peak: 0.026, send: 0.5, delay: 0.12, bright: 0.7 });
   sub({ freq: 60, endFreq: 80, dur: 0.4, peak: 0.028, attack: 0.05, send: 0.1 });
 }
 
 export function zoom() {
-  if (!uiOn()) return;
+  if (!sfxOn('zoom')) return;
   whoosh({ from: 400, to: 2200, dur: 0.35, peak: 0.023, attack: 0.12, send: 0.2, q: 1.1 });
   tick(N.A4, { peak: 0.016, send: 0.1 });
 }
 
 /** 搜索结果被打开：轻快的两音。 */
 export function searchPick() {
-  if (!uiOn()) return;
+  if (!sfxOn('search')) return;
   bell(N.D5, { dur: 1.2, peak: 0.02, send: 0.45, bright: 0.75 });
   bell(N.A5, { dur: 1.0, peak: 0.014, send: 0.5, bright: 0.7, delay: 0.06 });
 }
 
 /** 提示 / 失败：低而短的两音，不刺耳。 */
 export function nudge(ok = true) {
-  if (!uiOn()) return;
+  if (!sfxOn('nudge')) return;
   if (ok) {
     tone({ freq: N.A4, type: 'sine', dur: 0.3, peak: 0.014, attack: 0.005, send: 0.25 });
   } else {
@@ -697,7 +689,7 @@ export function heartbeat(strength = 1) {
 
 /** 折叠 / 展开一条：展开向上、收起向下。 */
 export function docFold(open) {
-  if (!uiOn()) return;
+  if (!sfxOn('docFold')) return;
   const up = !!open;
   tick(up ? N.A5 : N.D5, { peak: 0.024, dur: 0.085, send: 0.22, pan: 0.12 });
   tick(up ? N.E6 : N.A4, { peak: 0.012, delay: 0.032, dur: 0.07, send: 0.3, pan: -0.12 });
@@ -705,41 +697,41 @@ export function docFold(open) {
 
 /** 新增一条（回车 / 添加条目）。 */
 export function docAdd() {
-  if (!uiOn()) return;
+  if (!sfxOn('docEdit')) return;
   tick(N.E5, { peak: 0.026, dur: 0.075, send: 0.24 });
   tick(N.A5, { peak: 0.016, delay: 0.055, dur: 0.1, send: 0.32 });
 }
 
 /** 抓起一条准备拖动。 */
 export function docPick() {
-  if (!uiOn()) return;
+  if (!sfxOn('docMove')) return;
   noise({ dur: 0.085, peak: 0.015, attack: 0.004, type: 'bandpass', f0: 1900, f1: 1500, q: 1.3, send: 0.2 });
 }
 
 /** 放下：落到新位置的一声轻响。 */
 export function docDrop() {
-  if (!uiOn()) return;
+  if (!sfxOn('docMove')) return;
   tick(N.D5, { peak: 0.028, dur: 0.1, send: 0.26 });
   sub({ freq: 74, endFreq: 54, dur: 0.16, peak: 0.045, send: 0.1 });
 }
 
 /** 放置失败：闷响提示。 */
 export function docBlocked() {
-  if (!uiOn()) return;
+  if (!sfxOn('docMove')) return;
   tick(N.A3, { peak: 0.02, dur: 0.11, send: 0.2 });
   noise({ dur: 0.14, peak: 0.012, attack: 0.006, type: 'lowpass', f0: 520, f1: 240, send: 0.16 });
 }
 
 /** Tab / Shift+Tab：缩进向上、反缩进向下。 */
 export function docIndent(up) {
-  if (!uiOn()) return;
+  if (!sfxOn('docEdit')) return;
   tick(up ? N.Fs5 : N.D5, { peak: 0.022, dur: 0.08, send: 0.22 });
   tick(up ? N.A5 : N.A4, { peak: 0.012, delay: 0.04, dur: 0.07, send: 0.26 });
 }
 
 /** 删除空条目：轻轻擦掉。 */
 export function docRemove() {
-  if (!uiOn()) return;
+  if (!sfxOn('docEdit')) return;
   noise({ dur: 0.12, peak: 0.017, attack: 0.004, type: 'lowpass', f0: 880, f1: 260, send: 0.2 });
   tick(N.D4, { peak: 0.018, dur: 0.08, send: 0.18 });
 }

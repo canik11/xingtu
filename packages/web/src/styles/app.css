@@ -2196,33 +2196,80 @@ body.has-unsaved .save-orb {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
-.sound-cats {
+.sound-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-right: -4px;
+}
+.sound-group h3 {
+  margin: 0 0 5px;
+  color: #7f96b6;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .18em;
+}
+.sound-group.is-dim h3 {
+  opacity: .45;
+}
+.sound-items {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
 }
-.sound-cats button {
-  padding: 7px 4px;
-  border: 1px solid rgba(160, 195, 255, .16);
+.sound-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(160, 195, 255, .13);
   border-radius: 8px;
-  background: rgba(10, 18, 34, .5);
-  color: #93a9c8;
-  font-size: 10.5px;
-  letter-spacing: .04em;
+  background: rgba(10, 18, 34, .42);
+  color: #8fa4c2;
+  font-size: 11px;
+  text-align: left;
   cursor: pointer;
-  transition: color .25s, border-color .25s, background .25s;
+  transition: color .22s, border-color .22s, background .22s;
 }
-.sound-cats button:hover {
+.sound-item:hover {
   color: #dcecff;
-  border-color: rgba(170, 210, 255, .35);
+  border-color: rgba(170, 210, 255, .3);
 }
-.sound-cats button.is-active {
-  color: #0d1524;
-  background: linear-gradient(135deg, rgba(205, 230, 255, .92), rgba(150, 195, 255, .82));
-  border-color: transparent;
+.sound-item.is-on {
+  color: #e8f2ff;
+  border-color: rgba(168, 205, 255, .34);
+  background: rgba(28, 46, 74, .55);
 }
-.sound-demo {
-  align-self: flex-start;
+.sound-item-switch {
+  flex: none;
+  position: relative;
+  width: 26px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(120, 145, 180, .28);
+  transition: background .24s;
+}
+.sound-item-switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8fa4c2;
+  transition: left .24s, background .24s, box-shadow .24s;
+}
+.sound-item.is-on .sound-item-switch {
+  background: rgba(160, 205, 255, .5);
+}
+.sound-item.is-on .sound-item-switch i {
+  left: 14px;
+  background: #f2f8ff;
+  box-shadow: 0 0 8px rgba(180, 215, 255, .75);
 }
 .nav-doc {
   letter-spacing: .08em;
