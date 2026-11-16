@@ -11,9 +11,10 @@ if (!fs.existsSync(src)) {
   process.exit(1);
 }
 
-fs.rmSync(dest, { recursive: true, force: true });
+// 不整目录删除：桌面版正在运行时 app/ 会被锁住（EPERM），
+// 这里直接覆盖同名文件即可，dist 里只有单文件 index.html，不会残留旧文件。
 fs.mkdirSync(dest, { recursive: true });
-fs.cpSync(src, dest, { recursive: true });
+fs.cpSync(src, dest, { recursive: true, force: true });
 
 // 附带：应用图标、快捷方式启动器、WebView2 壳程序（单文件版分发时一起拷走）。
 const extras = [
