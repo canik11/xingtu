@@ -1262,7 +1262,10 @@ body.doc-open { overflow: hidden; }
   background: rgba(140, 180, 240, .035);
 }
 .doc-row.is-dragging {
-  opacity: .38;
+  opacity: .66;
+  outline: 1px dashed rgba(168, 200, 255, .58);
+  outline-offset: -2px;
+  border-radius: 8px;
 }
 .doc-handle {
   width: 18px;
@@ -1272,19 +1275,20 @@ body.doc-open { overflow: hidden; }
   background: none;
   cursor: grab;
   position: relative;
-  opacity: .36;
+  opacity: .52;
   transition: opacity .24s;
 }
+.doc-row:hover .doc-handle { opacity: .92; }
 .doc-handle::before {
   content: '';
   position: absolute;
-  left: 6px;
-  top: 10px;
-  width: 6px;
-  height: 6px;
+  left: 5.5px;
+  top: 9.5px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #dcecff;
-  box-shadow: 0 0 8px rgba(170, 210, 255, .55);
+  box-shadow: 0 0 10px rgba(170, 210, 255, .7);
 }
 .doc-handle:hover { opacity: 1; }
 .doc-handle:active { cursor: grabbing; }

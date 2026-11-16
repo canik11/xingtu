@@ -27,6 +27,8 @@ const NOTE_LIMIT = 2000;
 let isOpen = false;
 let dragState = null;
 let dropTarget = null;
+// 按住的位置是否落在正文里：落在正文里是「选字」，不该拖整行。
+let pressOnText = false;
 const collapsedNodes = new Set();
 
 function categoryName(id) {
@@ -54,13 +56,13 @@ function blockRow(block, nodeId, parentId, index, depth) {
   return `
     <div class="doc-row${depth === 0 ? ' is-root' : ''}" data-nid="${esc(block.id)}"
       data-node="${esc(nodeId)}" data-parent="${esc(parentId || '')}" data-index="${index}"
-      data-depth="${depth}" style="--depth:${depth}">
+      data-depth="${depth}" style="--depth:${depth}" draggable="true">
       <button class="doc-handle" type="button" draggable="true" aria-label="拖动条目"></button>
       ${hasKids
         ? `<button class="doc-fold" type="button" data-fold="${esc(block.id)}" aria-label="${block.collapsed ? '展开' : '折叠'}">${block.collapsed ? '▸' : '▾'}</button>`
         : '<span class="doc-fold is-leaf"></span>'}
       <div class="doc-text" contenteditable="true" spellcheck="false" role="textbox"
-        aria-label="大纲条目">${esc(block.text)}</div>
+        draggable="false" aria-label="大纲条目">${esc(block.text)}</div>
       ${masteryButton}
     </div>${children}`;
 }
@@ -199,15 +201,24 @@ function collapseAll(value) {
 }
 
 function startDrag(event) {
-  const handle = event.target.closest('.doc-handle');
-  if (!handle) return;
-  const row = handle.closest('.doc-row');
+  // 在正文上按住拖动是「选择文字」，不要让整行把它抢走。
+  if (pressOnText || event.target.closest('.doc-text')) {
+    event.preventDefault();
+    return;
+  }
+  const row = event.target.closest('.doc-row');
   if (!row) return;
   const owner = ownerOf(row.dataset.nid);
   if (!owner) return;
   dragState = { id: row.dataset.nid, nodeId: row.dataset.node, block: owner.block };
-  event.dataTransfer.effectAllowed = 'move';
-  event.dataTransfer.setData('text/plain', row.dataset.nid);
+  // 部分 WebView2 版本把 dataTransfer 当成只读对象，写属性会抛异常；
+  // 这里容忍失败，拖拽本身不依赖它。
+  try {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', row.dataset.nid);
+  } catch (err) {
+    /* 只读 dataTransfer：忽略 */
+  }
   el.docLayer.classList.add('is-dragging');
   requestAnimationFrame(() => row.classList.add('is-dragging'));
   sfx.docPick();
@@ -243,7 +254,11 @@ function targetFromRow(row, event) {
 function onDragOver(event) {
   if (!dragState) return;
   event.preventDefault();
-  event.dataTransfer.dropEffect = 'move';
+  try {
+    event.dataTransfer.dropEffect = 'move';
+  } catch (err) {
+    /* 只读 dataTransfer：忽略，后面的放置逻辑照常走 */
+  }
   clearDropMarks();
 
   const row = event.target.closest('.doc-row');
@@ -255,7 +270,11 @@ function onDragOver(event) {
       dragState.id === targetBlockId ||
       (sourceOwner && isBlockDescendant(sourceOwner.block, targetBlockId))
     ) {
-      event.dataTransfer.dropEffect = 'none';
+      try {
+        event.dataTransfer.dropEffect = 'none';
+      } catch (err) {
+        /* 忽略 */
+      }
       return;
     }
     const target = targetFromRow(row, event);
@@ -282,8 +301,13 @@ function onDragOver(event) {
 }
 
 function onDrop(event) {
-  if (!dragState || !dropTarget) return;
+  if (!dragState) return;
   event.preventDefault();
+  if (!dropTarget) {
+    // 没有算出落点：清掉拖动状态，别把高亮/变暗留在界面上。
+    endDrag();
+    return;
+  }
   const source = dragState;
   const target = dropTarget;
   const result = moveNoteBlock(
@@ -468,6 +492,16 @@ export function bindGlobalDoc() {
   el.docBody.addEventListener('keydown', onDocKeydown);
   el.docBody.addEventListener('click', onDocClick);
   el.docBody.addEventListener('dblclick', onDocDoubleClick);
+  el.docBody.addEventListener('mousedown', (event) => {
+    pressOnText = !!event.target.closest('.doc-text');
+  });
+  window.addEventListener(
+    'mouseup',
+    () => {
+      pressOnText = false;
+    },
+    true
+  );
   el.docBody.addEventListener('dragstart', startDrag);
   el.docBody.addEventListener('dragover', onDragOver);
   el.docBody.addEventListener('drop', onDrop);
