@@ -56,13 +56,13 @@ function blockRow(block, nodeId, parentId, index, depth) {
   return `
     <div class="doc-row${depth === 0 ? ' is-root' : ''}" data-nid="${esc(block.id)}"
       data-node="${esc(nodeId)}" data-parent="${esc(parentId || '')}" data-index="${index}"
-      data-depth="${depth}" style="--depth:${depth}" draggable="true">
-      <button class="doc-handle" type="button" draggable="true" aria-label="拖动条目"></button>
+      data-depth="${depth}" style="--depth:${depth}">
+      <button class="doc-handle" type="button" aria-label="拖动条目"></button>
       ${hasKids
         ? `<button class="doc-fold" type="button" data-fold="${esc(block.id)}" aria-label="${block.collapsed ? '展开' : '折叠'}">${block.collapsed ? '▸' : '▾'}</button>`
         : '<span class="doc-fold is-leaf"></span>'}
       <div class="doc-text" contenteditable="true" spellcheck="false" role="textbox"
-        draggable="false" aria-label="大纲条目">${esc(block.text)}</div>
+        aria-label="大纲条目">${esc(block.text)}</div>
       ${masteryButton}
     </div>${children}`;
 }
@@ -228,6 +228,7 @@ function startDrag(event) {
 function endDrag() {
   dragState = null;
   clearDropMarks();
+  document.body.classList.remove('doc-dragging');
   el.docLayer.classList.remove('is-dragging');
   el.docBody.querySelectorAll('.is-dragging').forEach((row) => row.classList.remove('is-dragging'));
   setStatus('');
@@ -300,13 +301,12 @@ function onDragOver(event) {
   }
 }
 
-function onDrop(event) {
-  if (!dragState) return;
-  event.preventDefault();
-  if (!dropTarget) {
+/** 真正执行放置：HTML5 drop 与指针拖拽共用。 */
+function commitDrop() {
+  if (!dragState || !dropTarget) {
     // 没有算出落点：清掉拖动状态，别把高亮/变暗留在界面上。
     endDrag();
-    return;
+    return false;
   }
   const source = dragState;
   const target = dropTarget;
@@ -321,7 +321,7 @@ function onDrop(event) {
     sfx.docBlocked();
     setStatus(result.reason === 'descendant' ? '不能把条目拖进自己的子级' : '这里不能放置');
     endDrag();
-    return;
+    return false;
   }
   collapsedNodes.delete(target.nodeId);
   refreshAfterStructure();
@@ -330,6 +330,113 @@ function onDrop(event) {
   render();
   sfx.docDrop();
   setStatus(`已移动「${movedText.slice(0, 24)}」`);
+  return true;
+}
+
+function onDrop(event) {
+  if (!dragState) return;
+  event.preventDefault();
+  commitDrop();
+}
+
+/* ------------------------------ 指针拖拽 ------------------------------ */
+// HTML5 drag 在 contenteditable 里很容易被「选字」抢走，WebView2 里还会挑 dataTransfer；
+// 这里自己用 pointer 事件拖：按住行的任意非文字处移动，就能重排或归入下级。
+
+let pointerDrag = null;
+
+function onPointerDown(event) {
+  if (event.button !== 0 || pointerDrag) return;
+  if (!el.docBody.contains(event.target)) return;
+  // 正文里按住是选字，按钮是点击，都不当作拖动。
+  if (event.target.closest('.doc-text')) return;
+  // 折叠、掌握等按钮不拖动；左侧的拖动把手要放行。
+  if (event.target.closest('button:not(.doc-handle), input, .doc-check')) return;
+  const row = event.target.closest('.doc-row');
+  if (!row) return;
+  const owner = ownerOf(row.dataset.nid);
+  if (!owner) return;
+  pointerDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    lastX: event.clientX,
+    lastY: event.clientY,
+    id: row.dataset.nid,
+    nodeId: row.dataset.node,
+    block: owner.block,
+    row,
+    active: false
+  };
+}
+
+function onPointerMove(event) {
+  if (!pointerDrag || event.pointerId !== pointerDrag.pointerId) return;
+  const drag = pointerDrag;
+  drag.lastX = event.clientX;
+  drag.lastY = event.clientY;
+  if (!drag.active) {
+    if (Math.hypot(drag.lastX - drag.startX, drag.lastY - drag.startY) < 6) return;
+    drag.active = true;
+    dragState = { id: drag.id, nodeId: drag.nodeId, block: drag.block };
+    el.docLayer.classList.add('is-dragging');
+    drag.row.classList.add('is-dragging');
+    document.body.classList.add('doc-dragging');
+    setStatus('拖动到目标位置');
+    sfx.docPick();
+  }
+  event.preventDefault();
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount) selection.removeAllRanges();
+
+  const under = document.elementFromPoint(drag.lastX, drag.lastY);
+  const row = under && under.closest ? under.closest('.doc-row') : null;
+  if (row) {
+    if (row === drag.row) {
+      clearDropMarks();
+      return;
+    }
+    const targetBlockId = row.dataset.nid;
+    if (drag.id === targetBlockId || isBlockDescendant(drag.block, targetBlockId)) {
+      clearDropMarks();
+      return;
+    }
+    const target = targetFromRow(row, { clientY: drag.lastY });
+    if (!target) return;
+    clearDropMarks();
+    dropTarget = target;
+    row.classList.add(`drop-${target.mode}`);
+    return;
+  }
+  // 落在节点放置区（「拖到这里，归入」）：挂到该节点末尾。
+  const section = under && under.closest ? under.closest('[data-drop-section]') : null;
+  if (section) {
+    const nodeId = section.dataset.dropSection;
+    const node = data.nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+    clearDropMarks();
+    dropTarget = { nodeId, parentId: null, index: (node.note || []).length, mode: 'section', section };
+    section.classList.add('drop-section');
+    return;
+  }
+  clearDropMarks();
+}
+
+function onPointerUp(event) {
+  if (!pointerDrag || event.pointerId !== pointerDrag.pointerId) return;
+  const drag = pointerDrag;
+  pointerDrag = null;
+  document.body.classList.remove('doc-dragging');
+  if (!drag.active) return;
+  if (event.pointerType === 'mouse') event.preventDefault();
+  commitDrop();
+}
+
+function onPointerCancel() {
+  if (!pointerDrag) return;
+  pointerDrag = null;
+  document.body.classList.remove('doc-dragging');
+  endDrag();
 }
 
 function onDocInput(event) {
@@ -502,10 +609,10 @@ export function bindGlobalDoc() {
     },
     true
   );
-  el.docBody.addEventListener('dragstart', startDrag);
-  el.docBody.addEventListener('dragover', onDragOver);
-  el.docBody.addEventListener('drop', onDrop);
-  el.docBody.addEventListener('dragend', endDrag);
+  el.docBody.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove, { passive: false });
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerCancel);
   el.docLayer.addEventListener('dragleave', (event) => {
     if (!el.docLayer.contains(event.relatedTarget)) clearDropMarks();
   });

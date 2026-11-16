@@ -1262,10 +1262,12 @@ body.doc-open { overflow: hidden; }
   background: rgba(140, 180, 240, .035);
 }
 .doc-row.is-dragging {
-  opacity: .66;
-  outline: 1px dashed rgba(168, 200, 255, .58);
+  opacity: .94;
+  background: rgba(120, 170, 255, .10);
+  outline: 1px dashed rgba(168, 200, 255, .72);
   outline-offset: -2px;
   border-radius: 8px;
+  box-shadow: 0 8px 22px -14px rgba(0, 0, 0, .75);
 }
 .doc-handle {
   width: 18px;
@@ -2274,3 +2276,8 @@ body.has-unsaved .save-orb {
 .nav-doc {
   letter-spacing: .08em;
 }
+
+/* 指针拖拽进行中：全局禁选，光标保持抓取。 */
+body.doc-dragging { user-select: none; cursor: grabbing; }
+body.doc-dragging .doc-text { cursor: grabbing; }
+

@@ -31,6 +31,13 @@ export function getLevel() {
 /** 不同形状的基准取景半径：非球形骨架更大，统一退到 430 左右。 */
 const SHAPE_RADIUS = { galaxy: 430, helix: 430, torus: 430, lattice: 440, wave: 430, binary: 420 };
 
+/** 面包屑标签：超过 5 个字就截断，免得一级长标题把整条导航顶开。 */
+function crumbLabel(name) {
+  const chars = Array.from(String(name || ''));
+  if (chars.length <= 5) return esc(name);
+  return `${esc(chars.slice(0, 5).join(''))}…`;
+}
+
 function sphereRadius() {
   const shaped = SHAPE_RADIUS[ui.shape];
   if (shaped) return ui.idleModes.puff || ui.spherePuffTarget > 0.5 ? shaped + 40 : shaped;
@@ -85,10 +92,10 @@ export function syncNav() {
       parts.push('<span class="crumb-sep">/</span>');
       const current = i === path.length - 1;
       if (current) {
-        parts.push(`<span class="crumb is-current">${esc(entity.name)}</span>`);
+        parts.push(`<span class="crumb is-current" title="${esc(entity.name)}">${crumbLabel(entity.name)}</span>`);
       } else {
         parts.push(
-          `<button type="button" class="crumb" data-focus="${esc(entity.id)}">${esc(entity.name)}</button>`
+          `<button type="button" class="crumb" data-focus="${esc(entity.id)}" title="${esc(entity.name)}">${crumbLabel(entity.name)}</button>`
         );
       }
     });
