@@ -649,3 +649,54 @@ export function heartbeat(strength = 1) {
   sub({ freq: 50, endFreq: 44, dur: 0.38, peak: 0.05 * s, attack: 0.008, send: 0.15 });
   sub({ freq: 44, dur: 0.3, peak: 0.028 * s, attack: 0.01, delay: 0.22, send: 0.15 });
 }
+
+/* ------------------------- 全项目大纲的编辑交互 ------------------------- */
+
+/** 折叠 / 展开一条：展开向上、收起向下。 */
+export function docFold(open) {
+  if (!uiOn()) return;
+  const up = !!open;
+  tick(up ? N.A5 : N.D5, { peak: 0.024, dur: 0.085, send: 0.22, pan: 0.12 });
+  tick(up ? N.E6 : N.A4, { peak: 0.012, delay: 0.032, dur: 0.07, send: 0.3, pan: -0.12 });
+}
+
+/** 新增一条（回车 / 添加条目）。 */
+export function docAdd() {
+  if (!uiOn()) return;
+  tick(N.E5, { peak: 0.026, dur: 0.075, send: 0.24 });
+  tick(N.A5, { peak: 0.016, delay: 0.055, dur: 0.1, send: 0.32 });
+}
+
+/** 抓起一条准备拖动。 */
+export function docPick() {
+  if (!uiOn()) return;
+  noise({ dur: 0.085, peak: 0.015, attack: 0.004, type: 'bandpass', f0: 1900, f1: 1500, q: 1.3, send: 0.2 });
+}
+
+/** 放下：落到新位置的一声轻响。 */
+export function docDrop() {
+  if (!uiOn()) return;
+  tick(N.D5, { peak: 0.028, dur: 0.1, send: 0.26 });
+  sub({ freq: 74, endFreq: 54, dur: 0.16, peak: 0.045, send: 0.1 });
+}
+
+/** 放置失败：闷响提示。 */
+export function docBlocked() {
+  if (!uiOn()) return;
+  tick(N.A3, { peak: 0.02, dur: 0.11, send: 0.2 });
+  noise({ dur: 0.14, peak: 0.012, attack: 0.006, type: 'lowpass', f0: 520, f1: 240, send: 0.16 });
+}
+
+/** Tab / Shift+Tab：缩进向上、反缩进向下。 */
+export function docIndent(up) {
+  if (!uiOn()) return;
+  tick(up ? N.Fs5 : N.D5, { peak: 0.022, dur: 0.08, send: 0.22 });
+  tick(up ? N.A5 : N.A4, { peak: 0.012, delay: 0.04, dur: 0.07, send: 0.26 });
+}
+
+/** 删除空条目：轻轻擦掉。 */
+export function docRemove() {
+  if (!uiOn()) return;
+  noise({ dur: 0.12, peak: 0.017, attack: 0.004, type: 'lowpass', f0: 880, f1: 260, send: 0.2 });
+  tick(N.D4, { peak: 0.018, dur: 0.08, send: 0.18 });
+}

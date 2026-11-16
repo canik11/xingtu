@@ -150,6 +150,31 @@ export async function pickKbFile() {
   return norm;
 }
 
+/** 新建一个空白知识文件：让用户自己挑保存位置，写盘后绑定它，返回文件名。 */
+export async function createKbFile(text) {
+  if (!kbFileSupported() || typeof window.showSaveFilePicker !== 'function') throw new Error('unsupported');
+  // 记住上次选择的文件位置：把上次的句柄作为 startIn，保存对话框会停在它所在的目录。
+  let lastHandle = null;
+  try {
+    lastHandle = await getHandle();
+  } catch {
+    /* IndexedDB 不可用时按默认目录。 */
+  }
+  const options = { suggestedName: '我的知识库.json', types: pickerTypes() };
+  if (lastHandle) options.startIn = lastHandle;
+  let handle;
+  try {
+    handle = await window.showSaveFilePicker(options);
+  } catch (err) {
+    if (err && err.name === 'AbortError') throw new Error('cancelled');
+    throw err;
+  }
+  if (!handle) throw new Error('cancelled');
+  await writeText(handle, text);
+  await bind(handle);
+  return boundName;
+}
+
 /** 启动时恢复上次绑定的文件；权限未授予时只恢复句柄，等用户重新选择。 */
 export async function restoreKbFile() {
   if (!kbFileSupported()) return null;

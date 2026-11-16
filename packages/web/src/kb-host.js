@@ -49,7 +49,7 @@ function onMessage(event) {
   const type = raw.slice(PREFIX.length, first);
   const path = raw.slice(first + 1, second);
   const content = raw.slice(second + 1);
-  if (type === 'loaded' || type === 'picked') hostPath = path;
+  if (type === 'loaded' || type === 'picked' || type === 'created') hostPath = path;
   settle({ status: type, path, content });
 }
 
@@ -88,6 +88,15 @@ export async function pickHostKb() {
   if (pending) settle(null);
   const wait = waitForShell();
   if (!post('starmap:kb-pick')) return null;
+  return wait;
+}
+
+/** 让壳弹出「新建知识库」保存对话框，写盘并绑定；返回 { status, path }。 */
+export async function createHostKb(text) {
+  if (!hostKbSupported()) return null;
+  if (pending) settle(null);
+  const wait = waitForShell();
+  if (!post('starmap:kb-create\n' + text)) return null;
   return wait;
 }
 

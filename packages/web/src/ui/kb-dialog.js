@@ -13,6 +13,12 @@ export function isKbDialogOpen() {
 /** 同步绑定文件、输入框与按钮文案，供载入/绑定后刷新。 */
 export function syncKbUi() {
   if (!el.kbPathInput) return;
+  if (el.kbCreateBtn) {
+    el.kbCreateBtn.hidden = false;
+    el.kbCreateBtn.title = hostKbSupported() || typeof window.showSaveFilePicker === 'function'
+      ? '新建一份空白知识库，保存位置由你选择'
+      : '新建空白知识库（这个浏览器不支持直接保存，会下载一份 JSON）';
+  }
   // 桌面壳：显示壳记住的完整路径，选择/读写都由壳负责。
   if (hostKbSupported()) {
     const hostPath = getHostKbPath();

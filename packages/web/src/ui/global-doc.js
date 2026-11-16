@@ -21,6 +21,7 @@ import { getEntity, refreshOutline } from '../outline.js';
 import { rebuildFocus } from '../focus.js';
 import { toggleMastery, blockMasteryRatio, isLeafBlock } from '../mastery.js';
 import { enterLocal } from '../navigation.js';
+import * as sfx from '../audio/sfx.js';
 
 const NOTE_LIMIT = 2000;
 let isOpen = false;
@@ -151,7 +152,9 @@ function caretOffset(textEl) {
 function toggleFold(id) {
   const owner = ownerOf(id);
   if (!owner) return;
-  if (toggleBlock(owner.node.note, id) === null) return;
+  const block = toggleBlock(owner.node.note, id);
+  if (!block) return;
+  sfx.docFold(!block.collapsed);
   // 折叠只是视图状态，不点亮「未保存」提示。
   scheduleSave({ silent: true });
   render();
@@ -164,12 +167,15 @@ function addBlock(nodeId) {
   collapsedNodes.delete(nodeId);
   refreshAfterStructure();
   render(block.id, 'end');
+  sfx.docAdd();
   setStatus('已添加条目');
 }
 
 function toggleNodeFold(nodeId) {
-  if (collapsedNodes.has(nodeId)) collapsedNodes.delete(nodeId);
+  const wasCollapsed = collapsedNodes.has(nodeId);
+  if (wasCollapsed) collapsedNodes.delete(nodeId);
   else collapsedNodes.add(nodeId);
+  sfx.docFold(wasCollapsed);
   render();
 }
 
@@ -186,6 +192,7 @@ function collapseAll(value) {
   };
   for (const node of data.nodes) walk(node.note || []);
   scheduleSave({ silent: true });
+  sfx.docFold(!value);
   render();
 }
 
@@ -201,6 +208,7 @@ function startDrag(event) {
   event.dataTransfer.setData('text/plain', row.dataset.nid);
   el.docLayer.classList.add('is-dragging');
   requestAnimationFrame(() => row.classList.add('is-dragging'));
+  sfx.docPick();
   setStatus('拖动到目标位置');
 }
 
@@ -284,6 +292,7 @@ function onDrop(event) {
     target.index
   );
   if (!result.ok) {
+    sfx.docBlocked();
     setStatus(result.reason === 'descendant' ? '不能把条目拖进自己的子级' : '这里不能放置');
     endDrag();
     return;
@@ -293,6 +302,7 @@ function onDrop(event) {
   const movedText = result.block.text || '未命名条目';
   endDrag();
   render();
+  sfx.docDrop();
   setStatus(`已移动「${movedText.slice(0, 24)}」`);
 }
 
@@ -320,6 +330,7 @@ function onDocKeydown(event) {
     const next = splitBlock(owner.node.note, owner.block.id, offset, currentText(text));
     refreshAfterStructure();
     render(next?.id || null, 'end');
+    sfx.docAdd();
     setStatus('已新增条目');
     return;
   }
@@ -331,6 +342,7 @@ function onDocKeydown(event) {
     if (result.ok) {
       refreshAfterStructure();
       render(owner.block.id, 'end');
+      sfx.docIndent(!event.shiftKey);
     }
     return;
   }
@@ -339,6 +351,7 @@ function onDocKeydown(event) {
     const result = removeBlock(owner.node.note, owner.block.id);
     refreshAfterStructure();
     render(result.focusId || null, 'end');
+    sfx.docRemove();
     setStatus('已删除空条目');
   }
 }
@@ -361,6 +374,7 @@ function onDocClick(event) {
     mastery.title = next ? '取消掌握' : '标记为已掌握';
     const box = mastery.querySelector('.doc-mastery-box');
     if (box) box.textContent = next ? '✓' : '';
+    sfx.mastery(next);
     setStatus(next ? `已标记掌握「${entity.name}」` : `已取消掌握「${entity.name}」`);
     return;
   }
@@ -417,6 +431,7 @@ export function openGlobalDoc() {
   void el.docLayer.offsetWidth;
   el.docLayer.classList.add('open');
   el.docBody.scrollTop = 0;
+  sfx.modal(true);
 }
 
 export function closeGlobalDoc() {
@@ -426,6 +441,7 @@ export function closeGlobalDoc() {
   el.docLayer.classList.remove('open');
   el.docLayer.hidden = true;
   document.body.classList.remove('doc-open');
+  sfx.modal(false);
 }
 
 export function bindGlobalDoc() {

@@ -50,11 +50,13 @@ namespace KnowledgeStarmap
         private static extern int SetWindowTheme(IntPtr hwnd, string appName, string idList);
         // 页面 → 壳：纯文本协议，避免 JSON 转义；路径与内容用换行分隔。
         private const string KbSaveCommand = "starmap:kb-save\n";
+        private const string KbCreateCommand = "starmap:kb-create\n";
         private readonly WebView2 webView;
         private readonly string userDataFolder;
         private readonly string kbConfigFile;
         private readonly string htmlPath;
         private string kbPath;
+        private bool pageDirty;
         private bool isFullscreen;
         private FormBorderStyle savedBorderStyle;
         private FormWindowState savedWindowState;
@@ -88,6 +90,7 @@ namespace KnowledgeStarmap
             Controls.Add(webView);
             Load += async (sender, args) => await InitAsync();
             Shown += (sender, args) => ApplyDarkTitleBar();
+            FormClosing += OnFormClosing;
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -231,6 +234,50 @@ namespace KnowledgeStarmap
             catch { }
         }
 
+        // 新建空白知识库：用户自己挑保存位置，壳写盘后把路径回传给页面。
+        private void CreateKbFile(string content)
+        {
+            using (var dialog = new SaveFileDialog())
+            {
+                dialog.Title = "新建知识库";
+                dialog.Filter = "知识库 JSON (*.json)|*.json|所有文件 (*.*)|*.*";
+                dialog.FileName = "我的知识库.json";
+                dialog.OverwritePrompt = true;
+                if (kbPath.Length > 0)
+                {
+                    try { dialog.InitialDirectory = Path.GetDirectoryName(kbPath); } catch { }
+                }
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    PostKbPlain("starmap:kb-cancel");
+                    return;
+                }
+                try
+                {
+                    File.WriteAllText(dialog.FileName, content, new UTF8Encoding(false));
+                    kbPath = dialog.FileName;
+                    WriteKbPath(kbPath);
+                    PostKbFile("starmap:kb-created", kbPath, "");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("无法写入这个文件：\n" + ex.Message, "知识星图",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    PostKbPlain("starmap:kb-error");
+                }
+            }
+        }
+
+        // 关闭窗口时，如果页面还有没保存的修改，先问一句。
+        private void OnFormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (!pageDirty || e.CloseReason == CloseReason.WindowsShutDown) return;
+            DialogResult choice = MessageBox.Show(
+                "有未保存的修改，退出会丢弃，确定退出吗？\n\n先点「否」回到窗口，按 Ctrl+S 保存。",
+                "知识星图", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+            if (choice != DialogResult.Yes) e.Cancel = true;
+        }
+
         private void UnbindKbFile()
         {
             kbPath = "";
@@ -246,6 +293,8 @@ namespace KnowledgeStarmap
             else if (msg == "starmap:kb-get") SendKbFile();
             else if (msg == "starmap:kb-pick") PickKbFile();
             else if (msg == "starmap:kb-unbind") UnbindKbFile();
+            else if (msg.StartsWith("starmap:dirty\n")) pageDirty = msg.EndsWith("1");
+            else if (msg.StartsWith(KbCreateCommand)) CreateKbFile(msg.Substring(KbCreateCommand.Length));
             else if (msg.StartsWith(KbSaveCommand)) SaveKbFile(msg.Substring(KbSaveCommand.Length));
         }
 

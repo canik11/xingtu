@@ -84,6 +84,7 @@ export function cacheDom() {
   el.kbLayer = $id('kbLayer');
   el.kbPathInput = $id('kbPathInput');
   el.kbPickBtn = $id('kbPickBtn');
+  el.kbCreateBtn = $id('kbCreateBtn');
   el.kbPathHint = $id('kbPathHint');
   
   el.kbDone = $id('kbDone');

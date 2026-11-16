@@ -24,8 +24,8 @@ import { heat } from './layout.js';
 import { enterLocal, enterSphere } from './navigation.js';
 import { openAppearance } from './ui/appearance.js';
 import { bindKbDialog, openKbDialog, syncKbUi } from './ui/kb-dialog.js';
-import { getKbFileName, kbFileSupported, pickKbFile, unbindKbFile } from './kb-file.js';
-import { hostKbSupported, pickHostKb } from './kb-host.js';
+import { createKbFile, getKbFileName, kbFileSupported, pickKbFile, unbindKbFile } from './kb-file.js';
+import { createHostKb, hostKbSupported, pickHostKb } from './kb-host.js';
 import { bindRewardDialog, openRewardDialog } from './ui/reward-dialog.js';
 import { openGlobalDoc } from './ui/global-doc.js';
 import * as sfx from './audio/sfx.js';
@@ -435,6 +435,74 @@ function applyLoadedData(norm) {
   sfx.imported();
 }
 
+/** 一份空白知识库：没有课程、没有关系，用户从零开始画自己的星图。 */
+export function blankKnowledge() {
+  return {
+    version: 3,
+    contentVersion: 3,
+    categories: [],
+    nodes: [],
+    edges: [],
+    topicEdges: [],
+    mastery: {},
+    appearance: {},
+    view: null
+  };
+}
+
+/**
+ * 「新建空白知识库」：让用户自己挑保存位置，写一份空白 JSON，并把它绑定成当前知识库。
+ * 桌面版走壳的原生保存对话框；浏览器走文件系统 API；都不支持时退回下载。
+ */
+export async function createBlankKnowledge() {
+  const text = JSON.stringify(blankKnowledge(), null, 2);
+  // 桌面壳：保存对话框、写盘与绑定都由壳完成。
+  if (hostKbSupported()) {
+    try {
+      const res = await createHostKb(text);
+      if (!res) {
+        toast('新建知识库失败');
+        return;
+      }
+      if (res.status === 'cancel') return;
+      if (res.status !== 'created' || !res.path) {
+        toast('新建知识库失败');
+        return;
+      }
+      applyLoadedData(blankKnowledge());
+      syncKbUi();
+      toast(`已新建知识库：${res.path}`);
+    } catch (err) {
+      toast('新建知识库失败');
+    }
+    return;
+  }
+  // 浏览器支持直接写文件：保存对话框 + 绑定。
+  if (kbFileSupported() && typeof window.showSaveFilePicker === 'function') {
+    try {
+      const name = await createKbFile(text);
+      setKbPath('');
+      syncKbUi();
+      applyLoadedData(blankKnowledge());
+      toast(`已新建知识库：${name}`);
+    } catch (err) {
+      if (err && err.message === 'cancelled') return;
+      toast('新建知识库失败，或这个浏览器不支持直接保存');
+    }
+    return;
+  }
+  // 退路：下载一份空白 JSON，同时把界面切到空白库。
+  const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '我的知识库.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  applyLoadedData(blankKnowledge());
+  toast('浏览器不支持直接写入文件，已下载空白知识库');
+}
+
 /**
  * 「知识库路径」里的统一入口：浏览器支持文件读写时打开选择器，绑定或切换知识文件；
  * 不支持时按输入框里的路径载入（只读）。
@@ -715,6 +783,7 @@ export function bindActions() {
     toast('知识库路径已保存');
   });
   el.kbPickBtn.addEventListener('click', () => void openKnowledge());
+  if (el.kbCreateBtn) el.kbCreateBtn.addEventListener('click', () => void createBlankKnowledge());
 
   if (!storageAvailable()) {
     setTimeout(() => toast('本地存储不可用：本次改动不会自动保存'), 1000);

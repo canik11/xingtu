@@ -137,7 +137,8 @@ export function createDefaultData() {
 export function normalizeData(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const rawNodes = Array.isArray(raw.nodes) ? raw.nodes : null;
-  if (!rawNodes || rawNodes.length === 0) return null;
+  // nodes: [] 是合法的「空白知识库」：用户可以自己从零开始建星图。
+  if (!rawNodes) return null;
   let migrated = false;
   const rawVersion = Number.isFinite(+raw.version) ? +raw.version : 0;
   const contentVersion = Number.isFinite(+raw.contentVersion) ? +raw.contentVersion : 0;
@@ -195,7 +196,7 @@ export function normalizeData(raw) {
     });
     nodeIds.add(id);
   });
-  if (!nodes.length) return null;
+  // 空白知识库（没有节点）也要放行：新建空白库后允许从零开始。
 
   const edges = [];
   const edgeKeys = new Set();

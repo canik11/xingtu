@@ -460,7 +460,17 @@ function armIntroAudioUnlock() {
 function bindSaveCue() {
   const paint = () => {
     const editingDirty = isEditing() && hasEditChanges();
-    document.body.classList.toggle('has-unsaved', isDirty() || editingDirty);
+    const dirty = isDirty() || editingDirty;
+    document.body.classList.toggle('has-unsaved', dirty);
+    // 桌面版（WebView2 壳）关闭窗口时要知道有没有没保存的东西。
+    const webview = window.chrome && window.chrome.webview;
+    if (webview) {
+      try {
+        webview.postMessage('starmap:dirty\n' + (dirty ? '1' : '0'));
+      } catch (error) {
+        /* 壳不在时忽略 */
+      }
+    }
   };
   onSaveStateChange(paint);
   onEditStateChange(paint);
