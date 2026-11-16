@@ -33,8 +33,11 @@ import {
 test('normalizeData 拒绝空数据与垃圾输入', () => {
   assert.equal(normalizeData(null), null);
   assert.equal(normalizeData({}), null);
-  assert.equal(normalizeData({ nodes: [] }), null);
   assert.equal(normalizeData('x'), null);
+  // nodes: [] 是合法的「空白知识库」——用户可以自己从零开始建星图，不算坏数据。
+  const blank = normalizeData({ nodes: [] });
+  assert.deepEqual(blank.nodes, []);
+  assert.deepEqual(blank.edges, []);
 });
 
 test('normalizeData 迁移老数据：没有 note 时用简介生成大纲', () => {
@@ -94,7 +97,7 @@ test('mergeSeedContent 补全笔记但保留用户自己的节点', () => {
     edges: [{ a: 'mine', b: 'calc1', label: '我的连线' }]
   });
   const report = mergeSeedContent(data);
-  assert.equal(report.addedNodes, 2);
+  assert.equal(report.addedNodes, 9);
   assert.ok(report.refreshedNotes >= 1);
   assert.equal(data.nodes.find((n) => n.id === 'mine').note[0].text, '自写');
   assert.equal(data.nodes.find((n) => n.id === 'calc1').note.length, 4);
@@ -125,7 +128,7 @@ test('serializeData 输出干净结构（数字取整、笔记保留层级）', 
   const out = serializeData(data, { x: 1.23456, y: -2.5, scale: 0.8123456 });
   assert.equal(out.version, 3);
   assert.deepEqual(out.view, { x: 1, y: -2, scale: 0.812 });
-  assert.equal(out.nodes.length, 3);
+  assert.equal(out.nodes.length, 10);
   assert.ok(!('deg' in out.nodes[0]));
   assert.ok(Array.isArray(out.nodes[0].note[0].children));
 });
@@ -349,7 +352,7 @@ test('LocalStorageBackend：首次打开给种子，之后读存档并升级', a
   const backend = new LocalStorageBackend({ storage: fake });
   const first = await backend.load();
   assert.equal(first.firstRun, true);
-  assert.equal(first.data.nodes.length, 3);
+  assert.equal(first.data.nodes.length, 10);
 
   const legacy = {
     version: 2,
@@ -362,12 +365,12 @@ test('LocalStorageBackend：首次打开给种子，之后读存档并升级', a
   assert.equal(upgraded.source, 'storage');
   assert.equal(upgraded.seeded, true);
   assert.equal(upgraded.migrated, true);
-  assert.ok(upgraded.data.nodes.length >= 3);
+  assert.ok(upgraded.data.nodes.length >= 10);
 
   store.set('starmap.knowledge.v1', '{坏的 JSON');
   const broken = await backend.load();
   assert.equal(broken.missing, true);
-  assert.equal(broken.data.nodes.length, 3);
+  assert.equal(broken.data.nodes.length, 10);
 });
 
 test('MemoryBackend 可存取往返', async () => {
@@ -376,6 +379,6 @@ test('MemoryBackend 可存取往返', async () => {
   first.data.nodes.push(buildNode({ name: '新', catId: 'math', desc: '', x: 0, y: 0, now: 0 }));
   await backend.save(serializeData(first.data));
   const again = await backend.load();
-  assert.equal(again.data.nodes.length, 4);
+  assert.equal(again.data.nodes.length, 11);
   assert.equal(again.firstRun, false);
 });

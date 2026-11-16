@@ -17,9 +17,9 @@ export const DATA_VERSION = 3;
 /**
  * 种子内容版本。大于当前值时首次打开会触发种子合并升级（例如合并高数上下、补全笔记）。
  * 以后修改 seed 内容并希望老用户也拿到，就把这个数字 +1。
- * 2：补全详细笔记；3：新增示例节点与关系。
+ * 2：补全详细笔记；3：新增示例节点与关系；4：扩写高数/线代/概率笔记并新增高中数学、高中物理节点。
  */
-export const CONTENT_VERSION = 3;
+export const CONTENT_VERSION = 4;
 
 /** 节点名、分类名、简介、笔记等字段的长度/规模上限。 */
 export const LIMITS = {

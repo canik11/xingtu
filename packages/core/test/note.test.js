@@ -146,12 +146,35 @@ test('appendRootBlock 追加空根条目', () => {
   assert.ok(findNoteEntry(note, block.id));
 });
 
-test('公开种子：3 个知识点、3 条关系', () => {
+test('公开种子：10 个知识点、14 条关系', () => {
   const data = createDefaultData();
-  assert.equal(data.nodes.length, 3);
-  assert.equal(data.edges.length, 3);
-  assert.equal(data.categories.length, 6);
-  assert.deepEqual(data.nodes.map((n) => n.id).sort(), ['calc1', 'linalg', 'prob']);
+  assert.equal(data.nodes.length, 10);
+  assert.equal(data.edges.length, 14);
+  assert.equal(data.categories.length, 8);
+  assert.deepEqual(data.nodes.map((n) => n.id).sort(), [
+    'calc1',
+    'hsmath-func',
+    'hsmath-geo',
+    'hsmath-stat',
+    'hsphys-em',
+    'hsphys-mech',
+    'hsphys-modern',
+    'hsphys-thermo',
+    'linalg',
+    'prob'
+  ]);
   assert.ok(!data.nodes.some((n) => n.id === 'calc2'));
   assert.ok(data.nodes.every((n) => Array.isArray(n.note) && n.note.length > 0));
+  // 高中数学 / 高中物理两个新分类都挂上了节点，且都有笔记内容。
+  assert.deepEqual([...new Set(data.nodes.map((n) => n.cat))].sort(), [
+    'hsmath',
+    'hsphys',
+    'math'
+  ]);
+  const total = data.nodes.reduce((sum, n) => sum + countBlocks(n.note), 0);
+  assert.ok(total >= 200, `种子笔记块过少：${total}`);
 });
+
+function countBlocks(list) {
+  return list.reduce((sum, block) => sum + 1 + countBlocks(block.children || []), 0);
+}
