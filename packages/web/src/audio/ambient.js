@@ -1,4 +1,4 @@
-// 星海环境声：一层极轻的持续和弦垫，随星海形状换调、随层级换亮度。
+﻿// 星海环境声：一层极轻的持续和弦垫，随星海形状换调、随层级换亮度。
 // 默认关闭，避免长时间学习时被声音牵着走；在「声音」面板里可以单独打开。
 import { audioContext, audioReady, bell, connectMix } from './engine.js';
 
@@ -157,147 +157,56 @@ export function ambientState() {
 /* ---------------------- 等待页的循环背景音 ---------------------- */
 
 let waitBus = null;
-let waitChordTimer = 0;
-let waitNoteTimer = 0;
+let waitTimer = 0;
 
-// 等待页音乐：D 大调的四个和弦，每个停 7 秒，pad 长音 + 轻低音 + 稀疏旋律。
-const WAIT_PROGRESSION = [
-  { pad: [146.83, 220.0, 293.66, 369.99], bass: 73.42 }, // Dmaj7
-  { pad: [123.47, 185.0, 246.94, 311.13], bass: 61.74 }, // Bm7
-  { pad: [196.0, 246.94, 293.66, 392.0], bass: 49.0 }, // Gmaj7
-  { pad: [110.0, 164.81, 220.0, 277.18], bass: 55.0 } // A7
-];
-// 旋律音阶：D5 E5 F#5 A5 B5 D6（D 大调五声）。
-const WAIT_MELODY = [587.33, 659.25, 739.99, 880.0, 987.77, 1174.66];
+// 钟琴音阶：D5 E5 F#5 A5 B5 D6 E6（D 大调五声）。
+const WAIT_SCALE = [587.33, 659.25, 739.99, 880.0, 987.77, 1174.66, 1318.51];
 
 /**
- * 点击进入之前铺在等待页下的一段循环音乐：和弦进行 + 轻低音 + 稀疏钟琴旋律。
- * 全部是持续振荡器与定时音符，没有采样循环，天然首尾无缝。
+ * 点击进入之前，等待页下的一小段循环钟琴：只有一颗颗钟音，没有持续音。
+ * 没有持续振荡器就没有嗡嗡声；乐句之间留白，靠长混响把尾音接起来。
  */
 export function startWaitAmbience() {
   if (waitBus || !audioReady()) return null;
   const ctx = audioContext();
   if (!ctx) return null;
-  const now = ctx.currentTime;
-  const out = ctx.createGain();
-  out.gain.value = 0.0001;
-  const nodes = [out, ...connectMix(out, { pan: 0, send: 0.7 })];
-  const voices = [];
+  waitBus = { ctx };
 
-  // 四声部 pad：每个声部一条振荡器，各自慢呼吸、左右分开。
-  const pads = [];
-  const chord = WAIT_PROGRESSION[0];
-  for (let i = 0; i < 4; i++) {
-    const osc = ctx.createOscillator();
-    osc.type = i === 0 ? 'triangle' : 'sine';
-    osc.frequency.value = chord.pad[i];
-    const gain = ctx.createGain();
-    gain.gain.value = 0.022 - i * 0.0035;
-    const lfo = ctx.createOscillator();
-    lfo.type = 'sine';
-    lfo.frequency.value = 0.05 + i * 0.017;
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.006;
-    lfo.connect(lfoGain);
-    lfoGain.connect(gain.gain);
-    const pan = ctx.createStereoPanner();
-    pan.pan.value = (i - 1.5) * 0.3;
-    osc.connect(gain);
-    gain.connect(pan);
-    pan.connect(out);
-    osc.start();
-    lfo.start();
-    pads.push(osc);
-    voices.push(osc, lfo, gain, lfoGain, pan);
-  }
-
-  // 低音：每小节一个根音，很轻，只给和声一个底。
-  const bass = ctx.createOscillator();
-  bass.type = 'sine';
-  bass.frequency.value = chord.bass;
-  const bassGain = ctx.createGain();
-  bassGain.gain.value = 0.012;
-  bass.connect(bassGain);
-  bassGain.connect(out);
-  bass.start();
-  voices.push(bass, bassGain);
-
-  out.gain.setTargetAtTime(0.9, now + 0.04, 1.2);
-  waitBus = { ctx, out, nodes, voices };
-
-  // 和弦：每 7 秒滑到下一个。
-  let step = 0;
-  const nextChord = () => {
+  // 一句 3~5 个音，走五声音阶；句与句之间停 2~3.5 秒。
+  let idx = 3;
+  const playPhrase = () => {
     if (!waitBus) return;
-    step = (step + 1) % WAIT_PROGRESSION.length;
-    const c = WAIT_PROGRESSION[step];
-    const t = ctx.currentTime + 0.05;
-    for (let i = 0; i < pads.length; i++) {
-      try {
-        pads[i].frequency.setTargetAtTime(c.pad[i], t, 1.6);
-      } catch (err) {
-        /* 已断开 */
-      }
+    const count = 3 + Math.floor(Math.random() * 3);
+    let t = 0;
+    for (let i = 0; i < count; i++) {
+      const step = [-2, -1, 1, 2][Math.floor(Math.random() * 4)];
+      idx = Math.max(0, Math.min(WAIT_SCALE.length - 1, idx + step));
+      bell(WAIT_SCALE[idx], {
+        dur: 2.4,
+        peak: 0.05,
+        attack: 0.004,
+        delay: t,
+        send: 0.9,
+        bright: 1.0,
+        spread: 0.55,
+        pan: (Math.random() - 0.5) * 0.8
+      });
+      t += 0.42 + Math.random() * 0.22;
     }
-    try {
-      bass.frequency.setTargetAtTime(c.bass, t, 1.6);
-    } catch (err) {
-      /* 已断开 */
-    }
-    waitChordTimer = setTimeout(nextChord, 7000);
+    waitTimer = setTimeout(playPhrase, Math.round((t + 2.0 + Math.random() * 1.5) * 1000));
   };
-  waitChordTimer = setTimeout(nextChord, 7000);
-
-  // 旋律：每 0.62~0.98 秒一颗钟琴音，在五声音阶里游走，不连着重复。
-  let last = -1;
-  const nextNote = () => {
-    if (!waitBus) return;
-    let idx = Math.floor(Math.random() * WAIT_MELODY.length);
-    if (idx === last) idx = (idx + 1) % WAIT_MELODY.length;
-    last = idx;
-    bell(WAIT_MELODY[idx], {
-      dur: 2.0,
-      peak: 0.03,
-      attack: 0.005,
-      send: 0.85,
-      bright: 1.0,
-      spread: 0.4,
-      pan: (Math.random() - 0.5) * 0.9
-    });
-    waitNoteTimer = setTimeout(nextNote, 620 + Math.random() * 360);
-  };
-  waitNoteTimer = setTimeout(nextNote, 700);
+  waitTimer = setTimeout(playPhrase, 500);
   return waitBus;
 }
-/** 收起等待页背景音：淡出后释放。 */
-export function stopWaitAmbience(fade = 0.7) {
+
+/** 收起等待页背景音：停掉后续乐句，已经在响的钟音自然衰减。 */
+export function stopWaitAmbience() {
   if (!waitBus) return;
-  const bus = waitBus;
   waitBus = null;
-  clearTimeout(waitChordTimer);
-  clearTimeout(waitNoteTimer);
-  const now = bus.ctx.currentTime;
-  bus.out.gain.cancelScheduledValues(now);
-  bus.out.gain.setValueAtTime(Math.max(0.0001, bus.out.gain.value), now);
-  bus.out.gain.setTargetAtTime(0.0001, now, Math.max(0.05, fade / 3));
-  setTimeout(() => {
-    for (const node of [...bus.voices, ...bus.nodes]) {
-      try {
-        if (typeof node.stop === 'function') node.stop();
-      } catch (err) {
-        /* 已停止 */
-      }
-      try {
-        node.disconnect();
-      } catch (err) {
-        /* 已断开 */
-      }
-    }
-  }, Math.round(fade * 1000) + 120);
+  clearTimeout(waitTimer);
 }
 
 /** 供调试：等待页背景音是否在响。 */
 export function waitAmbienceRunning() {
   return !!waitBus;
 }
-
