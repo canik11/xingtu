@@ -152,10 +152,16 @@ export function closePanel(force = false) {
       title: '有未保存的修改',
       message: '面板里的资料还没保存，关闭前要保存吗？',
       confirmText: '保存并关闭',
+      cancelText: '放弃修改',
+      danger: false,
       onConfirm: () => {
         runAction('saveEdit');
         // 保存校验没通过（名称为空/重名）时保持面板打开，让用户继续改。
         if (!isEditing()) closePanel(true);
+      },
+      onCancel: () => {
+        // 放弃本次编辑：丢弃表单改动，直接关面板。
+        closePanel(true);
       }
     });
     return;
