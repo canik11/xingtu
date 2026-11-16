@@ -57,6 +57,7 @@ namespace KnowledgeStarmap
         private readonly string htmlPath;
         private string kbPath;
         private bool pageDirty;
+        private bool allowClose;
         private bool isFullscreen;
         private FormBorderStyle savedBorderStyle;
         private FormWindowState savedWindowState;
@@ -268,14 +269,39 @@ namespace KnowledgeStarmap
             }
         }
 
-        // 关闭窗口时，如果页面还有没保存的修改，先问一句。
+        // 关闭窗口时，如果页面还有没保存的修改，交给网页里的确认框（与应用同一种深色风格）问一句。
         private void OnFormClosing(object sender, FormClosingEventArgs e)
         {
-            if (!pageDirty || e.CloseReason == CloseReason.WindowsShutDown) return;
+            if (allowClose || !pageDirty || e.CloseReason == CloseReason.WindowsShutDown) return;
+
+            // 先让网页弹出「保存并退出 / 放弃修改」；只有用户选择后才真正关闭。
+            e.Cancel = true;
+            if (AskPageToConfirmClose()) return;
+
+            // 页面不可用时的兜底：退回系统对话框。
             DialogResult choice = MessageBox.Show(
                 "有未保存的修改，退出会丢弃，确定退出吗？\n\n先点「否」回到窗口，按 Ctrl+S 保存。",
                 "知识星图", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
-            if (choice != DialogResult.Yes) e.Cancel = true;
+            if (choice == DialogResult.Yes)
+            {
+                allowClose = true;
+                Close();
+            }
+        }
+
+        private bool AskPageToConfirmClose()
+        {
+            try
+            {
+                if (webView == null || webView.CoreWebView2 == null) return false;
+                webView.CoreWebView2.ExecuteScriptAsync(
+                    "window.__starmapAskClose && window.__starmapAskClose()");
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private void UnbindKbFile()
@@ -294,6 +320,12 @@ namespace KnowledgeStarmap
             else if (msg == "starmap:kb-pick") PickKbFile();
             else if (msg == "starmap:kb-unbind") UnbindKbFile();
             else if (msg.StartsWith("starmap:dirty\n")) pageDirty = msg.EndsWith("1");
+            else if (msg.StartsWith("starmap:close-confirmed"))
+            {
+                // 网页确认框里选择了「保存并退出」或「放弃修改」。
+                allowClose = true;
+                Close();
+            }
             else if (msg.StartsWith(KbCreateCommand)) CreateKbFile(msg.Substring(KbCreateCommand.Length));
             else if (msg.StartsWith(KbSaveCommand)) SaveKbFile(msg.Substring(KbSaveCommand.Length));
         }

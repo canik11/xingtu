@@ -24,7 +24,7 @@ import { onQualityChange, quality, qualitySnapshot } from './quality.js';
 import { getOutline, getEntity, refreshOutline } from './outline.js';
 import { appearanceConfig, edgeIsMastered, toggleMastery } from './mastery.js';
 import { bindAddModal } from './ui/add-modal.js';
-import { bindConfirm } from './ui/confirm.js';
+import { bindConfirm, askConfirm } from './ui/confirm.js';
 import { bindAppearance } from './ui/appearance.js';
 import { bindShapeBar } from './ui/shape-bar.js';
 import { bindGlobalDoc } from './ui/global-doc.js';
@@ -498,7 +498,44 @@ function bindSaveCue() {
     },
     true
   );
+
+  // 桌面版关闭窗口：壳用 postMessage 触发这里，改用应用内确认框，
+  // 「保存并退出」「放弃修改」都会退出；点右上角 × 或按 Esc 只是收起弹窗，不退出。
+  window.__starmapAskClose = () => {
+    const dirty = isDirty() || (isEditing() && hasEditChanges());
+    if (!dirty) {
+      postCloseConfirmed();
+      return;
+    }
+    askConfirm({
+      title: '有未保存的修改',
+      message: '退出前要先保存到知识库文件吗？',
+      confirmText: '保存并退出',
+      cancelText: '放弃修改',
+      danger: false,
+      onConfirm: () => {
+        if (!saveNow()) {
+          toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
+          return;
+        }
+        postCloseConfirmed();
+      },
+      onCancel: postCloseConfirmed
+    });
+  };
+
   paint();
+}
+
+/** 通知桌面版壳：确认可以关闭窗口了。 */
+function postCloseConfirmed() {
+  const webview = window.chrome && window.chrome.webview;
+  if (!webview) return;
+  try {
+    webview.postMessage('starmap:close-confirmed\n');
+  } catch (error) {
+    /* 壳不在时忽略 */
+  }
 }
 
 /** 全局错误兜底：显示红条，避免“白屏无提示”。 */
