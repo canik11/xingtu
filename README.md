@@ -1,4 +1,4 @@
-# 知识星图 xintu
+# 知识星图 xingtu
 
 **把知识点画成星空。** 每个知识点是一颗发光的星，关系是一条白色光丝；一门课、一个章节、一条定义，都在这片星海里各就其位。
 
@@ -298,7 +298,7 @@ powershell -File scripts/build-installer.ps1
 
 ```bash
 node scripts/test.cjs
-node scripts/smoke.cjs "file:///D:/xintu/app/index.html?debug"
+node scripts/smoke.cjs "file:///D:/xingtu/app/index.html?debug"
 node scripts/shots.cjs screenshots
 ```
 

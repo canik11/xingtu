@@ -12,7 +12,7 @@ $sdk = Join-Path $root 'packaging\webview2'
 $app = Join-Path $root 'app'
 $dist = Join-Path $root 'packaging\dist'
 $source = Join-Path $root 'packaging\Program.cs'
-$icon = Join-Path $root 'assets\xintu.ico'
+$icon = Join-Path $root 'assets\xingtu.ico'
 $outExe = Join-Path $dist '知识星图.exe'
 
 if (-not (Test-Path -LiteralPath $csc)) { throw "找不到 csc.exe：$csc" }

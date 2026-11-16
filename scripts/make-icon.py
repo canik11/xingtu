@@ -1,4 +1,4 @@
-# 生成「知识星图」应用图标：assets/xintu.png（512）与 assets/xintu.ico（多尺寸）。
+# 生成「知识星图」应用图标：assets/xingtu.png（512）与 assets/xingtu.ico（多尺寸）。
 # 纯 Pillow 绘制，不依赖外部素材；在 2048 画布上绘制后缩小，保证边缘平滑。
 #
 # 用法：
@@ -150,15 +150,15 @@ def main():
     if '--zip' in sys.argv:
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr('xintu.png', png_bytes)
-            zf.writestr('xintu.ico', ico_bytes)
+            zf.writestr('xingtu.png', png_bytes)
+            zf.writestr('xingtu.ico', ico_bytes)
         sys.stdout.buffer.write(buf.getvalue())
         sys.stdout.buffer.flush()
         return
 
     os.makedirs(OUT_DIR, exist_ok=True)
-    png_path = os.path.join(OUT_DIR, 'xintu.png')
-    ico_path = os.path.join(OUT_DIR, 'xintu.ico')
+    png_path = os.path.join(OUT_DIR, 'xingtu.png')
+    ico_path = os.path.join(OUT_DIR, 'xingtu.ico')
     with open(png_path, 'wb') as fh:
         fh.write(png_bytes)
     with open(ico_path, 'wb') as fh:

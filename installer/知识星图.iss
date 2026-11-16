@@ -17,16 +17,16 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
-AppPublisherURL=https://gitee.com/canik/xintu
-AppSupportURL=https://gitee.com/canik/xintu
+AppPublisherURL=https://gitee.com/canik/xingtu
+AppSupportURL=https://gitee.com/canik/xingtu
 DefaultDirName={localappdata}\Programs\知识星图
 DefaultGroupName=知识星图
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=..\packaging\dist
 OutputBaseFilename=知识星图-安装包-{#AppVersion}
-SetupIconFile=..\assets\xintu.ico
-UninstallDisplayIcon={app}\xintu.ico
+SetupIconFile=..\assets\xingtu.ico
+UninstallDisplayIcon={app}\xingtu.ico
 UninstallDisplayName={#AppName}
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -49,8 +49,8 @@ Name: "startmenuicon"; Description: "创建开始菜单快捷方式(&S)"; GroupD
 Source: "..\app\*"; DestDir: "{app}"; Excludes: "create-shortcut.cmd,create-shortcut.ps1"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autodesktop}\知识星图"; Filename: "{app}\知识星图.exe"; IconFilename: "{app}\xintu.ico"; Tasks: desktopicon
-Name: "{group}\知识星图"; Filename: "{app}\知识星图.exe"; IconFilename: "{app}\xintu.ico"; Tasks: startmenuicon
+Name: "{autodesktop}\知识星图"; Filename: "{app}\知识星图.exe"; IconFilename: "{app}\xingtu.ico"; Tasks: desktopicon
+Name: "{group}\知识星图"; Filename: "{app}\知识星图.exe"; IconFilename: "{app}\xingtu.ico"; Tasks: startmenuicon
 Name: "{group}\卸载 知识星图"; Filename: "{uninstallexe}"; Tasks: startmenuicon
 
 [Run]

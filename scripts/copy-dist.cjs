@@ -18,8 +18,8 @@ fs.cpSync(src, dest, { recursive: true, force: true });
 
 // 附带：应用图标、快捷方式启动器、WebView2 壳程序（单文件版分发时一起拷走）。
 const extras = [
-  [path.join(root, 'assets', 'xintu.ico'), path.join(dest, 'xintu.ico')],
-  [path.join(root, 'assets', 'xintu.png'), path.join(dest, 'xintu.png')],
+  [path.join(root, 'assets', 'xingtu.ico'), path.join(dest, 'xingtu.ico')],
+  [path.join(root, 'assets', 'xingtu.png'), path.join(dest, 'xingtu.png')],
   [path.join(root, 'scripts', 'create-shortcut.ps1'), path.join(dest, 'create-shortcut.ps1')],
   [path.join(root, 'scripts', 'create-shortcut.cmd'), path.join(dest, 'create-shortcut.cmd')],
   [path.join(root, 'packaging', 'dist', '知识星图.exe'), path.join(dest, '知识星图.exe')],
@@ -46,7 +46,7 @@ for (const [from, to] of extras) {
 const index = path.join(dest, 'index.html');
 const notice = [
   '<!--',
-  '知识星图 xintu — 本项目代码按 CC BY-NC-SA 4.0 授权：https://creativecommons.org/licenses/by-nc-sa/4.0/',
+  '知识星图 xingtu — 本项目代码按 CC BY-NC-SA 4.0 授权：https://creativecommons.org/licenses/by-nc-sa/4.0/',
   '本文件内含第三方组件，保留各自许可：',
   '  pixi.js — MIT License, Copyright (c) 2013-2023 Mathew Groves, Chad Engler',
   '  pdf.js (pdfjs-dist) — Apache License 2.0, Copyright 2024 Mozilla Foundation',
@@ -54,7 +54,7 @@ const notice = [
   '-->'
 ].join('\n');
 const html = fs.readFileSync(index, 'utf8');
-if (!html.includes('知识星图 xintu — 本项目代码按')) {
+if (!html.includes('知识星图 xingtu — 本项目代码按')) {
   const injected = html.includes('<head>')
     ? html.replace('<head>', '<head>\n' + notice)
     : html.replace(/(<!doctype html>)/i, '$1\n' + notice);

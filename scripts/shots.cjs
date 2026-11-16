@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-const url = process.env.SHOT_URL || 'file:///D:/xintu/app/index.html?debug';
+const url = process.env.SHOT_URL || 'file:///D:/xingtu/app/index.html?debug';
 const outDir = process.argv[2] || path.join(__dirname, '..', 'screenshots');
 const port = 9413;
 const profile = path.join(__dirname, '..', '.edge-shots-profile');

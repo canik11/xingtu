@@ -78,7 +78,7 @@ namespace KnowledgeStarmap
             BackColor = Color.FromArgb(5, 9, 18);
             try
             {
-                string ico = Path.Combine(baseDir, "xintu.ico");
+                string ico = Path.Combine(baseDir, "xingtu.ico");
                 if (File.Exists(ico)) Icon = new Icon(ico);
             }
             catch { }

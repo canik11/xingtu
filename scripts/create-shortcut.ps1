@@ -8,7 +8,7 @@
     powershell -NoProfile -ExecutionPolicy Bypass -File .\create-shortcut.ps1
     powershell -NoProfile -ExecutionPolicy Bypass -File .\create-shortcut.ps1 -Browser chrome
     powershell -NoProfile -ExecutionPolicy Bypass -File .\create-shortcut.ps1 -Place startmenu
-    powershell -NoProfile -ExecutionPolicy Bypass -File .\create-shortcut.ps1 -SourceDir D:\xintu\app
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\create-shortcut.ps1 -SourceDir D:\xingtu\app
 
   说明：快捷方式里保存的是绝对路径，所以换电脑后请对新的文件夹再运行一次本脚本。
 #>
@@ -57,9 +57,9 @@ function Find-Browser([string]$kind) {
 
 $appDir = Resolve-AppDir $SourceDir
 $html = Join-Path $appDir 'index.html'
-$icon = Join-Path $appDir 'xintu.ico'
+$icon = Join-Path $appDir 'xingtu.ico'
 if (-not (Test-Path -LiteralPath $icon)) {
-  $icon = Join-Path $appDir 'xintu.png'
+  $icon = Join-Path $appDir 'xingtu.png'
 }
 
 # —— 优先使用同目录的「知识星图.exe」：独立窗口，不依赖浏览器外壳 ——
