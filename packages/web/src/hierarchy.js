@@ -10,6 +10,19 @@ import { shapePoint, shapeCloudDir, shapePath, shapeTangent } from './shapes.js'
 const OUTER_R = 300;
 /** 非球形时把整棵树铺到更大的骨架半径上，形状不会缩在屏幕中央。 */
 const SHAPE_OUTER = 392;
+/**
+ * 各级节点半径的比例：5 : 3 : 2 : 1（四级及以后都按 1 份算）。
+ * 星海的课程 / 章节 / 知识点分别对应第 1 / 2 / 3 级；
+ * 外观设置里的“节点大小”滑杆再对这里的结果统一乘一次。
+ */
+const LEVEL_PARTS = Object.freeze([5, 3, 2]);
+const LEVEL_UNIT = 1.225;
+
+/** 第 level 级（从 1 起）的基准半径；超出比例表的层级统一按 1 份算。 */
+export function levelRadius(level) {
+  const parts = LEVEL_PARTS[level - 1] || 1;
+  return parts * LEVEL_UNIT;
+}
 const INNER_R = 250;
 const FOCAL = 920;
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
@@ -356,7 +369,7 @@ function outerVisuals() {
       wz: m.z,
       persp: q.persp,
       depth: q.depth,
-      r: 4.6 + Math.min(n.deg || 0, 7) * 0.55
+      r: levelRadius(1)
     };
   });
 
@@ -380,7 +393,7 @@ function outerVisuals() {
       wz: m.z,
       persp: q.persp,
       depth: q.depth,
-      r: 3.7
+      r: levelRadius(2)
     };
   });
   if (ui.sphereScope < 3) return courses.concat(chapters);
@@ -404,7 +417,7 @@ function outerVisuals() {
       wz: m.z,
       persp: q.persp,
       depth: q.depth,
-      r: 2.45
+      r: levelRadius(3)
     };
   });
   return courses.concat(chapters, points);
@@ -763,7 +776,7 @@ export function buildInner(host) {
       blockId: block.id,
       treeDepth,
       hasChildren: childCount > 0,
-      r: treeDepth === 0 ? 6.1 + Math.min(childCount, 6) * 0.35 : Math.max(3.2, 4.5 - treeDepth * 0.35),
+      r: levelRadius(treeDepth + 1),
       x: 0,
       y: 0,
       z: 0
