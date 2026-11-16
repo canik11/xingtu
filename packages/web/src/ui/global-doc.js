@@ -449,9 +449,13 @@ export function bindGlobalDoc() {
   el.docClose.addEventListener('click', closeGlobalDoc);
   if (el.docSaveOrb) {
     el.docSaveOrb.addEventListener('click', () => {
-      saveNow();
-      setStatus('已保存');
-      toast('已保存修改');
+      if (saveNow()) {
+        setStatus('已保存');
+        toast('已保存修改');
+      } else {
+        setStatus('还没有知识库文件');
+        toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
+      }
     });
   }
   el.docCollapseAll.addEventListener('click', () => collapseAll(true));

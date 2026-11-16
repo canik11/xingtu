@@ -480,8 +480,8 @@ function bindSaveCue() {
   }
   if (el.saveOrb) {
     el.saveOrb.addEventListener('click', () => {
-      saveNow();
-      toast('已保存修改');
+      if (saveNow()) toast('已保存修改');
+      else toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
     });
   }
   window.addEventListener(
@@ -493,8 +493,8 @@ function bindSaveCue() {
         saveEdit();
         return;
       }
-      saveNow();
-      toast('已保存修改');
+      if (saveNow()) toast('已保存修改');
+      else toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
     },
     true
   );

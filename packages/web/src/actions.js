@@ -98,9 +98,12 @@ export function saveEdit() {
   updateStats();
   updateDock();
   refreshCategoryDatalist();
-  saveNow();
-  sfx.saved();
-  toast('已保存修改');
+  if (saveNow()) {
+    sfx.saved();
+    toast('已保存修改');
+  } else {
+    toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
+  }
 }
 
 /** 节点当前在屏幕上的位置：删除时黑洞就开在这里。 */

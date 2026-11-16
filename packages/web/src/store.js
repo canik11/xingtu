@@ -12,7 +12,7 @@ import {
   serializeData
 } from '@starmap/core';
 import { cam, ui } from './state.js';
-import { writeBoundKbFile } from './kb-file.js';
+import { getKbFileName, writeBoundKbFile } from './kb-file.js';
 import { hasHostKb, saveHostKb } from './kb-host.js';
 
 /** @type {import('@starmap/core').KnowledgeData} */
@@ -87,12 +87,14 @@ function acceptSaved() {
 }
 
 /* ------------------------- 撤销 / 重做 ------------------------- */
-// 快照式撤销：每次保存前把上一份快照压栈，Ctrl+Z 恢复。只覆盖数据修改，
-// 不记录旋转、缩放、展开层级这类视图操作。栈只存在于本次运行内。
+// 快照式撤销：每次修改（不是每次保存）前把上一版压栈，Ctrl+Z 回退。
+// 只覆盖数据修改，不记录旋转、缩放、展开层级这类视图操作。
+// 栈只存在于本次运行内，刷新即清空；撤销只改内存，不落盘。
 const UNDO_LIMIT = 50;
 const undoStack = [];
 const redoStack = [];
 let lastCommitted = null;
+let lastPushAt = 0;
 let restoring = false;
 let restoreListener = null;
 
@@ -106,6 +108,7 @@ export function markBaseline() {
   undoStack.length = 0;
   redoStack.length = 0;
   lastCommitted = JSON.stringify(snapshot());
+  lastPushAt = 0;
   acceptSaved();
 }
 
@@ -117,18 +120,26 @@ export function canRedo() {
   return redoStack.length > 0;
 }
 
-function rememberForUndo(snap) {
+function rememberForUndo() {
   if (restoring) return;
-  const text = JSON.stringify(snap);
+  const now = Date.now();
+  const text = JSON.stringify(snapshot());
   if (lastCommitted === null) {
     lastCommitted = text;
     return;
   }
   if (text === lastCommitted) return;
+  // 连续输入合并成一步：700ms 内的连续修改不再新增撤销点。
+  if (now - lastPushAt < 700) {
+    redoStack.length = 0;
+    lastCommitted = text;
+    return;
+  }
   undoStack.push(lastCommitted);
   if (undoStack.length > UNDO_LIMIT) undoStack.shift();
   redoStack.length = 0;
   lastCommitted = text;
+  lastPushAt = now;
 }
 
 function applySnapshot(text) {
@@ -143,13 +154,10 @@ function applySnapshot(text) {
   try {
     data = norm;
     rebuild();
-    const snap = snapshot();
-    lastCommitted = JSON.stringify(snap);
-    backend.save(snap);
-    const out = JSON.stringify(snap, null, 2);
-    if (hasHostKb()) saveHostKb(out);
-    else void writeBoundKbFile(out);
-    acceptSaved();
+    lastCommitted = JSON.stringify(snapshot());
+    lastPushAt = 0;
+    // 撤销/重做只改内存，不写盘：有没有未保存交给内容比对判断。
+    publishSaveState();
     if (restoreListener) restoreListener();
   } finally {
     restoring = false;
@@ -213,18 +221,26 @@ export function bindCameraReader(fn) {
   cameraReader = fn;
 }
 
-/** 立即保存。 */
+/**
+ * 立即把当前内容写进绑定的知识库 JSON 文件。
+ * 没有绑定文件时只写 localStorage 作离线兜底，并返回 false（不算“已保存”）。
+ * @returns {boolean} 是否成功写进了知识库文件
+ */
 export function saveNow() {
   if (!data) return false;
   try {
     const snap = snapshot();
-    rememberForUndo(snap);
-    backend.save(snap);
-    // 桌面壳：把快照交给壳写回绑定文件（完整路径、无需浏览器授权）。
-    // 浏览器：无权限/未绑定时静默跳过。
     const text = JSON.stringify(snap, null, 2);
-    if (hasHostKb()) saveHostKb(text);
-    else void writeBoundKbFile(text);
+    // localStorage 始终作为离线兜底，防止关闭前丢数据。
+    backend.save(snap);
+    if (!hasBoundFile()) return false;
+    // 桌面壳：把快照交给壳写回绑定文件（完整路径、无需浏览器授权）。
+    // 浏览器：没有写权限时静默跳过。
+    if (hasHostKb()) {
+      if (!saveHostKb(text)) return false;
+    } else {
+      void writeBoundKbFile(text);
+    }
     acceptSaved();
     return true;
   } catch (e) {
@@ -233,12 +249,19 @@ export function saveNow() {
 }
 
 /**
- * 标记数据有修改：只点亮「未保存」提示，不再自动落盘。
+ * 标记数据有修改：记下上一版供撤销，并点亮「未保存」提示，不自动落盘。
  * 保存交给用户：Ctrl+S / 点左上角月亮 / 面板的保存按钮。
- * @param {{ silent?: boolean }} [options] silent 时不亮提示（内部批量操作用）。
+ * @param {{ silent?: boolean }} [options] silent 时不亮提示、也不记撤销（视图状态用）。
  */
 export function scheduleSave(options = {}) {
-  if (!options.silent) publishSaveState();
+  if (options.silent) return;
+  rememberForUndo();
+  publishSaveState();
+}
+
+/** 是否已经绑定了可写入的知识库文件。 */
+export function hasBoundFile() {
+  return hasHostKb() || !!getKbFileName();
 }
 
 /** 存储是否可用（隐私模式/配额满时为 false）。 */
