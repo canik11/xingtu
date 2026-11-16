@@ -36,6 +36,34 @@ export function setBackend(next) {
 let cameraReader = null;
 let saveTimer = 0;
 
+/* ------------------------- 未保存状态 ------------------------- */
+// 数据改了但还没落盘时为 true；界面用左上角的小月亮提示，Ctrl+S 立即保存。
+let dirty = false;
+const saveListeners = new Set();
+
+/** 是否有未保存的修改。 */
+export function isDirty() {
+  return dirty;
+}
+
+/** 订阅保存状态变化（用于刷新月亮等提示）。 */
+export function onSaveStateChange(fn) {
+  saveListeners.add(fn);
+  return () => saveListeners.delete(fn);
+}
+
+function setDirty(value) {
+  if (dirty === value) return;
+  dirty = value;
+  for (const fn of saveListeners) {
+    try {
+      fn(dirty);
+    } catch (e) {
+      /* 监听器异常不影响保存 */
+    }
+  }
+}
+
 /* ------------------------- 撤销 / 重做 ------------------------- */
 // 快照式撤销：每次保存前把上一份快照压栈，Ctrl+Z 恢复。只覆盖数据修改，
 // 不记录旋转、缩放、展开层级这类视图操作。栈只存在于本次运行内。
@@ -56,6 +84,7 @@ export function markBaseline() {
   undoStack.length = 0;
   redoStack.length = 0;
   lastCommitted = JSON.stringify(snapshot());
+  setDirty(false);
 }
 
 export function canUndo() {
@@ -98,6 +127,7 @@ function applySnapshot(text) {
     const out = JSON.stringify(snap, null, 2);
     if (hasHostKb()) saveHostKb(out);
     else void writeBoundKbFile(out);
+    setDirty(false);
     if (restoreListener) restoreListener();
   } finally {
     restoring = false;
@@ -171,16 +201,21 @@ export function saveNow() {
     const text = JSON.stringify(snap, null, 2);
     if (hasHostKb()) saveHostKb(text);
     else void writeBoundKbFile(text);
+    setDirty(false);
     return true;
   } catch (e) {
     return false;
   }
 }
 
-/** 防抖保存（320ms）。 */
-export function scheduleSave() {
+/**
+ * 防抖保存：先亮起未保存提示，1.6 秒后落盘。
+ * @param {{ silent?: boolean }} [options] silent 时只保存、不亮提示（相机移动等自动变化）。
+ */
+export function scheduleSave(options = {}) {
+  if (!options.silent) setDirty(true);
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNow, 320);
+  saveTimer = setTimeout(saveNow, 1600);
 }
 
 /** 存储是否可用（隐私模式/配额满时为 false）。 */

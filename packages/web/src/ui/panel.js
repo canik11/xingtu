@@ -36,7 +36,8 @@ import { masteryFor, isMastered, toggleMastery, isLeafBlock } from '../mastery.j
 import { toast } from './feedback.js';
 import { refreshCategoryDatalist } from './datalist.js';
 import { renderRelations, wireRelEditor } from './relation-editor.js';
-import { enterEdit, isEditing, setEditing, cancelEdit, editState } from './edit-form.js';
+import { enterEdit, isEditing, setEditing, cancelEdit, editState, hasEditChanges } from './edit-form.js';
+import { askConfirm } from './confirm.js';
 import { runAction } from '../actions.js';
 
 let panelOpen = false;
@@ -144,8 +145,21 @@ export function openPanel(id) {
   }
 }
 
-/** 关闭面板。 */
-export function closePanel() {
+/** 关闭面板。force=true 时跳过“未保存”询问（保存后关闭、删除后关闭用）。 */
+export function closePanel(force = false) {
+  if (!force && isEditing() && hasEditChanges()) {
+    askConfirm({
+      title: '有未保存的修改',
+      message: '面板里的资料还没保存，关闭前要保存吗？',
+      confirmText: '保存并关闭',
+      onConfirm: () => {
+        runAction('saveEdit');
+        // 保存校验没通过（名称为空/重名）时保持面板打开，让用户继续改。
+        if (!isEditing()) closePanel(true);
+      }
+    });
+    return;
+  }
   const wasOpen = panelOpen;
   panelOpen = false;
   ui.panelOpen = false;

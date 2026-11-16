@@ -23,7 +23,8 @@ export function startLoop(ctx, gpu = null) {
     clock.last = now;
     clock.now = now;
 
-    if (stepCamera(dt)) scheduleSave();
+    // 相机移动只是视图状态，静默保存，不点亮「未保存」小月亮。
+    if (stepCamera(dt)) scheduleSave({ silent: true });
 
     if (ui.level === 'local' && !ui.focusGraph && temperature.alpha > 0.0005) {
       simulateStep(data, data.edges, index.categoryMap, temperature.alpha);

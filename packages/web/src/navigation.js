@@ -171,7 +171,7 @@ export function syncNav() {
 }
 
 function closeSidebar() {
-  panelApi.closePanel();
+  panelApi.closePanel(true);
   ui.panelOpen = false;
 }
 

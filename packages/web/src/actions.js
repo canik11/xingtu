@@ -43,7 +43,7 @@ import {
 import { editState } from './ui/edit-form.js';
 import { renderRelations, wireRelEditor } from './ui/relation-editor.js';
 import { refreshCategoryDatalist } from './ui/datalist.js';
-import { openAdd, closeModal } from './ui/add-modal.js';
+import { openAdd, closeModal, isAddOpen } from './ui/add-modal.js';
 import { bindDocImport, openDocImport } from './ui/doc-import.js';
 import { bindSearch } from './ui/search.js';
 import { toast } from './ui/feedback.js';
@@ -127,23 +127,103 @@ function nodeScreenSpot(n) {
   return { x, y };
 }
 
-/** 删除当前选中节点。 */
+/** 实体当前在屏幕上的位置（课程走场景，章节/知识点走局部图）。 */
+function entityScreenSpot(entity) {
+  if (!entity) return null;
+  if (ui.level === 'local' && ui.focusGraph) {
+    const fg = ui.focusGraph.nodes.find((n) => n.id === entity.id);
+    if (fg) {
+      const p = projectFocusNode(fg);
+      const s = worldToScreen(p.x, p.y);
+      if (Number.isFinite(s.x) && Number.isFinite(s.y)) return { x: s.x, y: s.y };
+    }
+  }
+  if (entity.level === 1) return nodeScreenSpot(entity.node);
+  const v = sceneVisuals().find((item) => item.id === entity.id);
+  if (v) {
+    const s = worldToScreen(v.x, v.y);
+    if (Number.isFinite(s.x) && Number.isFinite(s.y)) return { x: s.x, y: s.y };
+  }
+  return null;
+}
+
+/** 实体自身 + 全部下级的笔记块 id。 */
+function entityBlockIds(entity) {
+  const out = [];
+  const walk = (e) => {
+    if (!e) return;
+    if (e.blockId) out.push(e.blockId);
+    for (const childId of e.children || []) walk(getEntity(childId));
+  };
+  walk(entity);
+  return out;
+}
+
+/** 从笔记树里摘掉一块（连同它的整棵子树）。 */
+function removeBlockFromTree(list, blockId) {
+  for (let i = 0; i < list.length; i += 1) {
+    const block = list[i];
+    if (!block) continue;
+    if (block.id === blockId) {
+      list.splice(i, 1);
+      return true;
+    }
+    if (block.children && block.children.length && removeBlockFromTree(block.children, blockId)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 删除当前选中的实体：课程、章节或知识点。
+ * 选中课程时连同它下面所有章节与知识点一起删除；选中章节/知识点时连同它的下级一起删除。
+ * 同时清掉所有直接连在这些块上的关系线。
+ */
 export function deleteSelected() {
-  const n = index.getNode(ui.selection);
-  if (!n) return;
-  const count = index.edgesOf(n.id).length;
+  const entity = getEntity(ui.selection);
+  if (!entity) return;
+
+  const isCourse = entity.level === 1;
+  const blockIds = isCourse ? [] : entityBlockIds(entity);
+  // topicEdges 里存的是实体 id：笔记块是 `h:<blockId>`，课程是节点 id。
+  const blockKeys = new Set(blockIds.map((id) => `h:${id}`));
+  if (isCourse && entity.node) blockKeys.add(entity.node.id);
+  const topicCount = (data.topicEdges || []).filter(
+    (e) => e && (blockKeys.has(e.a) || blockKeys.has(e.b))
+  ).length;
+  const edgeCount = isCourse ? index.edgesOf(entity.node.id).length : 0;
+  const total = edgeCount + topicCount;
+  const kind = entity.level === 1 ? '课程' : entity.level === 2 ? '章节' : '知识点';
+  const scope =
+    entity.level === 1
+      ? '及其下全部章节与知识点'
+      : blockIds.length > 1
+        ? `及其下 ${blockIds.length - 1} 个下级知识点`
+        : '';
+
   askConfirm({
-    title: '删除知识点',
-    message: `确定删除「${n.name}」及其 ${count} 条关联吗？删除后无法撤销。`,
+    title: `删除${kind}`,
+    message: `确定删除「${entity.name}」${scope}，以及与之直接相连的 ${total} 条关系线吗？删除后无法撤销。`,
     confirmText: '删除',
     onConfirm: () => {
       const wasLocal = ui.level === 'local';
       const swallow = () => {
-        const result = removeNode(data, n.id);
-        data.nodes = result.nodes;
-        data.edges = result.edges;
+        if (isCourse) {
+          const result = removeNode(data, entity.node.id);
+          data.nodes = result.nodes;
+          data.edges = result.edges;
+        } else {
+          const host = data.nodes.find((x) => x.id === entity.hostId);
+          if (host && Array.isArray(host.note)) removeBlockFromTree(host.note, entity.blockId);
+        }
+        // 关系线：被删块（含子树）作为任一端的都清掉。
+        data.topicEdges = (data.topicEdges || []).filter(
+          (e) => !e || (!blockKeys.has(e.a) && !blockKeys.has(e.b))
+        );
         ui.selection = null;
-        closePanel();
+        ui.innerSelection = null;
+        closePanel(true);
         data.categories = pruneEmptyCategories(data.categories, data.nodes, BUILTIN_CATEGORY_IDS).categories;
         reindexAll();
         refreshOutline();
@@ -158,9 +238,9 @@ export function deleteSelected() {
         updateDock();
         saveNow();
         if (el.menuDelete) el.menuDelete.hidden = true;
-        toast('节点已删除');
+        toast('已删除');
       };
-      const spot = nodeScreenSpot(n);
+      const spot = entityScreenSpot(entity);
       if (!spot) {
         swallow();
         done();
@@ -176,9 +256,9 @@ export function deleteSelected() {
 export function syncMenuState() {
   syncSoundPanel();
   if (!el.menuDelete) return;
-  const n = index.getNode(ui.selection);
-  el.menuDelete.hidden = !n;
-  if (n) el.menuDelete.textContent = `删除「${n.name}」`;
+  const entity = getEntity(ui.selection);
+  el.menuDelete.hidden = !entity;
+  if (entity) el.menuDelete.textContent = `删除「${entity.name}」`;
 }
 
 /* ------------------------- 添加知识点 ------------------------- */
@@ -209,7 +289,7 @@ function nearestCategoryName(pos) {
  * @param {[number,number]|null} [pos] 世界坐标（双击空白处传入）
  */
 export function openAddNode(pos) {
-  if (isPanelOpenImpl()) closePanel();
+  if (isPanelOpenImpl()) closePanel(true);
   addState.pendingPos = pos || null;
   addState.relations = [];
   el.addForm.reset();
@@ -225,9 +305,25 @@ export function openAddNode(pos) {
 }
 
 /** 关闭弹窗。 */
-export function closeAddModal() {
+export function closeAddModal(force = false) {
+  if (!force && isAddOpen() && hasAddDraft()) {
+    askConfirm({
+      title: '放弃这个知识点？',
+      message: '已经填写的内容还没添加，关闭后会丢失。',
+      confirmText: '放弃并关闭',
+      onConfirm: () => closeAddModal(true)
+    });
+    return;
+  }
   closeModal();
   addState.pendingPos = null;
+}
+
+/** 添加弹窗里是否已经填了内容。 */
+function hasAddDraft() {
+  const name = el.addName && el.addName.value.trim();
+  const desc = el.addDesc && el.addDesc.value.trim();
+  return !!(name || desc);
 }
 
 /** 保存新知识点。 */
@@ -325,7 +421,7 @@ export async function exportData() {
 
 /** 用一份已规范化的数据替换当前知识库，并刷新依赖它的界面。 */
 function applyLoadedData(norm) {
-  if (isPanelOpen()) closePanel();
+  if (isPanelOpen()) closePanel(true);
   ui.selection = null;
   replaceData(norm);
   refreshOutline();
@@ -605,7 +701,7 @@ export function bindActions() {
     else if (action === 'kb') openKbDialog();
     else if (action === 'appearance') openAppearance();
     else if (action === 'global-doc') {
-      closePanel();
+      closePanel(true);
       openGlobalDoc();
     }
     else if (action === 'reward') openRewardDialog();

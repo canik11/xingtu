@@ -4,7 +4,7 @@ import './styles/app.css';
 import { randRange, ensurePositions, warmup } from '@starmap/core';
 import { el, cacheDom } from './lib/dom.js';
 import { cam, view, ui, flags, clock } from './state.js';
-import { data, index, load, reindex, saveNow, scheduleSave, storageAvailable, bindCameraReader, initBackend, replaceData, bindRestore, markBaseline } from './store.js';
+import { data, index, load, reindex, saveNow, scheduleSave, storageAvailable, bindCameraReader, initBackend, replaceData, bindRestore, markBaseline, isDirty, onSaveStateChange } from './store.js';
 import { camState, setMaxScale, worldToScreen } from './camera.js';
 import { heat } from './layout.js';
 import { initSpace, buildBackdrop, resetGrainPattern } from './scene/space.js';
@@ -12,7 +12,8 @@ import { initAmbient, bindAmbient, ambientStats } from './scene/ambient.js';
 import { initWebGLScene } from './scene/gl-scene.js';
 import { startLoop } from './loop.js';
 import { bindInteraction } from './interaction.js';
-import { bindActions, updateStats, refreshCategoryDatalist, closeAddModal, deleteSelected } from './actions.js';
+import { bindActions, updateStats, refreshCategoryDatalist, closeAddModal, deleteSelected, saveEdit } from './actions.js';
+import { isEditing, hasEditChanges, onEditStateChange } from './ui/edit-form.js';
 import { bindPanel, updateDock, bindPanelChrome, openPanel, closePanel, selectNode } from './ui/panel.js';
 import { bindNavigation, syncNav, setPanelApi, enterSphere, applyShapeForUser } from './navigation.js';
 import { sceneVisuals, spherePuffState } from './hierarchy.js';
@@ -160,6 +161,7 @@ async function boot() {
   bindNavigation();
   bindShapeBar();
   bindSound();
+  bindSaveCue();
   onQualityChange((q) => {
     setMaxScale(q.three.maxScale);
     resizeCanvas();
@@ -176,7 +178,7 @@ async function boot() {
   syncNav();
 
   bindRestore(() => {
-    closePanel();
+    closePanel(true);
     ui.selection = null;
     reindex();
     refreshOutline();
@@ -362,6 +364,20 @@ async function boot() {
       setShape(id) {
         return applyShapeForUser(id);
       },
+      entities() {
+        return getOutline().all.map((e) => ({
+          id: e.id,
+          level: e.level,
+          name: e.name,
+          parentId: e.parentId,
+          hostId: e.hostId,
+          blockId: e.blockId,
+          children: (e.children || []).slice()
+        }));
+      },
+      isDirty() {
+        return isDirty();
+      },
       select(id) {
         selectNode(id);
         openPanel(id);
@@ -434,6 +450,45 @@ function armIntroAudioUnlock() {
   };
   window.addEventListener('pointerdown', tryUnlock, true);
   window.addEventListener('keydown', tryUnlock, true);
+}
+
+/**
+ * 未保存提示与手动保存：
+ * - 左上角的小月亮在数据改动后亮起，落盘后自动熄灭；编辑面板里有改动时也亮；
+ * - 点月亮或按 Ctrl+S 立即保存；编辑面板里 Ctrl+S 等同于点“保存修改”。
+ */
+function bindSaveCue() {
+  const paint = () => {
+    const editingDirty = isEditing() && hasEditChanges();
+    document.body.classList.toggle('has-unsaved', isDirty() || editingDirty);
+  };
+  onSaveStateChange(paint);
+  onEditStateChange(paint);
+  if (el.panelBody) {
+    el.panelBody.addEventListener('input', paint);
+    el.panelBody.addEventListener('click', paint);
+  }
+  if (el.saveOrb) {
+    el.saveOrb.addEventListener('click', () => {
+      saveNow();
+      toast('已保存修改');
+    });
+  }
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+      event.preventDefault();
+      if (isEditing()) {
+        saveEdit();
+        return;
+      }
+      saveNow();
+      toast('已保存修改');
+    },
+    true
+  );
+  paint();
 }
 
 /** 全局错误兜底：显示红条，避免“白屏无提示”。 */
