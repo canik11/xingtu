@@ -55,9 +55,19 @@ export function closeSoundDialog() {
   el.soundLayer.hidden = true;
 }
 
-function demo() {
+function demo(kind = 'ui') {
   if (!audioReady() || !soundPrefs().enabled) {
     toast('声音还没有开始：点一下页面任意位置');
+    return;
+  }
+  if (kind === 'edit') {
+    sfx.keyPress();
+    window.setTimeout(() => sfx.keyBack(), 110);
+    window.setTimeout(() => sfx.saved(), 240);
+    return;
+  }
+  if (kind === 'intro') {
+    sfx.introCharge(0.5);
     return;
   }
   sfx.nudge(true);
@@ -91,14 +101,11 @@ export function bindSound() {
       const key = btn.dataset.sound;
       toggleSoundPref(key);
       syncSoundPanel();
-      if (soundPrefs().enabled && soundPrefs()[key] && audioReady()) {
-        if (key === 'pulse') sfx.heartbeat(1);
-        else demo();
-      }
+      if (soundPrefs().enabled && soundPrefs()[key] && audioReady()) demo(key);
     });
   }
 
-  if (el.soundDemo) el.soundDemo.addEventListener('click', demo);
+  if (el.soundDemo) el.soundDemo.addEventListener('click', () => demo('ui'));
 
   if (el.soundLayer) {
     el.soundLayer.addEventListener('click', (e) => {

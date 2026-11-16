@@ -8,6 +8,8 @@ export const SOUND_DEFAULTS = Object.freeze({
   enabled: true,
   volume: 0.87,
   ui: true,
+  edit: true,
+  intro: true,
   ambient: false,
   pulse: false
 });
@@ -31,7 +33,7 @@ function clamp(v, a, b) {
 function normalize(raw) {
   const next = { ...SOUND_DEFAULTS };
   if (raw && typeof raw === 'object') {
-    for (const key of ['enabled', 'ui', 'ambient', 'pulse']) {
+    for (const key of ['enabled', 'ui', 'edit', 'intro', 'ambient', 'pulse']) {
       if (typeof raw[key] === 'boolean') next[key] = raw[key];
     }
     const value = Number(raw.volume);
@@ -63,6 +65,8 @@ export function isSoundOn(category) {
   if (!state.enabled) return false;
   if (category === 'ambient') return !!state.ambient;
   if (category === 'pulse') return !!state.pulse;
+  if (category === 'edit') return !!state.edit;
+  if (category === 'intro') return !!state.intro;
   return !!state.ui;
 }
 

@@ -39,11 +39,19 @@ function uiOn() {
   return audioReady() && isSoundOn('ui');
 }
 
+function editOn() {
+  return audioReady() && isSoundOn('edit');
+}
+
+function introOn() {
+  return audioReady() && isSoundOn('intro');
+}
+
 /* ------------------------------ 开场 ------------------------------ */
 
 /** 等待页的氛围音：星海在呼吸，奇点在被一点点吸向中心。 */
 export function introWait(dur = 2.4) {
-  if (!uiOn()) return;
+  if (!introOn()) return;
   // 两声很低的持续音，撑起整片黑暗的底。
   tone({ freq: N.D2, type: 'sine', dur: dur + 0.6, peak: 0.05, attack: 1.1, send: 0.5 });
   tone({ freq: N.A2, type: 'triangle', dur: dur + 0.4, peak: 0.026, attack: 1.4, send: 0.45, detune: 5 });
@@ -66,7 +74,7 @@ export function introWait(dur = 2.4) {
 
 /** 奇点蓄力：一声清钟由弱到强，气流轻轻聚拢（和其他界面音效同一套音色）。 */
 export function introCharge(dur = 0.42) {
-  if (!uiOn()) return;
+  if (!introOn()) return;
   bell(N.D5, { dur: 0.9, peak: 0.05, attack: dur, send: 0.7, bright: 1.0, spread: 0.3 });
   noise({
     dur: dur + 0.2,
@@ -82,7 +90,7 @@ export function introCharge(dur = 0.42) {
 
 /** 星核绽放：一段四秒的小曲——和声长音铺底，钟琴旋律上行，最后落在 D 大三和弦。 */
 export function introBlast() {
-  if (!uiOn()) return;
+  if (!introOn()) return;
   // 和声：D 大三和弦的钟琴长音，分在左右两侧轻轻铺开。
   [N.D4, N.Fs4, N.A4].forEach((freq, i) => {
     tone({
@@ -469,10 +477,45 @@ export function blackhole() {
 }
 
 /** 保存修改：两声很轻的确认。 */
+/** 保存成功：一小段收束的钟音。 */
 export function saved() {
-  if (!uiOn()) return;
+  if (!editOn()) return;
   tone({ freq: N.A4, type: 'sine', dur: 0.55, peak: 0.024, attack: 0.004, send: 0.35 });
   bell(N.E5, { dur: 0.9, peak: 0.016, send: 0.45, delay: 0.07, bright: 0.6 });
+}
+
+/** 保存失败（还没有绑定知识库文件）：两声下沉的提示。 */
+export function saveFail() {
+  if (!uiOn()) return;
+  tone({ freq: N.D4, type: 'triangle', dur: 0.42, peak: 0.028, attack: 0.008, send: 0.25 });
+  tone({ freq: N.A3, type: 'triangle', dur: 0.55, peak: 0.02, attack: 0.01, send: 0.25, delay: 0.09 });
+}
+
+/* ------------------------------ 编辑：打字与删字 ------------------------------ */
+
+let lastKeyAt = 0;
+let lastBackAt = 0;
+
+/** 打字：极短的一粒木鱼/按键声，音高轻微随机，避免机械重复。 */
+export function keyPress() {
+  if (!editOn()) return;
+  const now = performance.now();
+  if (now - lastKeyAt < 55) return;
+  lastKeyAt = now;
+  const pitches = [N.D6, N.Fs6, N.A6, N.B5];
+  const pitch = pitches[Math.floor(Math.random() * pitches.length)];
+  tick(pitch, { peak: 0.016, dur: 0.045, send: 0.22, pan: (Math.random() - 0.5) * 0.5 });
+  tick(N.A4, { peak: 0.005, dur: 0.03, send: 0.12, pan: 0 });
+}
+
+/** 删字 / 退格：比打字略低、带一点摩擦感。 */
+export function keyBack() {
+  if (!editOn()) return;
+  const now = performance.now();
+  if (now - lastBackAt < 80) return;
+  lastBackAt = now;
+  tick(N.D5, { peak: 0.018, dur: 0.06, send: 0.2, pan: (Math.random() - 0.5) * 0.4 });
+  noise({ type: 'lowpass', f0: 900, f1: 380, dur: 0.06, peak: 0.01, send: 0.15 });
 }
 
 /** 撤销：向下两音；重做：向上一路。 */

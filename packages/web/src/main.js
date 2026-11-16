@@ -36,6 +36,8 @@ import { initSound, introSoundStart, introSoundCharge, introSoundBlast } from '.
 import { audioReady, unlockAudio, isAudioUnlocked, audioVolume } from './audio/engine.js';
 import { soundPrefs } from './audio/prefs.js';
 import { bindSound } from './ui/sound.js';
+import * as sfx from './audio/sfx.js';
+import { bindTypingSounds } from './audio/typing.js';
 
 let glScene = null;
 
@@ -161,6 +163,7 @@ async function boot() {
   bindNavigation();
   bindShapeBar();
   bindSound();
+  bindTypingSounds();
   bindSaveCue();
   onQualityChange((q) => {
     setMaxScale(q.three.maxScale);
@@ -480,8 +483,7 @@ function bindSaveCue() {
   }
   if (el.saveOrb) {
     el.saveOrb.addEventListener('click', () => {
-      if (saveNow()) toast('已保存修改');
-      else toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
+      saveWithCue();
     });
   }
   window.addEventListener(
@@ -493,8 +495,7 @@ function bindSaveCue() {
         saveEdit();
         return;
       }
-      if (saveNow()) toast('已保存修改');
-      else toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
+      saveWithCue();
     },
     true
   );
@@ -514,10 +515,7 @@ function bindSaveCue() {
       cancelText: '放弃修改',
       danger: false,
       onConfirm: () => {
-        if (!saveNow()) {
-          toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
-          return;
-        }
+        if (!saveWithCue()) return;
         postCloseConfirmed();
       },
       onCancel: postCloseConfirmed
@@ -525,6 +523,18 @@ function bindSaveCue() {
   };
 
   paint();
+}
+
+/** 统一的手动保存：成功与失败各有自己的声音。 */
+function saveWithCue() {
+  if (saveNow()) {
+    sfx.saved();
+    toast('已保存修改');
+    return true;
+  }
+  sfx.saveFail();
+  toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
+  return false;
 }
 
 /** 通知桌面版壳：确认可以关闭窗口了。 */

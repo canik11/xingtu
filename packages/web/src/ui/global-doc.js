@@ -453,9 +453,11 @@ export function bindGlobalDoc() {
     el.docSaveOrb.addEventListener('click', () => {
       if (saveNow()) {
         setStatus('已保存');
+        sfx.saved();
         toast('已保存修改');
       } else {
         setStatus('还没有知识库文件');
+        sfx.saveFail();
         toast('还没有知识库文件：在「⋯ → 知识库路径」里新建或选一个 JSON 文件');
       }
     });
