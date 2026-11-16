@@ -110,7 +110,7 @@ function cleanTableRow(line) {
 }
 
 /**
- * 幕布之类的工具会把标题导出成"孤立的短行 + 下面一串列表"，没有 # 号。
+ * 有些大纲工具会把标题导出成"孤立的短行 + 下面一串列表"，没有 # 号。
  * 这类行如果按正文处理，整篇文档就会摊平成同一层，导入后看不出上下级。
  * 判定刻意收紧：短、不带句子标点、下一行是列表/表格，才当作二级标题。
  */
@@ -265,7 +265,7 @@ export function parseMarkdown(file, text) {
       continue;
     }
     if (isPseudoHeading(lines, i)) {
-      // 没有 # 的章节名（如幕布导出的 Git.md），按二级标题挂进层级。
+      // 没有 # 的章节名（如某些大纲工具导出的 Git.md），按二级标题挂进层级。
       flushParagraph();
       addHeading(cleanInline(line), 2);
       continue;
@@ -310,7 +310,7 @@ function joinPdfParts(parts) {
   let line = '';
   const sorted = [...parts].sort((a, b) => a.x - b.x);
   for (const part of sorted) {
-    // 幕布等工具导出的 PDF 偶尔把汉字拆成「康熙部首」码位（如 U+2F64 的「⽤」），
+    // 部分工具导出的 PDF 偶尔把汉字拆成「康熙部首」码位（如 U+2F64 的「⽤」），
     // 先做 NFKC 归一化，既还原成正常汉字，也让 CJK 拼接规则继续生效。
     const raw = String(part.str || '');
     const str = raw.normalize ? raw.normalize('NFKC') : raw;
@@ -357,7 +357,7 @@ function pdfRows(items) {
 }
 
 /**
- * 从排版线索里还原 PDF 层级。经验：幕布 / Markdown 转出的 PDF 里，
+ * 从排版线索里还原 PDF 层级。经验：Markdown 转出的 PDF 里，
  * 标题是「短、以中文开头、不含标点与空格」的行，且缩进比正文浅；
  * 缩进越浅层级越高。识别不出两个以上标题时返回 null（调用方平铺）。
  */
@@ -410,7 +410,7 @@ function buildPdfTree(rows, title) {
       stack.push(node);
       continue;
     }
-    // 页脚（幕布导出带作者/发布方）字号更小且很短，直接丢弃。
+    // 页脚（导出工具常带作者/发布方）字号更小且很短，直接丢弃。
     if (row.size < median * 0.92 && row.text.length < 40) continue;
     pending.push(row.text);
     // 正文按行成块：命令/说明类 PDF 一行就是一条，合并反而糊在一起。
