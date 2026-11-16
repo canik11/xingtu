@@ -18,7 +18,7 @@ import {
 } from '@starmap/core';
 import { el, esc } from './lib/dom.js';
 import { ui, view } from './state.js';
-import { data, index, isDirty, replaceData, reindex, saveNow, snapshot, storageAvailable } from './store.js';
+import { data, index, isDirty, replaceData, reindex, saveNow, scheduleSave, snapshot, storageAvailable } from './store.js';
 import { fitView, zoomAt, center3DScene, worldToScreen } from './camera.js';
 import { heat } from './layout.js';
 import { enterLocal, enterSphere } from './navigation.js';
@@ -236,9 +236,10 @@ export function deleteSelected() {
       const done = () => {
         updateStats();
         updateDock();
-        saveNow();
+        // 删除也交给用户手动保存：只点亮月亮，按 Ctrl+S 才真正落盘。
+        scheduleSave();
         if (el.menuDelete) el.menuDelete.hidden = true;
-        toast('已删除');
+        toast('已删除 · 按 Ctrl+S 保存');
       };
       const spot = entityScreenSpot(entity);
       if (!spot) {

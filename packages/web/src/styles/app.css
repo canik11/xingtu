@@ -1124,6 +1124,9 @@ body.doc-open { overflow: hidden; }
   background: linear-gradient(180deg, rgba(12, 22, 42, .56), rgba(5, 10, 20, 0));
 }
 .doc-head-copy h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 2px 0 7px;
   font-size: 21px;
   font-weight: 600;
@@ -2107,9 +2110,9 @@ body.has-unsaved .save-orb {
     0 0 34px rgba(255, 210, 120, 0.4);
 }
 
-/* 全项目大纲里的同一颗月亮：大纲层会盖住顶栏，所以在标题行再放一个。 */
+/* 全项目大纲里的同一颗月亮：大纲层会盖住顶栏，所以放在标题左上角。 */
 .doc-save-orb {
-  margin-right: 2px;
+  margin: 0;
   align-self: center;
 }
 

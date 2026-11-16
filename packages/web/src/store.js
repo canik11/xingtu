@@ -37,13 +37,27 @@ let cameraReader = null;
 let saveTimer = 0;
 
 /* ------------------------- 未保存状态 ------------------------- */
-// 数据改了但还没落盘时为 true；界面用左上角的小月亮提示，Ctrl+S 立即保存。
+// 是否未保存按“内容指纹”判断：改了又改回去等于没改，不该继续亮月亮。
+// 指纹只取可存盘的数据，不含相机视角（转视角不算修改）。
+let savedFingerprint = '';
 let dirty = false;
 const saveListeners = new Set();
 
-/** 是否有未保存的修改。 */
+function contentFingerprint() {
+  if (!data) return '';
+  try {
+    const snap = serializeData(data, cam);
+    delete snap.view;
+    return JSON.stringify(snap);
+  } catch (e) {
+    return '';
+  }
+}
+
+/** 是否有未保存的修改（与最近一次落盘的内容不一致）。 */
 export function isDirty() {
-  return dirty;
+  if (!data) return false;
+  return contentFingerprint() !== savedFingerprint;
 }
 
 /** 订阅保存状态变化（用于刷新月亮等提示）。 */
@@ -52,9 +66,11 @@ export function onSaveStateChange(fn) {
   return () => saveListeners.delete(fn);
 }
 
-function setDirty(value) {
-  if (dirty === value) return;
-  dirty = value;
+/** 重新计算脏状态并通知界面（改了又改回去也会通知熄灭）。 */
+function publishSaveState() {
+  const next = isDirty();
+  if (next === dirty) return;
+  dirty = next;
   for (const fn of saveListeners) {
     try {
       fn(dirty);
@@ -62,6 +78,12 @@ function setDirty(value) {
       /* 监听器异常不影响保存 */
     }
   }
+}
+
+/** 把当前内容记为“已落盘”。 */
+function acceptSaved() {
+  savedFingerprint = contentFingerprint();
+  publishSaveState();
 }
 
 /* ------------------------- 撤销 / 重做 ------------------------- */
@@ -84,7 +106,7 @@ export function markBaseline() {
   undoStack.length = 0;
   redoStack.length = 0;
   lastCommitted = JSON.stringify(snapshot());
-  setDirty(false);
+  acceptSaved();
 }
 
 export function canUndo() {
@@ -127,7 +149,7 @@ function applySnapshot(text) {
     const out = JSON.stringify(snap, null, 2);
     if (hasHostKb()) saveHostKb(out);
     else void writeBoundKbFile(out);
-    setDirty(false);
+    acceptSaved();
     if (restoreListener) restoreListener();
   } finally {
     restoring = false;
@@ -164,6 +186,8 @@ export function load() {
   lastLoad = backend.load();
   data = lastLoad.data;
   rebuild();
+  // 刚读进来的内容就是磁盘上的样子：记为已保存，避免一打开就亮月亮。
+  acceptSaved();
   return lastLoad;
 }
 
@@ -201,7 +225,7 @@ export function saveNow() {
     const text = JSON.stringify(snap, null, 2);
     if (hasHostKb()) saveHostKb(text);
     else void writeBoundKbFile(text);
-    setDirty(false);
+    acceptSaved();
     return true;
   } catch (e) {
     return false;
@@ -214,7 +238,7 @@ export function saveNow() {
  * @param {{ silent?: boolean }} [options] silent 时不亮提示（内部批量操作用）。
  */
 export function scheduleSave(options = {}) {
-  if (!options.silent) setDirty(true);
+  if (!options.silent) publishSaveState();
 }
 
 /** 存储是否可用（隐私模式/配额满时为 false）。 */
