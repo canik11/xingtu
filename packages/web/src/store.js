@@ -1,11 +1,11 @@
 // 数据仓库：持有当前知识库、索引与存储后端，负责读写与防抖保存。
 // 视图层只通过这里的函数改数据，方便将来替换为服务端/云同步。
 import {
+  CONTENT_VERSION,
   KnowledgeIndex,
   LocalStorageBackend,
   ensureAnchors,
   ensurePositions,
-  mergeSeedContent,
   needsSeedUpgrade,
   normalizeData,
   randRange,
@@ -277,7 +277,7 @@ export function storageAvailable() {
 export function replaceData(raw) {
   const norm = normalizeData(raw);
   if (!norm) return false;
-  if (needsSeedUpgrade(norm)) mergeSeedContent(norm);
+  if (needsSeedUpgrade(norm)) norm.contentVersion = CONTENT_VERSION;
   data = norm;
   rebuild();
   cam.x = cam.tx = 0;

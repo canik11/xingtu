@@ -1,8 +1,8 @@
 // 存储层：把「数据」和「存放位置」解耦。
-// LocalStorageBackend 保留原单文件版行为（键 starmap.knowledge.v1、首次打开建种子、
-// contentVersion 落后时做一次性种子合并）；HTTP 后端预留给后续的本地服务端 / 桌面端。
-import { STORE_KEY } from '../constants.js';
-import { createDefaultData, mergeSeedAdditions, mergeSeedContent, needsSeedUpgrade, normalizeData } from '../domain/model.js';
+// LocalStorageBackend 保留原单文件版行为（键 starmap.knowledge.v1、首次打开建种子）；
+// 已有存档只做版本号对齐，出厂种子的新增内容不再合并进用户库——种子只影响全新安装。
+import { CONTENT_VERSION, STORE_KEY } from '../constants.js';
+import { createDefaultData, needsSeedUpgrade, normalizeData } from '../domain/model.js';
 
 /**
  * 读取结果。data 一定是规范化后的完整知识库。
@@ -11,9 +11,8 @@ import { createDefaultData, mergeSeedAdditions, mergeSeedContent, needsSeedUpgra
  * @property {'seed'|'storage'|'server'|'import'} source
  * @property {boolean} firstRun 首次打开（没有存档）
  * @property {boolean} missing 有存档但损坏
- * @property {boolean} seeded 执行了一次性种子升级
+ * @property {boolean} seeded 是否补入了出厂种子（现已恒为 false，保留字段以兼容）
  * @property {boolean} migrated 数据被迁移过（需要立即回写）
- * @property {{addedNodes:number,refreshedNotes:number,addedEdges:number}} [upgraded]
  */
 
 /**
@@ -79,19 +78,14 @@ export class LocalStorageBackend {
     const norm = normalizeData(parsed);
     if (!norm) return { ...seedResult(false), missing: true };
 
-    let upgraded = null;
-    if (needsSeedUpgrade(norm)) {
-      upgraded = upgradeSeed(norm);
-      norm.migrated = true;
-    }
+    if (needsSeedUpgrade(norm)) upgradeSeed(norm);
     return {
       data: norm,
       source: 'storage',
       firstRun: false,
       missing: false,
-      seeded: !!upgraded,
-      migrated: !!norm.migrated,
-      upgraded: upgraded || undefined
+      seeded: false,
+      migrated: !!norm.migrated
     };
   }
 
@@ -125,19 +119,14 @@ export function createHttpBackend(baseUrl = '/api/knowledge') {
       if (!res.ok) throw new Error('读取知识库失败：HTTP ' + res.status);
       const norm = normalizeData(await res.json());
       if (!norm) throw new Error('知识库数据为空');
-      let upgraded = null;
-      if (needsSeedUpgrade(norm)) {
-        upgraded = upgradeSeed(norm);
-        norm.migrated = true;
-      }
+      if (needsSeedUpgrade(norm)) upgradeSeed(norm);
       return {
         data: norm,
         source: 'server',
         firstRun: false,
         missing: false,
-        seeded: !!upgraded,
-        migrated: !!norm.migrated,
-        upgraded: upgraded || undefined
+        seeded: false,
+        migrated: !!norm.migrated
       };
     },
     async save(payload) {
@@ -170,19 +159,14 @@ export class MemoryBackend {
     if (this.raw === null) return seedResult(true);
     const norm = normalizeData(JSON.parse(this.raw));
     if (!norm) return { ...seedResult(false), missing: true };
-    let upgraded = null;
-    if (needsSeedUpgrade(norm)) {
-      upgraded = upgradeSeed(norm);
-      norm.migrated = true;
-    }
+    if (needsSeedUpgrade(norm)) upgradeSeed(norm);
     return {
       data: norm,
       source: 'storage',
       firstRun: false,
       missing: false,
-      seeded: !!upgraded,
-      migrated: !!norm.migrated,
-      upgraded: upgraded || undefined
+      seeded: false,
+      migrated: !!norm.migrated
     };
   }
 
@@ -196,7 +180,9 @@ export class MemoryBackend {
 }
 
 function upgradeSeed(norm) {
-  return Number(norm.contentVersion) >= 2 ? mergeSeedAdditions(norm) : mergeSeedContent(norm);
+  // 出厂种子只影响全新安装。已有知识库内容完全属于用户自己：
+  // 这里只把版本号对齐，不补节点、不补关系、不改笔记。
+  norm.contentVersion = CONTENT_VERSION;
 }
 
 function seedResult(firstRun) {

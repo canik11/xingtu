@@ -204,10 +204,6 @@ async function boot() {
   if (loaded.firstRun) saveNow();
   if (loaded.migrated) saveNow();
   markBaseline();
-  if (loaded.seeded) {
-    const added = (loaded.upgraded && loaded.upgraded.addedNodes) || 0;
-    setTimeout(() => toast(added > 0 ? `已升级知识库：新增 ${added} 个知识点` : '已升级知识库：已补全详细笔记'), 900);
-  }
   if (!storageAvailable()) setTimeout(() => toast('本地存储不可用：本次改动不会自动保存'), 1000);
 
   if (flags.debug) {

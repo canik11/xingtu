@@ -342,7 +342,7 @@ test('力导向：预热后节点不重叠、包围盒稳定', () => {
   assert.ok(Number.isFinite(data.nodes[0].x));
 });
 
-test('LocalStorageBackend：首次打开给种子，之后读存档并升级', async () => {
+test('LocalStorageBackend：首次打开给种子，已有存档不再合并种子内容', async () => {
   const store = new Map();
   const fake = {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
@@ -361,11 +361,13 @@ test('LocalStorageBackend：首次打开给种子，之后读存档并升级', a
     edges: []
   };
   store.set('starmap.knowledge.v1', JSON.stringify(legacy));
-  const upgraded = await backend.load();
-  assert.equal(upgraded.source, 'storage');
-  assert.equal(upgraded.seeded, true);
-  assert.equal(upgraded.migrated, true);
-  assert.ok(upgraded.data.nodes.length >= 10);
+  const loaded = await backend.load();
+  assert.equal(loaded.source, 'storage');
+  assert.equal(loaded.seeded, false);
+  // 出厂种子只影响全新安装：用户存档里不会被补入示例节点
+  assert.equal(loaded.data.nodes.length, 1);
+  assert.equal(loaded.data.nodes[0].id, 'x');
+  assert.equal(loaded.data.contentVersion, CONTENT_VERSION);
 
   store.set('starmap.knowledge.v1', '{坏的 JSON');
   const broken = await backend.load();
