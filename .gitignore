@@ -26,3 +26,4 @@ app.zip
 # 演示视频：本地生成工程与成片，一律不入库
 .video-src/
 demo/
+video/
