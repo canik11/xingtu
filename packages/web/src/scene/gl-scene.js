@@ -797,7 +797,7 @@ class WebGLScene {
    */
   updateSkeleton(t) {
     const g = this.skeleton;
-    if (ui.level !== 'sphere' || !ui.shape || ui.shape === 'sphere') {
+    if (ui.level !== 'sphere' || !ui.shape) {
       g.visible = false;
       return;
     }
@@ -829,7 +829,7 @@ class WebGLScene {
         if (i === 0) g.moveTo(s.x, s.y);
         else g.lineTo(s.x, s.y);
       }
-      g.stroke({ width: 1.6, color: 0xa9c9ff, alpha: 0.42 * gain * weight });
+      g.stroke({ width: 1.6, color: 0xa9c9ff, alpha: 0.48 * gain * weight });
     }
   }
 

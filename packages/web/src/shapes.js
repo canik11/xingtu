@@ -321,30 +321,28 @@ export function shapeSkeleton(shape, detail = 90) {
   };
   switch (shape) {
     case 'galaxy': {
-      // 两条螺旋臂，画亮一点，从关系线里也能看清
-      for (let arm = 0; arm < 2; arm++) line((t) => diskAt(t, arm), 160, 0.9);
-      // 盘外缘：星系的椭圆轮廓
+      // 两条螺旋臂：从明亮核心荡到外缘，这是星系的骨架签名。
+      for (let arm = 0; arm < 2; arm++) line((t) => diskAt(t, arm), 200, 0.95);
+      // 盘外缘：一圈很淡的椭圆，给出星盘边界，不和旋臂抢视线。
       line(
         (t) =>
           spinY(
             tiltX({ x: Math.cos(t * TAU) * 1.04, y: -0.02, z: Math.sin(t * TAU) * 1.04 }, DISK_TILT),
             DISK_YAW
           ),
-        80,
-        0.4
+        96,
+        0.22
       );
-      // 核球：三个不同朝向的小环，中心有一团体积
-      for (const ang of [0.4, 1.2, 2.0]) {
-        line(
-          (t) => {
-            const a = t * TAU;
-            const p = tiltX({ x: Math.cos(a) * 0.17, y: Math.sin(a) * 0.17, z: 0 }, ang);
-            return { x: p.x, y: p.y - 0.03, z: p.z };
-          },
-          30,
-          0.5
-        );
-      }
+      // 核心：一圈亮环勾出核球，其余体积交给中心星尘团。
+      line(
+        (t) => {
+          const a = t * TAU;
+          const p = tiltX({ x: Math.cos(a) * 0.16, y: Math.sin(a) * 0.16, z: 0 }, DISK_TILT * 0.55);
+          return { x: p.x, y: p.y - 0.03, z: p.z };
+        },
+        48,
+        0.45
+      );
       break;
     }
     case 'helix': {
@@ -427,7 +425,31 @@ export function shapeSkeleton(shape, detail = 90) {
       line((t) => quadAt(a, ctrl, b, t), 40, 0.4);
       break;
     }
-    case 'sphere':
+    case 'sphere': {
+      // 球面经纬网：五条纬线（赤道最亮）加八条经线，把整颗星球完整包住，
+      // 球形和其他形状一样有自己的几何骨架，而不是只靠一圈星尘。
+      for (const y of [-0.62, -0.32, 0, 0.32, 0.62]) {
+        const r = Math.sqrt(Math.max(0, 1 - y * y));
+        line(
+          (t) => ({ x: Math.cos(t * TAU) * r, y, z: Math.sin(t * TAU) * r }),
+          120,
+          Math.abs(y) < 0.01 ? 0.44 : 0.26
+        );
+      }
+      for (let k = 0; k < 8; k++) {
+        const yaw = (k / 8) * TAU;
+        line(
+          (t) => {
+            const y = 1 - t * 2;
+            const r = Math.sqrt(Math.max(0, 1 - y * y));
+            return { x: Math.cos(yaw) * r, y, z: Math.sin(yaw) * r };
+          },
+          72,
+          0.2
+        );
+      }
+      break;
+    }
     default:
       break;
   }
@@ -540,10 +562,13 @@ export function shapeIdlePoint(shape, p, time, scale, strength) {
 
   switch (shape) {
     case 'galaxy': {
-      // 旋涡星云：内圈角速度大、外圈慢，螺旋臂被差速剪切撕出涌流。
+      // 旋涌：整片星盘绕倾斜法线缓慢自转，只保留很轻的差速——旋臂随盘一起转动，
+      // 几何轮廓始终清晰，而不是把节点甩出去织成乱线。
       const r = Math.hypot(p.x, p.y, p.z) / R;
-      const omega = 0.03 + 0.22 / (0.35 + r);
-      return axisAngle(p, GALAXY_AXIS, s * omega * time);
+      const omega = 0.075 + 0.03 / (1 + r);
+      const swirl = axisAngle(p, GALAXY_AXIS, s * omega * time);
+      const pulse = 1 + s * 0.02 * Math.sin(time * 0.9);
+      return { x: swirl.x * pulse, y: swirl.y * pulse, z: swirl.z * pulse };
     }
     case 'helix': {
       // DNA：扭转角沿 Y 轴滑行，形成一道从下往上（或反向）传过的行波。
