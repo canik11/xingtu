@@ -282,8 +282,9 @@ export function shapePath(shape, t) {
       return { x: Math.cos(theta) * 0.5, y: (s - 0.5) * 1.72, z: Math.sin(theta) * 0.5 };
     }
     case 'torus': {
-      // 节点沿主环走一圈，只在管壁上小幅起伏：环面清楚，又不会绕成毛线球。
-      return ringAt(u * TAU, Math.sin(u * TAU * 2 + 0.6) * 0.55);
+      // 节点沿主环前进，同时绕管壁转五圈：整条节点带缠满环状管面，
+      // 管的外侧、内侧、上下缘都有节点，而不是全部挤在管壁的一条线上。
+      return ringAt(u * TAU, u * TAU * 5 + 0.9);
     }
     case 'lattice': {
       // 沿 12 条棱串行，走完整个立方线框。
