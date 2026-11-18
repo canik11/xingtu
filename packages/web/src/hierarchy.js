@@ -439,7 +439,9 @@ export function sceneEdges(visuals) {
 
     for (const e of data.edges) push(e.a, e.b, e.label, 'top');
     const outline = getOutline();
-    if (ui.sphereScope >= 2) {
+    // 非球形形状会把节点压到盘面 / 骨架上，逐级连线（课程—章节—知识点）
+    // 会织成一张密网，把形状本身的几何轮廓淹掉；层级关系在球形视图和侧栏里照常可读。
+    if (ui.shape === 'sphere' && ui.sphereScope >= 2) {
       for (const e of outline.hierarchy) {
         if (e.kind === 'chapter') push(e.a, e.b, '', 'chapter');
         if (ui.sphereScope >= 3 && e.kind === 'point') push(e.a, e.b, '', 'point');
