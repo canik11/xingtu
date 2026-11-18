@@ -4,7 +4,7 @@ import { TAU, clamp, mod } from '@starmap/core';
 import { cam, ui, view } from '../state.js';
 import { MAX_SCALE, worldToScreen } from '../camera.js';
 import { outerRadius, projectPoint, sceneVisuals, sceneEdges, innerSelectionSet } from '../hierarchy.js';
-import { shapePoint, shapeSkeleton } from '../shapes.js';
+import { shapePoint, shapeSkeleton, shapeIdlePoint } from '../shapes.js';
 import { getFocus, projectFocusNode } from '../focus.js';
 import { appearanceConfig, edgeDefaultRgb, edgeIsMastered, edgeMasteredRgb, masteryRgb, scaledAppearance } from '../mastery.js';
 import { GLBackdrop } from './gl-backdrop.js';
@@ -816,7 +816,15 @@ class WebGLScene {
       const weight = Array.isArray(entry) ? 1 : entry.alpha ?? 1;
       for (let i = 0; i < pts.length; i++) {
         const p = pts[i];
-        const q = projectPoint({ x: p.x * R * breath, y: p.y * R * breath, z: p.z * R }, rot, R);
+        // 骨架线与节点共用同一套形状私有形变，轮廓和星点不会各自乱动。
+        const world = shapeIdlePoint(
+          ui.shape,
+          { x: p.x * R * breath, y: p.y * R * breath, z: p.z * R },
+          ui.shapeClock,
+          R,
+          ui.spherePuff
+        );
+        const q = projectPoint(world, rot, R);
         const s = worldToScreen(q.x, q.y);
         if (i === 0) g.moveTo(s.x, s.y);
         else g.lineTo(s.x, s.y);
@@ -877,7 +885,9 @@ class WebGLScene {
       this.dustWorld[k + 1] = y;
       this.dustWorld[k + 2] = z;
 
-      const q = projectPoint({ x, y, z }, rot, R);
+      // 星尘与节点、骨架线同步形变；存储位置保持未形变，关闭效果后不留残影。
+      const world = shapeIdlePoint(shape, { x, y, z }, ui.shapeClock, R, ui.spherePuff);
+      const q = projectPoint(world, rot, R);
       const s = worldToScreen(q.x, q.y);
       const sprite = this.dustSprites[i];
       sprite.position.set(s.x, s.y);

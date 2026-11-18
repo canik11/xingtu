@@ -474,6 +474,155 @@ export function shapeCloudDir(shape, dir) {
   }
 }
 
+// ——— 每形状私有的几何形变 ———
+// 静默效果不再用同一种“向外膨胀”套所有形状：每种 3D 样式按自己的几何结构动。
+// 输入输出都是世界坐标；time 为秒，scale 是当前骨架的外半径，strength ∈ [0,1] 负责渐入。
+const IDLE_LABELS = {
+  sphere: '呼吸',
+  galaxy: '旋涌',
+  helix: '扭转',
+  torus: '环流',
+  lattice: '声子',
+  wave: '涟漪',
+  binary: '进动'
+};
+
+const IDLE_NOTES = {
+  sphere: '呼吸 = 整个星球沿半径同步胀缩，球面各层一起起伏',
+  galaxy: '旋涌 = 星盘绕倾斜法线差速旋转，内圈快外圈慢，两条旋臂被越拉越弯',
+  helix: '扭转 = 一道行波沿中轴传过双链，螺旋与碱基对横档跟着翻卷',
+  torus: '环流 = 星尘沿管壁切向环流，环面像被一圈圈拧动',
+  lattice: '声子 = 疏密行波沿晶格棱传递，节点在棱上轻声振动',
+  wave: '涟漪 = 波峰从波心一圈圈向外荡开，环层随之起伏',
+  binary: '进动 = 轨道面缓慢进动，两片叶瓣上下交错浮动'
+};
+
+/** 绕任意单位轴旋转（Rodrigues），用于星系差速旋转与星环环流。 */
+function axisAngle(p, axis, angle) {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const d = p.x * axis.x + p.y * axis.y + p.z * axis.z;
+  const cr = {
+    x: axis.y * p.z - axis.z * p.y,
+    y: axis.z * p.x - axis.x * p.z,
+    z: axis.x * p.y - axis.y * p.x
+  };
+  return {
+    x: p.x * c + cr.x * s + axis.x * d * (1 - c),
+    y: p.y * c + cr.y * s + axis.y * d * (1 - c),
+    z: p.z * c + cr.z * s + axis.z * d * (1 - c)
+  };
+}
+
+/** 星系盘的法线：盘面先倾斜再偏转，法线走同一套旋转。 */
+const GALAXY_AXIS = unitize(spinY(tiltX({ x: 0, y: 1, z: 0 }, DISK_TILT), DISK_YAW));
+
+/** 晶格的三根棱方向（随晶格骨架一起倾斜），形变沿最近的那根棱振动。 */
+const LATTICE_AXES = [
+  unitize(tiltX({ x: 1, y: 0, z: 0 }, 0.5)),
+  unitize(tiltX({ x: 0, y: 1, z: 0 }, 0.5)),
+  unitize(tiltX({ x: 0, y: 0, z: 1 }, 0.5))
+];
+
+/**
+ * 静默效果的几何形变：把世界坐标 p 按当前形状的私有规律推到新位置。
+ * 强度为 0 时严格返回原坐标，关闭效果不会留下任何偏移。
+ * @param {string} shape
+ * @param {{x:number,y:number,z:number}} p 世界坐标
+ * @param {number} time 秒
+ * @param {number} scale 当前骨架外半径
+ * @param {number} strength 0..1
+ */
+export function shapeIdlePoint(shape, p, time, scale, strength) {
+  const s = Math.max(0, Math.min(1, strength || 0));
+  if (s <= 0.0001) return p;
+  const R = scale || 1;
+
+  switch (shape) {
+    case 'galaxy': {
+      // 旋涡星云：内圈角速度大、外圈慢，螺旋臂被差速剪切撕出涌流。
+      const r = Math.hypot(p.x, p.y, p.z) / R;
+      const omega = 0.03 + 0.22 / (0.35 + r);
+      return axisAngle(p, GALAXY_AXIS, s * omega * time);
+    }
+    case 'helix': {
+      // DNA：扭转角沿 Y 轴滑行，形成一道从下往上（或反向）传过的行波。
+      const y = p.y / R;
+      const wave = time * 1.3 - y * 4.5;
+      const phi = s * 0.35 * Math.sin(wave);
+      const grow = 1 + s * 0.05 * Math.sin(wave + 1.2);
+      const q = spinY(p, phi);
+      return { x: q.x * grow, y: q.y, z: q.z * grow };
+    }
+    case 'torus': {
+      // 星环：先逆倾斜到环面坐标，再绕主环切向把节点卷到管壁的另一侧。
+      const q = tiltX(p, -RING_TILT);
+      const u = Math.atan2(q.z, q.x);
+      const cx = Math.cos(u) * RING_R;
+      const cy = Math.sin(2 * u) * 0.18;
+      const cz = Math.sin(u) * RING_R;
+      const v = { x: q.x - cx * R, y: q.y - cy * R, z: q.z - cz * R };
+      const tangent = unitize({
+        x: -Math.sin(u) * RING_R,
+        y: 0.36 * Math.cos(2 * u),
+        z: Math.cos(u) * RING_R
+      });
+      const rot = axisAngle(v, tangent, s * (time * 0.5 + u * 0.6));
+      return tiltX(
+        { x: rot.x + cx * R, y: rot.y + cy * R, z: rot.z + cz * R },
+        RING_TILT
+      );
+    }
+    case 'lattice': {
+      // 晶格：先逆倾斜回立方体坐标，找离节点最近的那根棱，让疏密波沿棱传递。
+      const local = tiltX(p, -0.5);
+      const ux = local.x / R;
+      const uy = local.y / R;
+      const uz = local.z / R;
+      const ax = Math.abs(ux);
+      const ay = Math.abs(uy);
+      const az = Math.abs(uz);
+      const axis = ax <= ay && ax <= az
+        ? LATTICE_AXES[0]
+        : ay <= az
+          ? LATTICE_AXES[1]
+          : LATTICE_AXES[2];
+      const amp = R * 0.018 * s * Math.sin(time * 2.0 + (ux + uy + uz) * 4.0);
+      return { x: p.x + axis.x * amp, y: p.y + axis.y * amp, z: p.z + axis.z * amp };
+    }
+    case 'wave': {
+      // 星波：波峰从中心向外一圈圈荡开，环层半径与高度一起起伏。
+      const r = Math.hypot(p.x, p.z) / R;
+      const wave = time * 1.5 - r * 6.0;
+      const grow = 1 + s * 0.075 * Math.sin(wave);
+      const lift = R * 0.03 * s * Math.sin(wave) * Math.min(1, r);
+      return { x: p.x * grow, y: p.y * grow + lift, z: p.z * grow };
+    }
+    case 'binary': {
+      // 双星：轨道面绕 Y 轴进动，两叶瓣沿高度方向交错浮动。
+      const q = spinY(p, s * 0.22 * Math.sin(time * 0.6));
+      const bob = R * 0.035 * s * Math.sin(time * 0.75 + Math.atan2(q.z, q.x));
+      return { x: q.x, y: q.y + bob, z: q.z };
+    }
+    case 'sphere':
+    default: {
+      // 球形：唯一保持球对称的样式，用整体径向呼吸而不是各自乱飞。
+      const breath = 1 + 0.1 * s * Math.sin(time * 1.1);
+      return { x: p.x * breath, y: p.y * breath, z: p.z * breath };
+    }
+  }
+}
+
+/** 当前形状的私有静默效果名（用于静默面板按钮与提示）。 */
+export function shapeIdleLabel(shape) {
+  return IDLE_LABELS[shape] || IDLE_LABELS.sphere;
+}
+
+/** 当前形状私有静默效果的说明文案。 */
+export function shapeIdleNote(shape) {
+  return IDLE_NOTES[shape] || IDLE_NOTES.sphere;
+}
+
 function loadShape() {
   try {
     let value = localStorage.getItem(STORE_KEY);

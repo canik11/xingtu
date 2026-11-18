@@ -5,7 +5,7 @@ import { ui, view } from './state.js';
 import { index } from './store.js';
 import { center3DScene, fitFocusView, panelReserve } from './camera.js';
 import { applyShape, captureTransitionFrom3D, clearTransition, resetSphereShape } from './hierarchy.js';
-import { saveShape } from './shapes.js';
+import { saveShape, shapeIdleLabel, shapeIdleNote } from './shapes.js';
 import { startTransition } from './scene/transition.js';
 import { buildFocus, captureFocusScreenMap, clearManualPositions, fitFocus, getFocus } from './focus.js';
 import { getEntity, pathOf, courseOf, refreshOutline } from './outline.js';
@@ -154,6 +154,14 @@ export function syncNav() {
           ? String(isStill())
           : String(!!ui.idleModes[mode]));
       });
+      // 每个形状的静默形变是私有的：按钮名与说明跟着当前形状切换。
+      const puffBtn = el.motionPanel.querySelector('[data-motion="puff"]');
+      if (puffBtn) puffBtn.textContent = shapeIdleLabel(ui.shape);
+      const note = el.motionPanel.querySelector('.motion-note');
+      if (note) {
+        note.textContent =
+          `效果可叠加；再点一次关闭。心跳 = 星海每拍轻跳两下（lub-dub）；${shapeIdleNote(ui.shape)}；拖动时暂停自动旋转`;
+      }
       if (document.activeElement !== el.motionSpeed) el.motionSpeed.value = String(ui.idleSpeed);
       el.motionSpeedText.textContent = `${ui.idleSpeed.toFixed(2).replace(/\.?0+$/, '')}×`;
     }

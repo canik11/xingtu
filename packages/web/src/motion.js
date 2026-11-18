@@ -2,10 +2,11 @@
 // 键名仍保留 breathe，兼容旧版保存的偏好；界面与效果已改为心跳。
 // “静止”是三项都关闭时的状态；偏好独立保存在 localStorage，不影响知识库数据。
 import { ui } from './state.js';
+import { shapeIdleLabel } from './shapes.js';
 
 const KEY = 'starmap.motion.v1';
 const MODES = ['rotate', 'breathe', 'puff'];
-const LABELS = { rotate: '旋转', breathe: '心跳', puff: '膨胀' };
+const LABELS = { rotate: '旋转', breathe: '心跳' };
 
 export function activeIdleModes() {
   return MODES.filter((mode) => !!ui.idleModes[mode]);
@@ -17,7 +18,9 @@ export function isStill() {
 
 export function idleLabel() {
   const active = activeIdleModes();
-  return active.length ? active.map((mode) => LABELS[mode]).join(' + ') : '静止';
+  return active.length
+    ? active.map((mode) => (mode === 'puff' ? shapeIdleLabel(ui.shape) : LABELS[mode])).join(' + ')
+    : '静止';
 }
 
 export function isIdleMode(mode) {
@@ -25,14 +28,9 @@ export function isIdleMode(mode) {
 }
 
 function initPuff() {
-  // 从半膨胀相位开始，打开开关时马上能看到散开，而不是先等十几秒。
-  ui.idlePhase = Math.PI / 2;
+  // 从一个小强度起步，打开开关时形变马上可见，再由补间推到满强度。
   ui.spherePuff = Math.max(ui.spherePuff, 0.04);
-  ui.spherePuffDepth = 0.56 + Math.random() * 0.3;
-  ui.spherePuffTarget = 0.03 + ui.spherePuffDepth * 0.5;
-  ui.spherePuffPrevSeed = ui.spherePuffSeed;
-  ui.spherePuffSeed = (Math.random() * 1e9) | 0;
-  ui.spherePuffSeedMix = 0;
+  ui.spherePuffTarget = 1;
 }
 
 /** 开关某一项效果；切换另一项不会关掉已经打开的效果。 */

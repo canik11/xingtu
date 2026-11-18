@@ -49,13 +49,11 @@ export const ui = {
   shape: 'sphere',
   /** 切换形状时节点从旧位置飞向新位置：{ from: Map<id,{x,y,z}>, start, dur }。 */
   shapeMorph: null,
-  /** 3D 球体的随机膨胀：0 = 标准球，1 = 完全展开；target 用于补间。 */
+  /** 形状私有静默形变的时钟（秒），只在该效果开启时推进。 */
+  shapeClock: 0,
+  /** 形状私有静默形变的强度：0 = 静止，1 = 完全展开；target 用于补间。 */
   spherePuff: 0,
   spherePuffTarget: 0,
-  spherePuffSeed: 1,
-  spherePuffPrevSeed: 1,
-  spherePuffSeedMix: 1,
-  spherePuffDepth: 0.62,
   /** 局部 3D 关系图的临时图（章节 / 知识点）。 */
   focusGraph: null,
 
@@ -66,10 +64,9 @@ export const ui = {
   sphereOffsets: new Map(),
   orbitDrag: null,
 
-  /* 3D 静默效果可以叠加：旋转 / 心跳 / 膨胀；三项都关即静止。 */
+  /* 3D 静默效果可以叠加：旋转 / 心跳 / 形状私有形变；三项都关即静止。 */
   idleModes: { rotate: true, breathe: false, puff: false },
   idleSpeed: 1,
-  idlePhase: 0,
   breathPhase: 0,
   /** 心跳的几何收缩（1 = 静止），幅度只有百分之几，只当轻颤。 */
   idleBreath: 1,

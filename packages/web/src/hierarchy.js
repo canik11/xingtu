@@ -5,7 +5,7 @@ import { cam, ui } from './state.js';
 import { data } from './store.js';
 import { worldToScreen } from './camera.js';
 import { getOutline, chaptersOf, pointsOf } from './outline.js';
-import { shapePoint, shapeCloudDir, shapePath, shapeTangent } from './shapes.js';
+import { shapePoint, shapeCloudDir, shapePath, shapeTangent, shapeIdlePoint } from './shapes.js';
 
 const OUTER_R = 300;
 /** 非球形时把整棵树铺到更大的骨架半径上，形状不会缩在屏幕中央。 */
@@ -77,7 +77,7 @@ function sphereOffset(id) {
   return ui.sphereOffsets.get(id) || { x: 0, y: 0, z: 0 };
 }
 
-/** 稳定的随机单位向量，用于打散章节位置与膨胀方向。 */
+/** 稳定的随机单位向量，用于打散章节与知识点的散落方向。 */
 function randDir(id, salt) {
   const u = rand01(id, `${salt}:u`);
   const v = rand01(id, `${salt}:v`);
@@ -85,37 +85,6 @@ function randDir(id, salt) {
   const z = v * 2 - 1;
   const r = Math.sqrt(Math.max(0, 1 - z * z));
   return { x: Math.cos(theta) * r, y: z, z: Math.sin(theta) * r };
-}
-
-/**
- * 节点向外膨胀的随机位移。以“球心 → 节点”的方向为主，再叠一点切向抖动，
- * 这样整体仍是向外膨胀，而不是单纯把节点揉成一团。
- */
-function puffOffsetForSeed(id, base, radius, seed) {
-  const outward = norm(base);
-  const jitter = randDir(id, `puff-${seed}`);
-  const radial = 0.16 + rand01(id, `puff-r-${seed}`) * 0.58;
-  // 每个节点有自己的呼吸相位：同一时刻有的先散、有的后散，整体更像星云。
-  const phase = rand01(id, `puff-phase-${seed}`) * Math.PI * 2;
-  const wobble = 0.62 + 0.38 * Math.sin(ui.idlePhase + phase);
-  return {
-    x: (outward.x * radial + jitter.x * 0.3) * radius * wobble,
-    y: (outward.y * radial + jitter.y * 0.3) * radius * wobble,
-    z: (outward.z * radial + jitter.z * 0.3) * radius * wobble
-  };
-}
-
-function puffOffset(id, base, radius) {
-  const mix = ui.spherePuffSeedMix ?? 1;
-  if (mix >= 0.999) return puffOffsetForSeed(id, base, radius, ui.spherePuffSeed);
-  const prev = puffOffsetForSeed(id, base, radius, ui.spherePuffPrevSeed ?? ui.spherePuffSeed);
-  const next = puffOffsetForSeed(id, base, radius, ui.spherePuffSeed);
-  const t = mix * mix * (3 - 2 * mix);
-  return {
-    x: prev.x + (next.x - prev.x) * t,
-    y: prev.y + (next.y - prev.y) * t,
-    z: prev.z + (next.z - prev.z) * t
-  };
 }
 
 /** 绕 Y 轴再绕 X 轴旋转，返回透视后的世界坐标。 */
@@ -205,7 +174,6 @@ function shapeLayout() {
 /** 外层每个课程节点的球面坐标（半径 OUTER_R）。 */
 function courseBases() {
   const list = getOutline().courses;
-  const puff = ui.spherePuff;
   if (ui.shape !== 'sphere') {
     const layout = shapeLayout();
     return list.map((course) => {
@@ -217,14 +185,8 @@ function courseBases() {
   return list.map((course, i) => {
     const unit = shapePoint(ui.shape, i, list.length);
     const base = { x: unit.x * OUTER_R, y: unit.y * OUTER_R, z: unit.z * OUTER_R };
-    const off = puffOffset(course.id, base, OUTER_R);
     const drag = sphereOffset(course.id);
-    return {
-      course,
-      x: base.x + off.x * puff + drag.x,
-      y: base.y + off.y * puff + drag.y,
-      z: base.z + off.z * puff + drag.z
-    };
+    return { course, x: base.x + drag.x, y: base.y + drag.y, z: base.z + drag.z };
   });
 }
 
@@ -235,21 +197,19 @@ function courseBases() {
 function chapterBases() {
   const out = [];
   const bases = courseBases();
-  const puff = ui.spherePuff;
   if (ui.shape !== 'sphere') {
     const layout = shapeLayout();
     bases.forEach((base) => {
       chaptersOf(base.course.id).forEach((chapter) => {
         const p = layout.get(chapter.id);
         if (!p) return;
-        const own = puffOffset(chapter.id, p, 76);
         const drag = sphereOffset(chapter.id);
         out.push({
           chapter,
           course: base.course,
-          x: p.x + own.x * puff * 0.36 + drag.x,
-          y: p.y + own.y * puff * 0.36 + drag.y,
-          z: p.z + own.z * puff * 0.36 + drag.z
+          x: p.x + drag.x,
+          y: p.y + drag.y,
+          z: p.z + drag.z
         });
       });
     });
@@ -261,14 +221,13 @@ function chapterBases() {
     chapters.forEach((chapter) => {
       const dir = shapeCloudDir(ui.shape, randDir(chapter.id, 'chapter-pos'));
       const radius = 36 + rand01(chapter.id, 'chapter-r') * 46;
-      const own = puffOffset(chapter.id, base, 76);
       const drag = sphereOffset(chapter.id);
       out.push({
         chapter,
         course: base.course,
-        x: base.x + dir.x * radius + own.x * puff * 0.58 + drag.x,
-        y: base.y + dir.y * radius + own.y * puff * 0.58 + drag.y,
-        z: base.z + dir.z * radius + own.z * puff * 0.58 + drag.z
+        x: base.x + dir.x * radius + drag.x,
+        y: base.y + dir.y * radius + drag.y,
+        z: base.z + dir.z * radius + drag.z
       });
     });
   });
@@ -278,7 +237,6 @@ function chapterBases() {
 /** 三级知识点：散落在所属章节周围的小星群。 */
 function pointBases() {
   const out = [];
-  const puff = ui.spherePuff;
   if (ui.shape !== 'sphere') {
     const layout = shapeLayout();
     chapterBases().forEach((chapter) => {
@@ -288,15 +246,14 @@ function pointBases() {
         if (ui.sphereScope < 4 && (point.depth || 0) > 0) return;
         const p = layout.get(point.id);
         if (!p) return;
-        const own = puffOffset(point.id, p, 30);
         const drag = sphereOffset(point.id);
         out.push({
           point,
           chapter: chapter.chapter,
           course: chapter.course,
-          x: p.x + own.x * puff * 0.24 + drag.x,
-          y: p.y + own.y * puff * 0.24 + drag.y,
-          z: p.z + own.z * puff * 0.24 + drag.z
+          x: p.x + drag.x,
+          y: p.y + drag.y,
+          z: p.z + drag.z
         });
       });
     });
@@ -310,15 +267,14 @@ function pointBases() {
       if (ui.sphereScope < 4 && (point.depth || 0) > 0) return;
       const dir = shapeCloudDir(ui.shape, randDir(point.id, `point-pos-${i}`));
       const radius = 14 + rand01(point.id, 'point-r') * 24;
-      const own = puffOffset(point.id, chapter, 30);
       const drag = sphereOffset(point.id);
       out.push({
         point,
         chapter: chapter.chapter,
         course: chapter.course,
-        x: chapter.x + dir.x * radius + own.x * puff * 0.34 + drag.x,
-        y: chapter.y + dir.y * radius + own.y * puff * 0.34 + drag.y,
-        z: chapter.z + dir.z * radius + own.z * puff * 0.34 + drag.z
+        x: chapter.x + dir.x * radius + drag.x,
+        y: chapter.y + dir.y * radius + drag.y,
+        z: chapter.z + dir.z * radius + drag.z
       });
     });
   });
@@ -351,8 +307,13 @@ function outerVisuals() {
   const courseDepthR = ui.shape === 'sphere' ? OUTER_R : SHAPE_OUTER;
   const chapterDepthR = ui.shape === 'sphere' ? OUTER_R + 70 : SHAPE_OUTER;
   const pointDepthR = ui.shape === 'sphere' ? OUTER_R + 120 : SHAPE_OUTER;
+  // 静默效果的几何形变统一挂到这里：节点、边、骨架与星尘用同一套世界坐标。
+  const idle = (p, radius) =>
+    ui.spherePuff > 0.0005
+      ? shapeIdlePoint(ui.shape, p, ui.shapeClock, radius, ui.spherePuff)
+      : p;
   const courses = courseBases().map((p) => {
-    const m = morphWorld(p.course.id, p);
+    const m = idle(morphWorld(p.course.id, p), courseDepthR);
     const q = projectPoint(m, rot, courseDepthR);
     const n = p.course;
     return {
@@ -376,7 +337,7 @@ function outerVisuals() {
   if (ui.sphereScope < 2) return courses;
 
   const chapters = chapterBases().map((p) => {
-    const m = morphWorld(p.chapter.id, p);
+    const m = idle(morphWorld(p.chapter.id, p), chapterDepthR);
     const q = projectPoint(m, rot, chapterDepthR);
     return {
       id: p.chapter.id,
@@ -399,7 +360,7 @@ function outerVisuals() {
   if (ui.sphereScope < 3) return courses.concat(chapters);
 
   const points = pointBases().map((p) => {
-    const m = morphWorld(p.point.id, p);
+    const m = idle(morphWorld(p.point.id, p), pointDepthR);
     const q = projectPoint(m, rot, pointDepthR);
     return {
       id: p.point.id,
@@ -579,27 +540,22 @@ export function moveSphereNode(visual, dxScreen, dyScreen) {
   ui.sphereOffsets.set(visual.id, { x: nx, y: ny, z: nz });
 }
 
-/** 切换球体随机膨胀；再点一次回到标准球。 */
+/** 切换当前形状的私有静默形变；再点一次回到标准形态。 */
 export function toggleSpherePuff() {
   if (ui.spherePuffTarget > 0.5) {
     ui.spherePuffTarget = 0;
     // “还原球体”同时清掉手动拖拽造成的节点偏移，否则球回来了、节点仍歪着。
     ui.sphereOffsets.clear();
   } else {
-    ui.spherePuffSeed = (Math.random() * 1e9) | 0;
     ui.spherePuffTarget = 1;
   }
   return ui.spherePuffTarget > 0.5;
 }
 
-/** 把星海恢复成标准球体，并清掉所有手动拖动偏移。 */
+/** 把星海恢复成标准形态，并清掉所有手动拖动偏移。 */
 export function resetSphereShape() {
   ui.spherePuff = 0;
   ui.spherePuffTarget = 0;
-  ui.spherePuffDepth = 0.62;
-  ui.spherePuffPrevSeed = ui.spherePuffSeed;
-  ui.spherePuffSeed = (Math.random() * 1e9) | 0;
-  ui.spherePuffSeedMix = 1;
   ui.sphereOffsets.clear();
 }
 
@@ -607,9 +563,7 @@ export function spherePuffState() {
   return {
     expanded: ui.spherePuffTarget > 0.5,
     value: ui.spherePuff,
-    target: ui.spherePuffTarget,
-    depth: ui.spherePuffDepth,
-    seedMix: ui.spherePuffSeedMix
+    target: ui.spherePuffTarget
   };
 }
 
@@ -630,31 +584,18 @@ export function applyShape(shape) {
   return true;
 }
 
-/** 每帧自动缓慢自转 / 呼吸（拖拽时暂停旋转）并推进膨胀补间。 */
+/** 每帧自动缓慢自转 / 呼吸（拖拽时暂停旋转）并推进形状私有形变。 */
 export function tick(dt) {
   if (ui.shapeMorph && performance.now() - ui.shapeMorph.start >= ui.shapeMorph.dur) {
     ui.shapeMorph = null;
   }
-  // 「膨胀」静默效果：每个循环缓慢涨大再缩回，到谷底换一套随机方向。
-  if (ui.level === 'sphere' && ui.idleModes.puff) {
-    ui.idlePhase += dt * 0.00055 * ui.idleSpeed;
-    if (ui.idlePhase >= Math.PI * 2) {
-      ui.idlePhase -= Math.PI * 2;
-      // 先留一份旧种子做交叉淡入，避免换种子瞬间节点整体跳位。
-      ui.spherePuffPrevSeed = ui.spherePuffSeed;
-      ui.spherePuffSeed = (Math.random() * 1e9) | 0;
-      ui.spherePuffSeedMix = 0;
-      ui.spherePuffDepth = 0.56 + Math.random() * 0.3;
-    }
-    const wave = 0.5 - 0.5 * Math.cos(ui.idlePhase);
-    ui.spherePuffTarget = 0.03 + wave * ui.spherePuffDepth;
+  // 静默里的私有形变：每种形状按自己的几何推进，强度由开关平滑补间。
+  if (ui.level === 'sphere') {
+    ui.spherePuffTarget = ui.idleModes.puff ? 1 : 0;
+    if (ui.idleModes.puff) ui.shapeClock += (dt / 1000) * ui.idleSpeed;
   }
-  if (ui.spherePuffSeedMix < 1) {
-    ui.spherePuffSeedMix = Math.min(1, ui.spherePuffSeedMix + dt / 975);
-  }
-
   if (ui.level === 'sphere' && Math.abs(ui.spherePuff - ui.spherePuffTarget) > 0.0001) {
-    const k = 1 - Math.exp(-dt / 190);
+    const k = 1 - Math.exp(-dt / 260);
     ui.spherePuff += (ui.spherePuffTarget - ui.spherePuff) * k;
     if (Math.abs(ui.spherePuffTarget - ui.spherePuff) < 0.001) {
       ui.spherePuff = ui.spherePuffTarget;
