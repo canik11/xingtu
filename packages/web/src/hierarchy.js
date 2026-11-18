@@ -439,9 +439,14 @@ export function sceneEdges(visuals) {
 
     for (const e of data.edges) push(e.a, e.b, e.label, 'top');
     const outline = getOutline();
-    // 星海只画知识点之间的真实关系；课程—章节—知识点的逐级连线在节点多时
-    // 会织成一张密网（球形、盘状形状尤其明显），把形状的几何轮廓淹掉。
-    // 层级关系改由「层级」按钮、侧栏与星河长卷呈现。
+    // 课程—章节—知识点逐级连线：选中某个节点时靠它高亮出上下级关系，
+    // 这是星海里查看层级的主要途径，必须保留。
+    if (ui.sphereScope >= 2) {
+      for (const e of outline.hierarchy) {
+        if (e.kind === 'chapter') push(e.a, e.b, '', 'chapter');
+        if (ui.sphereScope >= 3 && e.kind === 'point') push(e.a, e.b, '', 'point');
+      }
+    }
     for (const e of outline.topicEdges) push(e.a, e.b, e.label, 'topic');
     for (const e of outline.crossEdges || []) push(e.a, e.b, e.label, 'topic');
 

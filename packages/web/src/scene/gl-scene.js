@@ -814,6 +814,7 @@ class WebGLScene {
     for (const entry of this.skeletonLines) {
       const pts = Array.isArray(entry) ? entry : entry.pts;
       const weight = Array.isArray(entry) ? 1 : entry.alpha ?? 1;
+      const screen = [];
       for (let i = 0; i < pts.length; i++) {
         const p = pts[i];
         // 骨架线与节点共用同一套形状私有形变，轮廓和星点不会各自乱动。
@@ -825,11 +826,20 @@ class WebGLScene {
           ui.spherePuff
         );
         const q = projectPoint(world, rot, R);
-        const s = worldToScreen(q.x, q.y);
-        if (i === 0) g.moveTo(s.x, s.y);
-        else g.lineTo(s.x, s.y);
+        screen.push(worldToScreen(q.x, q.y));
       }
-      g.stroke({ width: 1.6, color: 0xa9c9ff, alpha: 0.48 * gain * weight });
+      const trace = () => {
+        for (let i = 0; i < screen.length; i++) {
+          const s = screen[i];
+          if (i === 0) g.moveTo(s.x, s.y);
+          else g.lineTo(s.x, s.y);
+        }
+      };
+      // 一层宽而淡的辉光加一条细亮主线：几何骨架从关系线里跳出来，但不会太刺眼。
+      trace();
+      g.stroke({ width: 5.2, color: 0x7fb0ff, alpha: 0.055 * gain * weight });
+      trace();
+      g.stroke({ width: 1.5, color: 0xcfe3ff, alpha: 0.6 * gain * weight });
     }
   }
 

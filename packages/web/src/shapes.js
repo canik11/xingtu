@@ -94,6 +94,21 @@ function diskAt(u, arm) {
   );
 }
 
+/** 螺旋臂上的一点：offset 把三条细线错开成一条有宽度的光带。 */
+function galaxySpiral(u, arm, offset = 0) {
+  const r = 0.1 + u * DISK_R + offset;
+  const phi = u * TAU * DISK_SPIN + arm * Math.PI;
+  return spinY(
+    tiltX({ x: Math.cos(phi) * r, y: -0.02, z: Math.sin(phi) * r }, DISK_TILT),
+    DISK_YAW
+  );
+}
+
+/** 盘面上的同心环（极坐标网格的纬线），r 是归一化半径。 */
+function galaxyRing(a, r) {
+  return spinY(tiltX({ x: Math.cos(a) * r, y: -0.02, z: Math.sin(a) * r }, DISK_TILT), DISK_YAW);
+}
+
 /** 核心：一个略微压扁的小球，从任何角度看都有体积。 */
 function bulgeAt(i, count) {
   const p = fibonacci(i, Math.max(1, count), 0.7);
@@ -321,28 +336,18 @@ export function shapeSkeleton(shape, detail = 90) {
   };
   switch (shape) {
     case 'galaxy': {
-      // 两条螺旋臂：从明亮核心荡到外缘，这是星系的骨架签名。
-      for (let arm = 0; arm < 2; arm++) line((t) => diskAt(t, arm), 200, 0.95);
-      // 盘外缘：一圈很淡的椭圆，给出星盘边界，不和旋臂抢视线。
-      line(
-        (t) =>
-          spinY(
-            tiltX({ x: Math.cos(t * TAU) * 1.04, y: -0.02, z: Math.sin(t * TAU) * 1.04 }, DISK_TILT),
-            DISK_YAW
-          ),
-        96,
-        0.22
-      );
-      // 核心：一圈亮环勾出核球，其余体积交给中心星尘团。
-      line(
-        (t) => {
-          const a = t * TAU;
-          const p = tiltX({ x: Math.cos(a) * 0.16, y: Math.sin(a) * 0.16, z: 0 }, DISK_TILT * 0.55);
-          return { x: p.x, y: p.y - 0.03, z: p.z };
-        },
-        48,
-        0.45
-      );
+      // 旋涡星云：两条螺旋臂各由三条细线叠成光带，再加盘面同心环，
+      // 像一张斜放的极坐标网格——螺旋是臂，同心环是纬，一眼能读出星盘几何。
+      for (let arm = 0; arm < 2; arm++) {
+        for (const off of [-0.035, 0, 0.035]) {
+          line((t) => galaxySpiral(t, arm, off), 200, off === 0 ? 0.95 : 0.42);
+        }
+      }
+      for (const rr of [0.3, 0.55, 0.8, 1.02]) {
+        line((t) => galaxyRing(t * TAU, rr), 120, rr > 1 ? 0.3 : 0.22);
+      }
+      // 核球：一圈亮环，中心体积交给星尘团。
+      line((t) => galaxyRing(t * TAU, 0.12), 48, 0.5);
       break;
     }
     case 'helix': {
@@ -370,12 +375,18 @@ export function shapeSkeleton(shape, detail = 90) {
       break;
     }
     case 'torus': {
-      // 外缘与内缘两条主环，勾出甜甜圈的轮廓
-      for (const v of [0, Math.PI]) line((t) => ringAt(t * TAU, v));
-      // 六道经线：每道绕管壁一圈，环面的厚度与孔洞一眼可见
-      for (let k = 0; k < 6; k++) {
-        const u = ((k + 0.5) / 6) * TAU;
-        line((t) => ringAt(u, t * TAU), 16, 0.42);
+      // 环面网格：四圈纬线（外缘、管中、内缘、另一侧管中）铺开主环，
+      // 十六道经线沿管壁绕一整圈，把整个甜甜圈完整包住。
+      for (const v of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
+        line(
+          (t) => ringAt(t * TAU, v),
+          120,
+          v === 0 || Math.abs(v - Math.PI) < 0.01 ? 0.45 : 0.22
+        );
+      }
+      for (let k = 0; k < 16; k++) {
+        const u = (k / 16) * TAU;
+        line((t) => ringAt(u, t * TAU), 24, k % 4 === 0 ? 0.38 : 0.2);
       }
       break;
     }
