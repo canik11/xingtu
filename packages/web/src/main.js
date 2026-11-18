@@ -25,9 +25,9 @@ import { getOutline, getEntity, refreshOutline } from './outline.js';
 import { appearanceConfig, edgeIsMastered, toggleMastery } from './mastery.js';
 import { bindAddModal } from './ui/add-modal.js';
 import { bindConfirm, askConfirm } from './ui/confirm.js';
-import { bindAppearance } from './ui/appearance.js';
+import { bindAppearance, refreshAppearance } from './ui/appearance.js';
 import { bindShapeBar } from './ui/shape-bar.js';
-import { bindGlobalDoc } from './ui/global-doc.js';
+import { bindGlobalDoc, refreshGlobalDoc } from './ui/global-doc.js';
 import { showFatal, toast } from './ui/feedback.js';
 import { canFetchKbPath, fetchKnowledge, getKbPath, isDefaultKbPath } from './kb-path.js';
 import { restoreKbFile } from './kb-file.js';
@@ -185,6 +185,8 @@ async function boot() {
     ui.selection = null;
     reindex();
     refreshOutline();
+    refreshGlobalDoc();
+    refreshAppearance();
     if (ui.level === 'local' && ui.focusId && getEntity(ui.focusId)) {
       try {
         buildFocus(ui.focusId);

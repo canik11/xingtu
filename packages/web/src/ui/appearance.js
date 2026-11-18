@@ -89,6 +89,11 @@ export function isAppearanceOpen() {
   return open;
 }
 
+// 撤销/重做等外部改动后，外观面板开着就按最新配置重绘控件。
+export function refreshAppearance() {
+  if (open) renderAll();
+}
+
 function syncColorUi() {
   const cfg = appearanceConfig();
   el.appearanceDefault.value = cfg.defaultColor;

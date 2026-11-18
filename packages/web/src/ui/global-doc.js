@@ -51,7 +51,7 @@ function blockRow(block, nodeId, parentId, index, depth) {
         ? `<button class="doc-mastery${mastered ? ' on' : ''}" type="button" data-mastery="${esc(block.id)}"
         aria-pressed="${mastered}" aria-label="${mastered ? '取消掌握' : '标记为已掌握'}"
         title="${mastered ? '取消掌握' : '标记为已掌握'}"><span class="doc-mastery-box" aria-hidden="true">${mastered ? '✓' : ''}</span></button>`
-        : `<span class="doc-mastery-ratio" title="这一条包含子条目，掌握度按子级汇总">${Math.round(blockMasteryRatio(block) * 100)}%</span>`)
+        : `<span class="doc-mastery-ratio" data-ratio="${esc(block.id)}" title="这一条包含子条目，掌握度按子级汇总">${Math.round(blockMasteryRatio(block) * 100)}%</span>`)
     : '';
   return `
     <div class="doc-row${depth === 0 ? ' is-root' : ''}" data-nid="${esc(block.id)}"
@@ -489,6 +489,20 @@ function onDocKeydown(event) {
   }
 }
 
+// 勾选/取消一个叶子条目后，沿 DOM 向上刷新每条祖先条目显示的掌握百分比。
+// 结构是「.doc-row 与 .doc-children 平级」：子行的父级是它前面那个 .doc-row。
+function refreshAncestorRatios(row) {
+  let children = row?.parentElement;
+  while (children) {
+    const parentRow = children.previousElementSibling;
+    if (!parentRow || !parentRow.classList?.contains('doc-row')) break;
+    const owner = ownerOf(parentRow.dataset.nid);
+    const ratio = parentRow.querySelector(':scope > .doc-mastery-ratio');
+    if (owner && ratio) ratio.textContent = `${Math.round(blockMasteryRatio(owner.block) * 100)}%`;
+    children = parentRow.parentElement;
+  }
+}
+
 function onDocClick(event) {
   const mastery = event.target.closest('[data-mastery]');
   if (mastery) {
@@ -507,6 +521,8 @@ function onDocClick(event) {
     mastery.title = next ? '取消掌握' : '标记为已掌握';
     const box = mastery.querySelector('.doc-mastery-box');
     if (box) box.textContent = next ? '✓' : '';
+    // 这一条的掌握度变化会改变所有上层条目的百分比，一并刷新。
+    refreshAncestorRatios(mastery.closest('.doc-row'));
     sfx.mastery(next);
     setStatus(next ? `已标记掌握「${entity.name}」` : `已取消掌握「${entity.name}」`);
     return;
@@ -552,6 +568,11 @@ function onKeydownCapture(event) {
 
 export function isGlobalDocOpen() {
   return isOpen;
+}
+
+// 撤销/重做等外部改动后，长卷是打开状态就按最新数据重绘（保留滚动位置）。
+export function refreshGlobalDoc() {
+  if (isOpen) render();
 }
 
 export function openGlobalDoc() {
